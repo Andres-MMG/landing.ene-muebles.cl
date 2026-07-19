@@ -1,0 +1,48 @@
+# Strapi Docker build context exclusions.
+# Mirrors the root `.dockerignore` so the cms-specific path is
+# self-documenting when run with a narrower build context.
+
+# Dependencies
+**/node_modules
+**/.pnpm-store
+
+# Strapi
+**/.strapi
+**/.strapi-updater.json
+**/.tmp
+**/.cache
+
+# Build output
+**/build
+**/dist
+
+# Uploads (volume-mounted in production)
+**/public/uploads/*
+!**/public/uploads/.gitkeep
+
+# Environment files
+.env
+.env.*
+!**/.env.example
+
+# Tests, logs, infra data
+**/coverage
+**/test-results
+**/*.log
+**/logs
+**/.data
+**/mysql-data
+
+# AI-agent tooling and generated registries
+**/.agents
+**/.claude
+**/.atl
+
+# Git metadata and editor noise
+.git
+.gitignore
+.gitattributes
+**/.idea
+**/.vscode
+**/.DS_Store
+**/Thumbs.db

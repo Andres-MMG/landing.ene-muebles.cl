@@ -1,0 +1,65 @@
+# Root Docker build context exclusions.
+# Shared across `apps/web/Dockerfile` and `apps/cms/Dockerfile`.
+
+# Dependencies
+**/node_modules
+**/.pnpm-store
+
+# Next.js
+**/.next
+**/out
+**/.turbo
+**/next-env.d.ts
+
+# Strapi
+**/.strapi
+**/.strapi-updater.json
+**/.tmp
+**/.cache
+
+# Build output
+**/build
+**/dist
+
+# Uploads (volume-mounted in production)
+**/public/uploads/*
+!**/public/uploads/.gitkeep
+
+# Environment files
+.env
+.env.*
+!**/.env.example
+
+# Tests and reports
+**/coverage
+**/.nyc_output
+**/playwright-report
+**/test-results
+
+# Logs
+**/*.log
+**/logs
+**/npm-debug.log*
+**/yarn-debug.log*
+**/yarn-error.log*
+
+# Local infrastructure data
+**/.data
+**/mysql-data
+
+# AI-agent tooling and generated registries
+**/.agents
+**/.claude
+**/.atl
+skills-lock.json
+
+# Git metadata
+.git
+.gitignore
+.gitattributes
+
+# Editor and OS noise
+**/.idea
+**/.vscode
+**/.DS_Store
+**/Thumbs.db

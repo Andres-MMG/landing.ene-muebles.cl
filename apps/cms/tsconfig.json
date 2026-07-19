@@ -1,0 +1,34 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": ".",
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "target": "ES2022",
+    "lib": ["ES2022"],
+    "noEmit": false,
+    "jsx": "preserve",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "isolatedModules": false,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "config/**/*.ts",
+    "src/**/*.ts",
+    "types/**/*.d.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    "build",
+    "dist",
+    ".strapi",
+    ".tmp",
+    ".cache",
+    "src/admin",
+    "src/plugins",
+    "**/*.test.ts"
+  ]
+}

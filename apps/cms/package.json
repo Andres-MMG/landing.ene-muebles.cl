@@ -1,0 +1,37 @@
+{
+  "name": "cms",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Strapi v5 backend for the Ene Muebles landing page (placeholder scaffold).",
+  "scripts": {
+    "build": "strapi build",
+    "develop": "strapi develop",
+    "start": "strapi start",
+    "strapi": "strapi",
+    "ts:generate-types": "strapi ts:generate-types"
+  },
+  "dependencies": {
+    "@strapi/plugin-users-permissions": "5.2.0",
+    "@strapi/strapi": "5.2.0",
+    "better-sqlite3": "11.3.0",
+    "mysql2": "3.11.3",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "react-router-dom": "6.27.0",
+    "styled-components": "6.1.13"
+  },
+  "devDependencies": {
+    "@types/node": "20.17.10",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "typescript": "5.6.3"
+  },
+  "engines": {
+    "node": ">=20.0.0 <=22.x.x",
+    "pnpm": ">=9.0.0"
+  },
+  "license": "UNLICENSED",
+  "strapi": {
+    "uuid": "ene-muebles-cms-bootstrap"
+  }
+}

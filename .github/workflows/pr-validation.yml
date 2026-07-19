@@ -40,33 +40,26 @@ jobs:
       issues: read
       pull-requests: read
     steps:
-      - name: Require exactly one closing issue
+      - name: Require exactly one closing issue keyword in PR body
         uses: actions/github-script@v9
         with:
           script: |
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 2) {
-                      totalCount
-                    }
-                  }
-                }
-              }
-            `;
-            const result = await github.graphql(query, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: context.payload.pull_request.number,
-            });
-            const count = result.repository.pullRequest.closingIssuesReferences.totalCount;
+            const body = context.payload.pull_request.body || '';
+            // Allow either an explicit "Closes #N" keyword or a closing keyword in any case, optionally followed by ":".
+            // GitHub's auto-link for closing keywords only runs when the PR targets the default branch; this workflow
+            // must therefore scan the body itself so chained-PR bases (e.g. feature/landing-page-initial) are accepted.
+            const pattern = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s*:?\s+#(\d+)/gi;
+            const matches = [...body.matchAll(pattern)];
 
-            if (count !== 1) {
+            if (matches.length !== 1) {
               core.setFailed(
-                `Expected exactly one closing issue linked with Closes/Fixes/Resolves #N; found ${count}.`,
+                `Expected exactly one closing-issue keyword (Closes/Fixes/Resolves #N) in the PR body; found ${matches.length}.`,
               );
+              return;
             }
+
+            const issueNumber = Number(matches[0][1]);
+            core.setOutput('issueNumber', String(issueNumber));
 
   issue-approval:
     name: Check Issue Has status:approved
@@ -80,35 +73,18 @@ jobs:
         uses: actions/github-script@v9
         with:
           script: |
-            const query = `
-              query($owner: String!, $repo: String!, $number: Int!) {
-                repository(owner: $owner, name: $repo) {
-                  pullRequest(number: $number) {
-                    closingIssuesReferences(first: 2) {
-                      totalCount
-                      nodes {
-                        number
-                      }
-                    }
-                  }
-                }
-              }
-            `;
-            const result = await github.graphql(query, {
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              number: context.payload.pull_request.number,
-            });
-            const references = result.repository.pullRequest.closingIssuesReferences;
+            const body = context.payload.pull_request.body || '';
+            const pattern = /(?:close|closes|closed|fix|fixes|fixed|resolve|resolves|resolved)\s*:?\s+#(\d+)/gi;
+            const matches = [...body.matchAll(pattern)];
 
-            if (references.totalCount !== 1) {
+            if (matches.length !== 1) {
               core.setFailed(
-                `Approval cannot be validated until exactly one closing issue is linked; found ${references.totalCount}.`,
+                `Approval cannot be validated until exactly one closing issue is referenced in the PR body; found ${matches.length}.`,
               );
               return;
             }
 
-            const issueNumber = references.nodes[0].number;
+            const issueNumber = Number(matches[0][1]);
             const { data: issue } = await github.rest.issues.get({
               owner: context.repo.owner,
               repo: context.repo.repo,

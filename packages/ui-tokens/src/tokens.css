@@ -1,0 +1,11 @@
+@theme {
+  --color-ink: #2C2C2C;
+  --color-taupe: #A69076;
+  --color-cream: #EBE2D9;
+  --color-paper: #F9F8F6;
+}
+
+@theme inline {
+  --font-display: var(--font-source-serif-4), Georgia, serif;
+  --font-body: var(--font-hanken-grotesk), system-ui, sans-serif;
+}

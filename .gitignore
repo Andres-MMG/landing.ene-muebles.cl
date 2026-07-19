@@ -42,6 +42,15 @@ yarn-error.log*
 .data/
 mysql-data/
 
+# Strapi CMS workspace artifacts
+apps/cms/.tmp/
+apps/cms/.strapi/
+apps/cms/build/
+apps/cms/dist/
+apps/cms/node_modules/
+apps/cms/public/uploads/
+!apps/cms/public/uploads/.gitkeep
+
 # Local AI-agent tooling and generated registries
 .agents/
 .claude/

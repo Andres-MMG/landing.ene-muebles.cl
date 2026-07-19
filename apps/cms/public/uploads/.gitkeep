@@ -1,0 +1,2 @@
+# Placeholder so `public/uploads/` is tracked in the repository.
+# The directory itself is mounted as a Docker volume in production.

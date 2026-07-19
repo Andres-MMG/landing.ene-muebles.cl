@@ -13,12 +13,14 @@ Monorepo for the Ene Muebles landing page, focused on catalog discovery and qual
 
 ## Current Status
 
-Slice A / PR-3a provides the pnpm workspace, the shared UI token package, and the Next.js web scaffold. The CMS, Compose deployment, and test runners remain deferred to later pull requests in the `landing-page-initial` chain.
+Slice A / PR-3a provides the pnpm workspace, the shared UI token package, and the Next.js web scaffold. Slice B / PR-3b adds the Strapi v5 bootstrap, the Coolify Compose stack, and the environment contract. The full content types, seed scripts, populated REST queries, and test runners remain deferred to later pull requests in the `landing-page-initial` chain.
 
 ## Monorepo Layout
 
 - `apps/web/` — Next.js App Router application
+- `apps/cms/` — Strapi v5 placeholder scaffold (`site-setting` singleton only)
 - `packages/ui-tokens/` — shared Tailwind theme tokens and Chilean Spanish copy
+- `infrastructure/` — Coolify Compose stack (`web`, `cms`, `db`, `proxy`)
 - `openspec/changes/landing-page-initial/` — authoritative proposal, specifications, design, and tasks
 - `.github/` — contribution templates and pull-request validation workflows
 - `skills-lock.json` — portable source and integrity metadata for project skills
@@ -31,8 +33,25 @@ Use Node.js 20 LTS and pnpm 9.
 | --- | --- |
 | Install dependencies | `pnpm install` |
 | Start the web app | `pnpm --filter web dev` |
+| Start the CMS in dev mode | `pnpm --filter cms develop` |
+| Build the web app for production | `pnpm --filter web build` |
+| Build the CMS for production | `pnpm --filter cms build` |
 | Lint the web app | `pnpm --filter web lint` |
 | Type-check the web app | `pnpm --filter web typecheck` |
+| Validate the Coolify Compose stack | `docker compose -f infrastructure/docker-compose.yml config` |
+
+## Production Topology
+
+The Coolify Compose stack in `infrastructure/` is the single source of
+truth for the production layout: a Traefik v3 reverse proxy fronting one
+public web service, with Strapi v5 and MySQL 8 isolated on a private
+Docker network. See `infrastructure/README.md` for the full topology,
+health checks, volumes, and environment contract.
+
+Required deployment variables live in `infrastructure/.env.example`.
+Copy to `.env`, replace every `CHANGE_ME` placeholder with a real value,
+and load via Coolify's Environment UI. The `.env` filename is ignored
+by `.gitignore`; only `.env.example` files are tracked.
 
 ## OpenSpec Change
 

@@ -1,0 +1,15 @@
+node_modules/
+.pnpm-store/
+.next/
+.turbo/
+out/
+build/
+dist/
+coverage/
+playwright-report/
+test-results/
+public/uploads/
+.strapi/
+.atl/
+.agents/
+.claude/

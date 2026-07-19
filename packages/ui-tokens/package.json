@@ -1,0 +1,13 @@
+{
+  "name": "@ene/ui-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "files": ["src"],
+  "exports": {
+    ".": "./src/index.ts",
+    "./index.css": "./src/index.css",
+    "./tokens.css": "./src/tokens.css",
+    "./copy/es-CL": "./src/copy/es-CL.ts"
+  }
+}

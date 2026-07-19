@@ -7,6 +7,10 @@ node_modules/
 .next/
 out/
 next-env.d.ts
+apps/web/.next/
+apps/web/.turbo/
+apps/web/node_modules/
+!apps/web/next-env.d.ts
 
 # Strapi and build output
 .strapi/
@@ -17,11 +21,9 @@ dist/
 public/uploads/
 
 # Environment files and credentials
-.env
-.env.local
-.env.*.local
-.env.production
+.env*
 !.env.example
+!apps/web/.env.local.example
 
 # Tests and reports
 coverage/

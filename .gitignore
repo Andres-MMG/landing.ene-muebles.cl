@@ -1,0 +1,59 @@
+# Dependencies and package-manager state
+node_modules/
+.pnpm-store/
+.pnpm-debug.log*
+
+# Next.js
+.next/
+out/
+next-env.d.ts
+
+# Strapi and build output
+.strapi/
+.strapi-updater.json
+.cache/
+build/
+dist/
+public/uploads/
+
+# Environment files and credentials
+.env
+.env.local
+.env.*.local
+.env.production
+!.env.example
+
+# Tests and reports
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Local infrastructure data
+.data/
+mysql-data/
+
+# Local AI-agent tooling and generated registries
+.agents/
+.claude/
+.atl/
+
+# Tool caches
+.eslintcache
+.turbo/
+
+# Editors and operating systems
+.idea/
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+Thumbs.db
+*.swp
+*~

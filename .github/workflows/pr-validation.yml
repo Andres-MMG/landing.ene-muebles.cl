@@ -1,0 +1,146 @@
+name: PR Validation
+
+on:
+  pull_request:
+    types:
+      - opened
+      - edited
+      - synchronize
+      - reopened
+      - labeled
+      - unlabeled
+
+permissions: {}
+
+jobs:
+  branch-name:
+    name: Check Branch Name
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Validate branch naming convention
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const branch = context.payload.pull_request.head.ref;
+            const pattern = /^(feat|fix|chore|docs|style|refactor|perf|test|build|ci|revert)\/[a-z0-9._-]+$/;
+
+            if (!pattern.test(branch)) {
+              core.setFailed(
+                `Branch "${branch}" is invalid. Expected type/description using the allowed types and lowercase a-z0-9._-.`,
+              );
+            }
+
+  issue-reference:
+    name: Check Issue Reference
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Require exactly one closing issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 2) {
+                      totalCount
+                    }
+                  }
+                }
+              }
+            `;
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: context.payload.pull_request.number,
+            });
+            const count = result.repository.pullRequest.closingIssuesReferences.totalCount;
+
+            if (count !== 1) {
+              core.setFailed(
+                `Expected exactly one closing issue linked with Closes/Fixes/Resolves #N; found ${count}.`,
+              );
+            }
+
+  issue-approval:
+    name: Check Issue Has status:approved
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      issues: read
+      pull-requests: read
+    steps:
+      - name: Require approval on the linked issue
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const query = `
+              query($owner: String!, $repo: String!, $number: Int!) {
+                repository(owner: $owner, name: $repo) {
+                  pullRequest(number: $number) {
+                    closingIssuesReferences(first: 2) {
+                      totalCount
+                      nodes {
+                        number
+                      }
+                    }
+                  }
+                }
+              }
+            `;
+            const result = await github.graphql(query, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              number: context.payload.pull_request.number,
+            });
+            const references = result.repository.pullRequest.closingIssuesReferences;
+
+            if (references.totalCount !== 1) {
+              core.setFailed(
+                `Approval cannot be validated until exactly one closing issue is linked; found ${references.totalCount}.`,
+              );
+              return;
+            }
+
+            const issueNumber = references.nodes[0].number;
+            const { data: issue } = await github.rest.issues.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: issueNumber,
+            });
+            const labels = issue.labels
+              .map((label) => (typeof label === 'string' ? label : label.name))
+              .filter(Boolean);
+
+            if (!labels.includes('status:approved')) {
+              core.setFailed(
+                `Linked issue #${issueNumber} must have the status:approved label before this pull request can merge.`,
+              );
+            }
+
+  pr-label:
+    name: Check PR Has type:* Label
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions: {}
+    steps:
+      - name: Require exactly one PR type label
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const typeLabels = context.payload.pull_request.labels
+              .map((label) => label.name)
+              .filter((name) => name.startsWith('type:'));
+
+            if (typeLabels.length !== 1) {
+              const found = typeLabels.length === 0 ? 'none' : typeLabels.join(', ');
+              core.setFailed(
+                `Expected exactly one type:* label; found ${typeLabels.length} (${found}).`,
+              );
+            }

@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "skills": {
+    "coolify": {
+      "source": "oakoss/agent-skills",
+      "sourceType": "github",
+      "skillPath": "skills/coolify/SKILL.md",
+      "computedHash": "f214baddf03833c0b6c3bbd658296f916fcbeb9c1f53a2d96b5165cfe9fb47a5"
+    },
+    "coolify-deploy": {
+      "source": "v1truv1us/ai-eng-system",
+      "sourceType": "github",
+      "skillPath": "skills/coolify-deploy/SKILL.md",
+      "computedHash": "7aca6317767e5163ab216e6a72c07a6658777381e36ec243d3e18cb1b182dcd2"
+    },
+    "impeccable": {
+      "source": "pbakaus/impeccable",
+      "sourceType": "github",
+      "skillPath": ".agents/skills/impeccable/SKILL.md",
+      "computedHash": "d51e27d5228746d083a478bfe5038b4da0bf59275ebc5d7f1ccf9c525577715f"
+    },
+    "seo-aeo-best-practices": {
+      "source": "sanity-io/agent-toolkit",
+      "sourceType": "github",
+      "skillPath": "skills/seo-aeo-best-practices/SKILL.md",
+      "computedHash": "b6b2dd3af3c92f82f04b830dab2cc323f299d7c2e57f7d3619a5886caa7eeb08"
+    },
+    "seo-geo-aeo": {
+      "source": "snlabat/seo-geo-aeo-skill",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "1dd97f1b2559fc0fd815ff99149880ed3d4f005f6d7aeeba371ff19dd5744010"
+    },
+    "strapi-v5-expert": {
+      "source": "moteodimassi/strapi-v5-expert",
+      "sourceType": "github",
+      "skillPath": "SKILL.md",
+      "computedHash": "e7ee697485ea1338bbb32d8c060adcd2e921fe0215ccabf97c5bddf61216e81a"
+    },
+    "tailwind-css-patterns": {
+      "source": "giuseppe-trisciuoglio/developer-kit",
+      "sourceType": "github",
+      "skillPath": "plugins/developer-kit-typescript/skills/tailwind-css-patterns/SKILL.md",
+      "computedHash": "2fa1b2d4e0bc020dcbaa1e65af6f7ba75715116686e0fd663a4b268c8ace22d4"
+    }
+  }
+}

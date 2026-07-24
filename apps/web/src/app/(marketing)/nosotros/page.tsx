@@ -1,0 +1,185 @@
+import Link from "next/link";
+import { getSiteSettings } from "@/lib/strapi";
+import { site } from "@ene/ui-tokens";
+import { ContactCTA } from "@/components/ContactCTA";
+
+export const revalidate = 60;
+export const dynamic = "force-dynamic";
+
+export const metadata = {
+  title: "Sobre nosotros",
+  description:
+    "Ene Muebles: proveedor de mobiliario escolar y de oficina para instituciones en Chile. Misión, visión y valores.",
+};
+
+export default async function NosotrosPage() {
+  const settings = await getSiteSettings();
+  const productCount = 20;
+  const categoryCount = 2;
+  const years = 30;
+
+  return (
+    <>
+      <section aria-labelledby="nosotros-heading" className="bg-paper">
+        <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-12 px-6 pt-24 pb-16 sm:px-10 sm:pt-28 sm:pb-20 lg:grid-cols-12 lg:gap-16 lg:px-16 lg:pt-32 lg:pb-24">
+          <div className="lg:col-span-7">
+            <div className="flex items-center gap-3">
+              <span className="block h-px w-10 bg-taupe" aria-hidden />
+              <span className="t-label text-taupe-deep">
+                {site.aboutOverlineSec}
+              </span>
+            </div>
+            <h1
+              id="nosotros-heading"
+              className="t-display mt-8 max-w-[20ch] text-[clamp(2.5rem,1.25rem+5vw,5rem)] text-ink"
+            >
+              {site.aboutHeadingSec}
+            </h1>
+            <p className="t-body mt-8 max-w-[55ch] text-lg text-ink-mute sm:text-xl">
+              {site.aboutIntro}
+            </p>
+          </div>
+          <aside className="lg:col-span-4 lg:col-start-9">
+            <dl className="space-y-0 border-t border-ink-line">
+              <div className="flex items-baseline justify-between border-b border-ink-line py-5">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  Años en el rubro
+                </dt>
+                <dd className="t-mono text-3xl text-ink">
+                  {String(years).padStart(2, "0")}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between border-b border-ink-line py-5">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  Productos en catálogo
+                </dt>
+                <dd className="t-mono text-3xl text-ink">
+                  {String(productCount).padStart(2, "0")}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between border-b border-ink-line py-5">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  Líneas de producto
+                </dt>
+                <dd className="t-mono text-3xl text-ink">
+                  {String(categoryCount).padStart(2, "0")}
+                </dd>
+              </div>
+              <div className="flex items-baseline justify-between py-5">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  Cobertura
+                </dt>
+                <dd className="t-mono text-3xl text-ink">16 regiones</dd>
+              </div>
+            </dl>
+          </aside>
+        </div>
+      </section>
+
+      <section className="bg-ink text-paper">
+        <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 sm:pt-28 sm:pb-24 lg:px-16 lg:pt-36 lg:pb-28">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+            <div className="lg:col-span-4">
+              <div className="flex items-center gap-3">
+                <span className="block h-px w-10 bg-taupe" aria-hidden />
+                <span className="t-label text-taupe">
+                  {site.missionHeading}
+                </span>
+              </div>
+              <h2 className="t-h2 mt-6 text-[clamp(2rem,1.2rem+3vw,3rem)] text-paper">
+                {site.missionHeading}
+              </h2>
+            </div>
+            <div className="lg:col-span-7 lg:col-start-6">
+              <p className="t-h3 text-2xl text-paper-mute-on-ink">
+                {site.missionBody}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-paper">
+        <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 sm:pt-28 sm:pb-24 lg:px-16 lg:pt-32 lg:pb-28">
+          <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
+            <div className="lg:col-span-4">
+              <div className="flex items-center gap-3">
+                <span className="block h-px w-10 bg-taupe" aria-hidden />
+                <span className="t-label text-taupe-deep">
+                  {site.visionHeading}
+                </span>
+              </div>
+              <h2 className="t-h2 mt-6 text-[clamp(2rem,1.2rem+3vw,3rem)] text-ink">
+                {site.visionHeading}
+              </h2>
+            </div>
+            <div className="lg:col-span-7 lg:col-start-6">
+              <p className="t-h3 text-2xl text-ink-mute">
+                {site.visionBody}
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-cream-soft">
+        <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 sm:pt-28 sm:pb-24 lg:px-16 lg:pt-32 lg:pb-28">
+          <header className="grid grid-cols-1 gap-8 border-b border-ink-line pb-12 lg:grid-cols-12 lg:gap-12">
+            <div className="lg:col-span-7">
+              <div className="flex items-center gap-3">
+                <span className="block h-px w-10 bg-taupe" aria-hidden />
+                <span className="t-label text-taupe-deep">Valores</span>
+              </div>
+              <h2 className="t-h2 mt-6 max-w-[24ch] text-[clamp(2rem,1.2rem+3vw,3.25rem)] text-ink">
+                Cuatro compromisos por escrito.
+              </h2>
+            </div>
+          </header>
+          <ol className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+            {site.values.map((value, index) => (
+              <li
+                key={value.title}
+                className="relative border-t border-ink-line pt-6"
+              >
+                <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  {String(index + 1).padStart(2, "0")}
+                </span>
+                <h3 className="t-h2 mt-3 text-2xl text-ink">{value.title}</h3>
+                <p className="t-body mt-4 text-base text-ink-mute">
+                  {value.body}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      </section>
+
+      <section className="bg-paper">
+        <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-24 sm:px-10 sm:pt-28 sm:pb-28 lg:px-16 lg:pt-32 lg:pb-32">
+          <div className="grid grid-cols-1 gap-8 border-b border-ink-line pb-12 lg:grid-cols-12 lg:gap-12">
+            <div className="lg:col-span-7">
+              <h2 className="t-h2 text-[clamp(2rem,1.2rem+3vw,3.25rem)] text-ink">
+                ¿Listo para cotizar tu proyecto institucional?
+              </h2>
+            </div>
+            <div className="lg:col-span-4 lg:col-start-9">
+              <p className="t-body text-base text-ink-mute">
+                Envíanos tu lista, región y plazos. Te respondemos con
+                ficha técnica y propuesta en 24 h hábiles.
+              </p>
+              <Link
+                href="/contacto"
+                className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
+              >
+                Ir a contacto
+                <span aria-hidden>→</span>
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <ContactCTA settings={settings} />
+    </>
+  );
+}

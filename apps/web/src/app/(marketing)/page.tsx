@@ -3,11 +3,9 @@ import { AboutSection } from "@/components/AboutSection";
 import { CategoryGrid } from "@/components/CategoryGrid";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { ContactCTA } from "@/components/ContactCTA";
-import { Footer } from "@/components/Footer";
 import {
   getSiteSettings,
   getCategories,
-  getFeaturedProducts,
   getProducts,
   type Category,
   type Product,
@@ -17,8 +15,9 @@ export const revalidate = 60;
 export const dynamic = "force-dynamic";
 
 export default async function MarketingPage() {
-  // site-settings is the only hard dependency — if it fails, the error
-  // boundary takes over. Everything below is gracefully skipped.
+  // site-settings is already fetched by the root layout and passed via
+  // children rendering, but we still need it here for the hero/footer
+  // content. The cache (revalidate: 60) keeps the cost low.
   const settings = await getSiteSettings();
 
   let categories: Category[] = [];
@@ -44,7 +43,7 @@ export default async function MarketingPage() {
   }
 
   return (
-    <main className="bg-paper text-ink">
+    <>
       <Hero settings={settings} />
       <CategoryGrid categories={categories} />
       <AboutSection
@@ -58,7 +57,6 @@ export default async function MarketingPage() {
         whatsappNumber={settings.whatsappNumber}
       />
       <ContactCTA settings={settings} />
-      <Footer settings={settings} />
-    </main>
+    </>
   );
 }

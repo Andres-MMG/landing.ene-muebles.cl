@@ -27,4 +27,63 @@ export const site = {
   footerContact: "Contacto",
   footerLegal: "Legal",
   footerCopy: "Proveedor de mobiliario escolar y de oficina en Chile. Despacho a todo el país.",
+
+  nav: [
+    { label: "Inicio", href: "/" },
+    { label: "Catálogo", href: "/catalogo" },
+    { label: "Nosotros", href: "/nosotros" },
+    { label: "Contacto", href: "/contacto" },
+  ],
+
+  aboutOverlineSec: "Sobre nosotros",
+  aboutHeadingSec: "Un proveedor que entrega lo que promete.",
+  aboutIntro:
+    "Ene Muebles fabrica y distribuye mobiliario escolar y de oficina bajo estándares de pliego público. Cada pieza se entrega con ficha técnica, declaración de materiales y plazo de despacho por escrito.",
+  missionHeading: "Misión",
+  missionBody:
+    "Suministrar mobiliario escolar y de oficina que cumple con los estándares de pliego público, con despacho a todo Chile y respaldo escrito por cada operación.",
+  visionHeading: "Visión",
+  visionBody:
+    "Ser el proveedor de referencia de mobiliario institucional en Chile, reconocido por cumplimiento, continuidad de servicio y calidad declarada.",
+  values: [
+    {
+      title: "Cumplimiento",
+      body:
+        "Cada despacho se ejecuta en el plazo pactado por escrito. Garantía escrita sobre cada producto.",
+    },
+    {
+      title: "Materialidad",
+      body:
+        "Melamina 18 mm, cantos PVC termosellados, estructura metálica reforzada. Especificaciones declaradas.",
+    },
+    {
+      title: "Cobertura",
+      body:
+        "Despacho a las 16 regiones. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
+    },
+    {
+      title: "Atención",
+      body:
+        "Cotización en 24 h hábiles. Asignación de un ejecutivo por cuenta para licitaciones y proyectos.",
+    },
+  ],
+
+  contactHeadingPage: "Hablemos de tu proyecto.",
+  contactBodyPage:
+    "Ponte en contacto con nosotros. Cotizamos tu pedido en 24 horas hábiles, con ficha técnica, declaración de materiales y plazo de despacho por escrito.",
+  contactoFieldName: "Nombre",
+  contactoFieldCompany: "Institución o empresa",
+  contactoFieldEmail: "Correo",
+  contactoFieldPhone: "Teléfono",
+  contactoFieldRegion: "Región",
+  contactoFieldMessage: "Cuéntanos qué necesitas",
+  contactoSubmit: "Enviar mensaje",
+  contactoNote:
+    "También puedes escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +56 2 2898 4421.",
+
+  legalUpdated: "Última actualización: enero 2026.",
+  termsIntro:
+    "Estos términos y condiciones regulan el uso del sitio web de Ene Muebles y la relación comercial con sus clientes institucionales. Al utilizar este sitio o solicitar una cotización, el usuario acepta las condiciones aquí descritas.",
+  privacyIntro:
+    "Esta política describe cómo Ene Muebles trata los datos personales que recibe a través de su sitio web, canales de contacto y procesos comerciales, conforme a la Ley 19.628 sobre Protección de Datos Personales de Chile.",
 } as const;

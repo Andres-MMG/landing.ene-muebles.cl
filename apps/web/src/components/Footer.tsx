@@ -1,3 +1,4 @@
+import Link from "next/link";
 import type { SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
@@ -22,10 +23,17 @@ const socialHref = (network: string, value: string): string => {
   }
 };
 
+const navItems: { label: string; href: string }[] = [
+  { label: "Inicio", href: "/" },
+  { label: "Catálogo", href: "/catalogo" },
+  { label: "Nosotros", href: "/nosotros" },
+  { label: "Contacto", href: "/contacto" },
+];
+
 /**
  * Footer — institutional data dump.
  *
- * 4-column grid: brand identity, catalog links, contact channel, legal.
+ * 4-column grid: brand identity, navigation, contact channel, legal.
  * Above the grid: a hairline divider with the brand promise stretched
  * across the width. Below: copyright + RUT/horario in mono. No social
  * icons; social handles are listed as text (industrial, not decorative).
@@ -66,29 +74,39 @@ export function Footer({ settings }: FooterProps) {
             {site.footerCatalog}
           </p>
           <ul className="mt-6 space-y-3">
+            {navItems.map((item) => (
+              <li key={item.href}>
+                <Link
+                  href={item.href as never}
+                  className="t-body text-sm text-paper transition-colors hover:text-taupe"
+                >
+                  {item.label}
+                </Link>
+              </li>
+            ))}
             <li>
-              <a
+              <Link
                 href="/catalogo"
                 className="t-body text-sm text-paper transition-colors hover:text-taupe"
               >
                 Ver catálogo
-              </a>
+              </Link>
             </li>
             <li>
-              <a
+              <Link
                 href="/categoria/oficina"
                 className="t-body text-sm text-paper transition-colors hover:text-taupe"
               >
                 Línea oficina
-              </a>
+              </Link>
             </li>
             <li>
-              <a
+              <Link
                 href="/categoria/escolar"
                 className="t-body text-sm text-paper transition-colors hover:text-taupe"
               >
                 Línea escolar
-              </a>
+              </Link>
             </li>
           </ul>
         </div>
@@ -132,6 +150,30 @@ export function Footer({ settings }: FooterProps) {
             {site.footerLegal}
           </p>
           <ul className="mt-6 space-y-3 t-mono text-sm text-paper-mute-on-ink">
+            <li>
+              <Link
+                href="/nosotros"
+                className="transition-colors hover:text-taupe"
+              >
+                Sobre nosotros
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/terminos"
+                className="transition-colors hover:text-taupe"
+              >
+                Términos y condiciones
+              </Link>
+            </li>
+            <li>
+              <Link
+                href="/privacidad"
+                className="transition-colors hover:text-taupe"
+              >
+                Política de privacidad
+              </Link>
+            </li>
             <li>© {year} {settings.siteName}</li>
             <li>Proveedor institucional · Chile</li>
             {settings.businessHours ? (

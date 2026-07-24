@@ -2,8 +2,10 @@
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
     "plugins": [{ "name": "next" }],
+    "preserveSymlinks": true,
+    "baseUrl": ".",
     "paths": {
-      "@ui-tokens/*": ["../../packages/ui-tokens/src/*"]
+      "@/*": ["./src/*"]
     }
   },
   "include": [

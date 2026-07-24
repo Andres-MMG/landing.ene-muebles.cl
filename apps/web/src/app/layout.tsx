@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 import { Hanken_Grotesk, Source_Serif_4 } from "next/font/google";
-import "@ui-tokens/tokens.css";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({

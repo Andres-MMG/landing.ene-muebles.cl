@@ -1,0 +1,170 @@
+# Local Docker Desktop stack
+#
+# Ports 4780-4785 form one consecutive, high-numbered block so this stack is
+# easy to recognize and less likely to collide with common framework defaults.
+# Override any host port with the matching variable in `.env.local` or the shell.
+
+name: landing-local
+
+services:
+  proxy:
+    image: traefik:v3.1
+    # NOTE: The Docker provider is intentionally disabled in the local stack.
+    # On Docker Desktop (Windows + WSL2 backend) the bind-mounted
+    # /var/run/docker.sock can fail the provider handshake with an empty
+    # "Error response from daemon:" — Traefik then enters a retry loop and
+    # `traefik healthcheck` never reports the service healthy. Services
+    # already publish their own host ports (web 4780, cms 4781, db 4782),
+    # so routing through Traefik is not required locally. The proxy is kept
+    # solely for the diagnostic dashboard (4785) and the ping healthcheck.
+    command:
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--api.insecure=true"
+      - "--api.dashboard=true"
+      - "--ping=true"
+      - "--log.level=INFO"
+    ports:
+      # 4783: local HTTP entrypoint (reserved; no provider currently routes here).
+      - "${PROXY_HTTP_PORT:-4783}:80"
+      # 4784: local HTTPS entrypoint (reserved; no provider currently routes here).
+      - "${PROXY_HTTPS_PORT:-4784}:443"
+      # 4785: insecure dashboard for local diagnostics only.
+      - "${PROXY_DASHBOARD_PORT:-4785}:8080"
+    depends_on:
+      web:
+        condition: service_healthy
+    networks:
+      - landing_internal_local
+    # Docker socket mount removed: no provider consumes it anymore. The
+    # letsencrypt volume is kept so the local volume contract mirrors
+    # production (infrastructure/docker-compose.yml) and the dashboard
+    # route can later be hardened without re-inventing the volume layout.
+    volumes:
+      - proxy_letsencrypt_local:/letsencrypt
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    restart: unless-stopped
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: production
+    ports:
+      # 4780: Next.js site, published directly for browser debugging.
+      - "${WEB_PORT:-4780}:3000"
+    depends_on:
+      cms:
+        condition: service_healthy
+    networks:
+      - landing_internal_local
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=landing_internal_local"
+      - "traefik.http.routers.web-local.rule=HostRegexp(`.+`)"
+      - "traefik.http.routers.web-local.entrypoints=web"
+      - "traefik.http.routers.web-local.service=web-local"
+      - "traefik.http.routers.web-local-secure.rule=HostRegexp(`.+`)"
+      - "traefik.http.routers.web-local-secure.entrypoints=websecure"
+      - "traefik.http.routers.web-local-secure.tls=true"
+      - "traefik.http.routers.web-local-secure.service=web-local"
+      - "traefik.http.services.web-local.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    restart: unless-stopped
+
+  cms:
+    build:
+      context: ..
+      dockerfile: apps/cms/Dockerfile
+    env_file:
+      - .env.local
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      PORT: 1337
+      DATABASE_CLIENT: mysql
+      DATABASE_HOST: db
+      DATABASE_PORT: 3306
+      DATABASE_SSL: "false"
+    # Map the shared MYSQL_* values from `.env.local` to Strapi's DATABASE_*
+    # contract inside the container; Compose env_file values are runtime-only.
+    command:
+      - sh
+      - -c
+      - >-
+        export DATABASE_NAME="$${MYSQL_DATABASE}"
+        DATABASE_USERNAME="$${MYSQL_USER}"
+        DATABASE_PASSWORD="$${MYSQL_PASSWORD}";
+        exec pnpm --filter cms start
+    ports:
+      # 4781: Strapi API and admin panel, published for Windows access.
+      - "${CMS_PORT:-4781}:1337"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - landing_internal_local
+    volumes:
+      - cms_uploads_local:/srv/app/apps/cms/public/uploads
+      - cms_tmp_local:/srv/app/apps/cms/.tmp
+    healthcheck:
+      # Strapi v5 does NOT expose `/_health` by default — it must be added via a
+      # custom route. Until that lands, use `/admin` which is served as soon as
+      # the HTTP listener binds (the panel is the first thing Strapi boots).
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:1337/admin"]
+      interval: 15s
+      timeout: 5s
+      retries: 20
+      start_period: 120s
+    restart: unless-stopped
+
+  db:
+    image: mysql:8.0
+    env_file:
+      - .env.local
+    command:
+      - "--default-authentication-plugin=caching_sha2_password"
+      - "--character-set-server=utf8mb4"
+      - "--collation-server=utf8mb4_unicode_ci"
+    ports:
+      # 4782: MySQL, published so Windows database clients can connect.
+      - "${DB_PORT:-4782}:3306"
+    networks:
+      - landing_internal_local
+    volumes:
+      - db_data_local:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -u root --password=\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    restart: unless-stopped
+
+networks:
+  landing_internal_local:
+    driver: bridge
+    name: landing_internal_local
+
+volumes:
+  proxy_letsencrypt_local:
+    name: proxy_letsencrypt_local
+  cms_uploads_local:
+    name: cms_uploads_local
+  cms_tmp_local:
+    name: cms_tmp_local
+  db_data_local:
+    name: db_data_local

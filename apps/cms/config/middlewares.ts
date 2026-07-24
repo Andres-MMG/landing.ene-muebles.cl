@@ -10,7 +10,10 @@ export default [
           'connect-src': ["'self'", 'https:'],
           'img-src': ["'self'", 'data:', 'blob:', 'http://localhost:*', 'https:'],
           'media-src': ["'self'", 'data:', 'blob:'],
-          upgradeInsecureRequests: false,
+          // `null` omits the `upgrade-insecure-requests` directive entirely.
+          // A boolean `false` would be coerced to the literal string "false",
+          // which helmet rejects as an invalid CSP directive value.
+          upgradeInsecureRequests: null,
         },
       },
     },
@@ -18,10 +21,10 @@ export default [
   {
     name: 'strapi::cors',
     config: {
-      enabled: true,
       origin: [
         'https://landing.ene-muebles.cl',
         'http://localhost:3000',
+        'http://localhost:4780',
       ],
       methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
       headers: ['Content-Type', 'Authorization', 'Origin', 'Accept'],

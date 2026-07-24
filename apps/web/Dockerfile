@@ -11,6 +11,7 @@ ARG PNPM_VERSION=9.15.9
 
 # ---- base ----
 FROM ${NODE_IMAGE} AS base
+ARG PNPM_VERSION
 ENV PNPM_HOME=/pnpm PATH=/pnpm:$PATH
 RUN corepack enable && corepack prepare pnpm@${PNPM_VERSION} --activate
 WORKDIR /repo
@@ -18,10 +19,10 @@ WORKDIR /repo
 # ---- deps ----
 FROM base AS deps
 RUN apk add --no-cache python3 make g++ libc6-compat
-COPY pnpm-workspace.yaml package.json ./
+COPY pnpm-workspace.yaml package.json pnpm-lock.yaml tsconfig.base.json ./
 COPY packages/ui-tokens/package.json packages/ui-tokens/
 COPY apps/web/package.json apps/web/
-RUN pnpm install --filter web... --no-frozen-lockfile
+RUN pnpm install --filter web... --frozen-lockfile
 
 # ---- build ----
 FROM deps AS build

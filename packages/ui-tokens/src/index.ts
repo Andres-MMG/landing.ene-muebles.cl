@@ -1,1 +1,1 @@
-export { heroHeadline, heroSubheadline } from "./copy/es-CL";
+export { site } from "./site";

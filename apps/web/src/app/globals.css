@@ -1,5 +1,9 @@
 @import "tailwindcss";
-@import "@ui-tokens/index.css";
+@import "@ene/ui-tokens/index.css";
+
+/* --------------------------------------------------------------------------
+ * Base + reset
+ * -------------------------------------------------------------------------- */
 
 @layer base {
   *,
@@ -9,14 +13,180 @@
   }
 
   html {
-    background: var(--color-paper);
+    background: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
   }
 
   body {
-    min-height: 100vh;
     margin: 0;
-    background: var(--color-paper);
+    min-height: 100vh;
+    background: var(--color-canvas);
     color: var(--color-ink);
     font-family: var(--font-body);
+    font-size: 1rem;
+    line-height: var(--leading-body);
+    font-feature-settings: "ss01", "cv11";
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    margin: 0;
+    font-weight: 600;
+    color: var(--color-ink);
+  }
+
+  p, ul, ol, figure {
+    margin: 0;
+  }
+
+  ul, ol {
+    padding: 0;
+    list-style: none;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+
+  img, svg, video {
+    max-width: 100%;
+    display: block;
+  }
+
+  button {
+    font: inherit;
+    color: inherit;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+  }
+
+  ::selection {
+    background: var(--color-ink);
+    color: var(--color-canvas);
+  }
+}
+
+/* Focus visible — keyboard only. */
+:focus-visible {
+  outline: 2px solid var(--color-ink);
+  outline-offset: 3px;
+}
+
+/* --------------------------------------------------------------------------
+ * Typography utilities
+ * -------------------------------------------------------------------------- */
+
+@layer utilities {
+  .t-display {
+    font-family: var(--font-display);
+    font-weight: 500;
+    line-height: var(--leading-display);
+    letter-spacing: var(--tracking-display);
+    text-wrap: balance;
+  }
+
+  .t-h2 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    line-height: var(--leading-tight);
+    letter-spacing: var(--tracking-tight);
+    text-wrap: balance;
+  }
+
+  .t-h3 {
+    font-family: var(--font-body);
+    font-weight: 600;
+    line-height: var(--leading-snug);
+    letter-spacing: var(--tracking-tight);
+  }
+
+  .t-body {
+    font-family: var(--font-body);
+    font-weight: 400;
+    line-height: var(--leading-body);
+    text-wrap: pretty;
+  }
+
+  .t-mono {
+    font-family: var(--font-mono);
+    font-variant-numeric: tabular-nums;
+    letter-spacing: 0;
+  }
+
+  .t-label {
+    font-family: var(--font-body);
+    font-weight: 500;
+    font-size: 0.6875rem;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Reveal-on-scroll — CSS scroll-driven, respects reduced-motion.
+ * -------------------------------------------------------------------------- */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(12px);
+  animation: reveal-in 0.9s var(--ease-out-quint) forwards;
+  animation-timeline: view();
+  animation-range: entry 0% cover 30%;
+}
+
+@keyframes reveal-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    animation: none;
+  }
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+ * Image hover — scale only, no shadow.
+ * -------------------------------------------------------------------------- */
+
+.img-zoom {
+  overflow: hidden;
+}
+
+.img-zoom img,
+.img-zoom .img {
+  transition: transform 0.9s var(--ease-out-quint);
+}
+
+.img-zoom:hover img,
+.img-zoom:hover .img,
+.img-zoom:focus-within img,
+.img-zoom:focus-within .img {
+  transform: scale(1.04);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .img-zoom img,
+  .img-zoom .img {
+    transition: none;
+  }
+  .img-zoom:hover img,
+  .img-zoom:focus-within img {
+    transform: none;
   }
 }

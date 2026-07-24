@@ -1,24 +1,64 @@
-import { heroHeadline, heroSubheadline } from "@ui-tokens/copy/es-CL";
+import { Hero } from "@/components/Hero";
+import { AboutSection } from "@/components/AboutSection";
+import { CategoryGrid } from "@/components/CategoryGrid";
+import { FeaturedProducts } from "@/components/FeaturedProducts";
+import { ContactCTA } from "@/components/ContactCTA";
+import { Footer } from "@/components/Footer";
+import {
+  getSiteSettings,
+  getCategories,
+  getFeaturedProducts,
+  getProducts,
+  type Category,
+  type Product,
+} from "@/lib/strapi";
 
-export default function MarketingPage() {
+export const revalidate = 60;
+export const dynamic = "force-dynamic";
+
+export default async function MarketingPage() {
+  // site-settings is the only hard dependency — if it fails, the error
+  // boundary takes over. Everything below is gracefully skipped.
+  const settings = await getSiteSettings();
+
+  let categories: Category[] = [];
+  let featured: Product[] = [];
+  let productCount: number | undefined;
+  let categoryCount: number | undefined;
+  try {
+    const [allCats, allProducts] = await Promise.all([
+      getCategories(),
+      getProducts(),
+    ]);
+    categories = allCats;
+    categoryCount = allCats.length;
+    productCount = allProducts.length;
+    featured = allProducts
+      .filter((p) => p.featured)
+      .slice(0, 6);
+    if (featured.length === 0) {
+      featured = allProducts.slice(0, 6);
+    }
+  } catch (err) {
+    console.warn("[home] catalog fetch failed:", err);
+  }
+
   return (
-    <main className="min-h-screen bg-paper text-ink">
-      <section
-        aria-labelledby="hero-heading"
-        className="mx-auto flex min-h-screen max-w-6xl items-center px-6 py-24 sm:px-10 lg:px-16"
-      >
-        <div className="max-w-3xl">
-          <h1
-            id="hero-heading"
-            className="text-balance font-display text-[clamp(2.25rem,1.5rem+3vw,4.5rem)] font-medium leading-[1.02] tracking-[-0.03em]"
-          >
-            {heroHeadline}
-          </h1>
-          <p className="mt-6 max-w-[65ch] font-body text-lg leading-8 text-ink/80 sm:text-xl">
-            {heroSubheadline}
-          </p>
-        </div>
-      </section>
+    <main className="bg-paper text-ink">
+      <Hero settings={settings} />
+      <CategoryGrid categories={categories} />
+      <AboutSection
+        aboutText={settings.aboutText}
+        siteName={settings.siteName}
+        productCount={productCount}
+        categoryCount={categoryCount}
+      />
+      <FeaturedProducts
+        products={featured}
+        whatsappNumber={settings.whatsappNumber}
+      />
+      <ContactCTA settings={settings} />
+      <Footer settings={settings} />
     </main>
   );
 }

@@ -24,6 +24,7 @@ public/uploads/
 .env*
 !.env.example
 !apps/web/.env.local.example
+!infrastructure/.env.local.example
 
 # Tests and reports
 coverage/
@@ -50,6 +51,7 @@ apps/cms/dist/
 apps/cms/node_modules/
 apps/cms/public/uploads/
 !apps/cms/public/uploads/.gitkeep
+apps/cms/scripts/_scrape/
 
 # Local AI-agent tooling and generated registries
 .agents/
@@ -58,6 +60,7 @@ apps/cms/public/uploads/
 
 # Tool caches
 .eslintcache
+*.tsbuildinfo
 .turbo/
 
 # Editors and operating systems

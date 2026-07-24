@@ -118,8 +118,8 @@ services:
     networks:
       - landing_internal_local
     volumes:
-      - cms_uploads_local:/srv/app/apps/cms/public/uploads
-      - cms_tmp_local:/srv/app/apps/cms/.tmp
+      - cms_uploads_local:/repo/apps/cms/public/uploads
+      - cms_tmp_local:/repo/apps/cms/.tmp
     healthcheck:
       # Strapi v5 does NOT expose `/_health` by default — it must be added via a
       # custom route. Until that lands, use `/admin` which is served as soon as

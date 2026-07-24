@@ -17,6 +17,39 @@
       "required": true,
       "minLength": 1,
       "maxLength": 120
+    },
+    "tagline": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "contactEmail": {
+      "type": "email"
+    },
+    "contactPhone": {
+      "type": "string"
+    },
+    "whatsappNumber": {
+      "type": "string"
+    },
+    "address": {
+      "type": "text"
+    },
+    "socialLinks": {
+      "type": "json"
+    },
+    "businessHours": {
+      "type": "text"
+    },
+    "aboutText": {
+      "type": "text"
+    },
+    "heroImage": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
     }
   }
 }

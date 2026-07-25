@@ -210,7 +210,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(
                       `Consulta: ${product.name}`
                     )}`}
-className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
+className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
                 >
                   Enviar correo
                 </a>

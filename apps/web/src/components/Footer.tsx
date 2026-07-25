@@ -78,7 +78,7 @@ export function Footer({ settings }: FooterProps) {
               <li key={item.href}>
                 <Link
                   href={item.href as never}
-                  className="t-body text-sm text-paper transition-colors hover:text-taupe"
+                  className="t-body text-sm text-paper transition-colors hover:text-taupe tap-target"
                 >
                   {item.label}
                 </Link>
@@ -87,7 +87,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/catalogo"
-                className="t-body text-sm text-paper transition-colors hover:text-taupe"
+                className="t-body text-sm text-paper transition-colors hover:text-taupe tap-target"
               >
                 Ver catálogo
               </Link>
@@ -95,7 +95,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/categoria/oficina"
-                className="t-body text-sm text-paper transition-colors hover:text-taupe"
+                className="t-body text-sm text-paper transition-colors hover:text-taupe tap-target"
               >
                 Línea oficina
               </Link>
@@ -103,7 +103,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/categoria/escolar"
-                className="t-body text-sm text-paper transition-colors hover:text-taupe"
+                className="t-body text-sm text-paper transition-colors hover:text-taupe tap-target"
               >
                 Línea escolar
               </Link>
@@ -120,7 +120,7 @@ export function Footer({ settings }: FooterProps) {
               <li>
                 <a
                   href={`mailto:${settings.contactEmail}`}
-                  className="transition-colors hover:text-taupe"
+                  className="transition-colors hover:text-taupe tap-target"
                 >
                   {settings.contactEmail}
                 </a>
@@ -130,7 +130,7 @@ export function Footer({ settings }: FooterProps) {
               <li>
                 <a
                   href={`tel:${settings.contactPhone.replace(/\s/g, "")}`}
-                  className="transition-colors hover:text-taupe"
+                  className="transition-colors hover:text-taupe tap-target"
                 >
                   {settings.contactPhone}
                 </a>
@@ -153,7 +153,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/nosotros"
-                className="transition-colors hover:text-taupe"
+                className="transition-colors hover:text-taupe tap-target"
               >
                 Sobre nosotros
               </Link>
@@ -161,7 +161,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/terminos"
-                className="transition-colors hover:text-taupe"
+                className="transition-colors hover:text-taupe tap-target"
               >
                 Términos y condiciones
               </Link>
@@ -169,7 +169,7 @@ export function Footer({ settings }: FooterProps) {
             <li>
               <Link
                 href="/privacidad"
-                className="transition-colors hover:text-taupe"
+                className="transition-colors hover:text-taupe tap-target"
               >
                 Política de privacidad
               </Link>
@@ -194,7 +194,7 @@ export function Footer({ settings }: FooterProps) {
                         href={socialHref(network, handle)}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="transition-colors hover:text-taupe"
+                        className="transition-colors hover:text-taupe tap-target"
                       >
                         {network} · {handle}
                       </a>

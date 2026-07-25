@@ -169,7 +169,7 @@ export default async function NosotrosPage() {
               </p>
               <Link
                 href="/contacto"
-                className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
+                className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
               >
                 Ir a contacto
                 <span aria-hidden>→</span>

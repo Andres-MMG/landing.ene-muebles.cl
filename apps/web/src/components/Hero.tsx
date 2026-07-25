@@ -64,7 +64,7 @@ export function Hero({ settings }: HeroProps) {
             </Link>
             <Link
               href="#contacto"
-              className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline"
+              className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
             >
               {site.quoteCta}
             </Link>

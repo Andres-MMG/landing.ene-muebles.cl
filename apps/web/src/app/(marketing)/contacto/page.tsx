@@ -74,7 +74,7 @@ export default async function ContactoPage() {
               {settings.contactEmail ? (
                 <a
                   href={`mailto:${settings.contactEmail}`}
-                  className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
+                  className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
                 >
                   {site.emailLabel} · {settings.contactEmail}
                 </a>

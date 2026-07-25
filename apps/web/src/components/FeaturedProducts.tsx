@@ -55,7 +55,7 @@ export function FeaturedProducts({
             </p>
             <a
               href="/catalogo"
-              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline"
+              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
             >
               {site.catalogAll}
               <span aria-hidden>→</span>

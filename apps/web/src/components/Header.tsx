@@ -54,7 +54,7 @@ export function Header({
       <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-6 px-6 sm:px-10 lg:h-20 lg:px-16">
         <Link
           href="/"
-          className="font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-deep lg:text-xl"
+          className="inline-flex items-center py-2 font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-deep lg:py-0 lg:text-xl"
         >
           {siteName}
         </Link>
@@ -104,7 +104,7 @@ export function Header({
             onClick={() => setMenuOpen(true)}
             aria-label="Abrir menú"
             aria-expanded={menuOpen}
-            className="inline-flex h-10 w-10 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper lg:hidden"
+            className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper lg:hidden"
           >
             <svg
               width="14"

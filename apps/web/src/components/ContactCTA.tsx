@@ -63,7 +63,7 @@ export function ContactCTA({ settings }: ContactCTAProps) {
               {settings.contactEmail ? (
                 <a
                   href={`mailto:${settings.contactEmail}`}
-                  className="t-label inline-flex items-center gap-2 text-paper underline-offset-[6px] transition-colors hover:text-taupe hover:underline"
+                  className="t-label inline-flex items-center gap-2 text-paper underline-offset-[6px] transition-colors hover:text-taupe hover:underline tap-target"
                 >
                   {site.emailLabel} · {settings.contactEmail}
                 </a>
@@ -81,7 +81,7 @@ export function ContactCTA({ settings }: ContactCTAProps) {
                   <dd className="t-mono mt-2 text-lg text-paper">
                     <a
                       href={`tel:${settings.contactPhone.replace(/\s/g, "")}`}
-                      className="transition-colors hover:text-taupe"
+                      className="transition-colors hover:text-taupe tap-target"
                     >
                       {settings.contactPhone}
                     </a>

@@ -53,7 +53,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             </p>
             <Link
               href="/catalogo"
-              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline"
+              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
             >
               {site.catalogAll}
               <span aria-hidden>→</span>
@@ -124,7 +124,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft sm:hidden lg:inline">
                     Ir
                   </span>
-                  <span className="inline-flex h-10 w-10 items-center justify-center border border-ink text-base transition-colors duration-500 group-hover:border-taupe-deep group-hover:bg-ink group-hover:text-paper">
+                  <span className="inline-flex h-11 w-11 items-center justify-center border border-ink text-base transition-colors duration-500 group-hover:border-taupe-deep group-hover:bg-ink group-hover:text-paper">
                     →
                   </span>
                 </span>

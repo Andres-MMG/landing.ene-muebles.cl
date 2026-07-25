@@ -74,7 +74,7 @@ export function MobileMenu({
           type="button"
           onClick={onClose}
           aria-label="Cerrar menú"
-          className="inline-flex h-10 w-10 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper"
+          className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper"
         >
           <svg
             width="12"
@@ -100,7 +100,7 @@ export function MobileMenu({
                 <Link
                   href={item.href as never}
                   onClick={onClose}
-                  className={`t-display block text-[clamp(2.5rem,1.5rem+5vw,4rem)] leading-none ${
+                  className={`t-display block min-h-[44px] py-2 text-[clamp(2.5rem,1.5rem+5vw,4rem)] leading-none ${
                     active ? "text-ink" : "text-ink-mute"
                   } transition-colors hover:text-taupe-deep`}
                   aria-current={active ? "page" : undefined}
@@ -130,7 +130,7 @@ export function MobileMenu({
           {contactPhone ? (
             <a
               href={`tel:${contactPhone.replace(/\s/g, "")}`}
-              className="t-mono block text-base text-ink"
+              className="t-mono block min-h-[44px] py-2 text-base text-ink"
             >
               <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
                 Tel
@@ -141,7 +141,7 @@ export function MobileMenu({
           {contactEmail ? (
             <a
               href={`mailto:${contactEmail}`}
-              className="t-mono block text-base text-ink"
+              className="t-mono block min-h-[44px] py-2 text-base text-ink"
             >
               <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
                 Email

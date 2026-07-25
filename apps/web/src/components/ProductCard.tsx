@@ -130,7 +130,7 @@ export function ProductCard({
         <div className="mt-auto flex items-center gap-6 pt-2">
           <Link
             href={`/producto/${product.slug}` as never}
-            className="t-label inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline"
+            className="t-label inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
           >
             Ver detalle
             <span aria-hidden>→</span>
@@ -140,7 +140,7 @@ export function ProductCard({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="t-label ml-auto text-ink-soft transition-colors hover:text-ink"
+              className="t-label ml-auto text-ink-soft transition-colors hover:text-ink tap-target"
             >
               WhatsApp
             </a>

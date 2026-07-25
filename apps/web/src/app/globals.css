@@ -128,6 +128,27 @@
 }
 
 /* --------------------------------------------------------------------------
+ * Touch targets — tap-target utility.
+ *
+ * Apple HIG and WCAG 2.5.5 require 44px minimum tap area on touch
+ * devices. Apply `.tap-target` to inline text links (Ver detalle,
+ * WhatsApp, Enviar correo, Ver catálogo completo, Solicitar
+ * cotización, footer column links, etc.) to guarantee the clickable
+ * area meets the minimum on touch input without changing the visual.
+ * Desktop pointer/keyboard is unaffected.
+ * -------------------------------------------------------------------------- */
+
+@layer utilities {
+  .tap-target {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+}
+
+/* --------------------------------------------------------------------------
  * Reveal-on-scroll — CSS scroll-driven, respects reduced-motion.
  * -------------------------------------------------------------------------- */
 

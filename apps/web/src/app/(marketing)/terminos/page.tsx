@@ -33,7 +33,7 @@ const sections = [
     heading: "4. Cotizaciones y aceptaciones",
     body: [
       "Las cotizaciones son válidas por 30 días corridos desde su emisión, salvo que la propuesta indique algo distinto. La aceptación debe formalizarse por escrito (correo electrónico, carta o documento equivalente) y puede requerir firma del responsable institucional.",
-      "Los precios no incluyen flete, montaje ni servicios adicionales, salvo que la cotización los incluya expresamente.",
+      "Los precios no incluyen flete ni montaje ni servicios adicionales, salvo que la cotización los exprese expresamente.",
     ],
   },
   {
@@ -70,7 +70,7 @@ const sections = [
   {
     heading: "10. Contacto",
     body: [
-      "Para consultas sobre estos términos, escribir a contacto@ene-muebles.cl o al +56 2 2898 4421 en horario hábil.",
+      "Para consultas sobre estos términos, escríbanos a contacto@ene-muebles.cl o llámenos al +56 2 2898 4421 en horario hábil.",
     ],
   },
 ];

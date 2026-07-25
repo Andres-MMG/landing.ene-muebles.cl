@@ -79,7 +79,7 @@ export const site = {
   contactoFieldMessage: "Cuéntanos qué necesitas",
   contactoSubmit: "Enviar mensaje",
   contactoNote:
-    "También puedes escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +56 2 2898 4421.",
+    "También puede escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +56 2 2898 4421.",
 
   legalUpdated: "Última actualización: enero 2026.",
   termsIntro:

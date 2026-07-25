@@ -53,9 +53,9 @@ export default async function CatalogoPage() {
             </div>
             <div className="lg:col-span-4 lg:col-start-9">
               <p className="t-body text-base text-ink-mute">
-                Despacho a todo Chile, descuentos por volumen y
-                financiamiento disponible. Cada producto se entrega con
-                ficha técnica y declaración de materiales.
+                Despacho a todo Chile, descuentos por volumen y pago a
+                30, 60 o 90 días para instituciones. Cada producto se
+                entrega con ficha técnica y declaración de materiales.
               </p>
               <div className="mt-6">
                 <CategoryFilter categories={categories} />

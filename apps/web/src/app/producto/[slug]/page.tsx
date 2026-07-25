@@ -145,7 +145,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   {fmtDim(product.dimensions.height, "cm") ? (
                     <div>
                       <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-                        Alto
+                        Altura
                       </dt>
                       <dd className="mt-2 t-mono text-base text-ink">
                         {fmtDim(product.dimensions.height, "cm")}
@@ -210,10 +210,10 @@ export default async function ProductDetailPage({ params }: Props) {
                     href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(
                       `Consulta: ${product.name}`
                     )}`}
-                    className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
-                  >
-                    Enviar email
-                  </a>
+className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
+                >
+                  Enviar correo
+                </a>
                 ) : null}
               </div>
             </div>

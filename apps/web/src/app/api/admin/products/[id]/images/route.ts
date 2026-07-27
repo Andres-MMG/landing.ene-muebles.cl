@@ -79,8 +79,15 @@ export async function POST(
     );
   }
   const current = (await currentRes.json().catch(() => null)) as {
-    data?: { images?: unknown[] };
+    data?: { id?: number; images?: unknown[] };
   } | null;
+  const productId = current?.data?.id;
+  if (typeof productId !== 'number') {
+    return NextResponse.json(
+      { error: 'El producto no tiene un identificador válido.' },
+      { status: 404 }
+    );
+  }
   const currentCount = Array.isArray(current?.data?.images)
     ? current!.data!.images!.length
     : 0;
@@ -95,7 +102,9 @@ export async function POST(
   const strapiForm = new FormData();
   for (const f of files) strapiForm.append('files', f);
   strapiForm.append('ref', 'api::product.product');
-  strapiForm.append('refId', productDocumentId);
+  // Strapi's upload relation table stores related_id as an INTEGER.
+  // The route receives a documentId, so use the numeric entry id here.
+  strapiForm.append('refId', String(productId));
   strapiForm.append('field', 'images');
 
   const uploadRes = await fetch(`${STRAPI}/api/upload`, {

@@ -55,12 +55,33 @@ export async function POST(
     );
   }
 
+  // The public route uses documentId, but Strapi's upload relation table
+  // stores related_id as an INTEGER. Resolve the numeric entry id before
+  // sending refId to /api/upload.
+  const categoryRes = await fetch(
+    `${STRAPI}/api/categories/${categoryDocumentId}?fields[0]=id`,
+    {
+      headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
+      cache: 'no-store',
+    }
+  );
+  const categoryJson = (await categoryRes.json().catch(() => null)) as {
+    data?: { id?: number };
+  } | null;
+  const categoryId = categoryJson?.data?.id;
+  if (!categoryRes.ok || typeof categoryId !== 'number') {
+    return NextResponse.json(
+      { error: 'No se pudo leer la categoría.' },
+      { status: 404 }
+    );
+  }
+
   // 1. Upload the file to Strapi's Media Library and bind to the
   //    category's single `image` field.
   const uploadForm = new FormData();
   uploadForm.append('files', file);
   uploadForm.append('ref', 'api::category.category');
-  uploadForm.append('refId', categoryDocumentId);
+  uploadForm.append('refId', String(categoryId));
   uploadForm.append('field', 'image');
 
   const uploadRes = await fetch(`${STRAPI}/api/upload`, {

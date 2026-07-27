@@ -54,7 +54,10 @@ export default async function AdminDashboardPage() {
       aria-label="Listado de productos"
       className="mx-auto w-full max-w-[1440px] px-6 py-12 sm:px-10 lg:px-16 lg:py-16"
     >
-      <header className="flex flex-wrap items-end justify-between gap-6 border-b border-ink-line pb-8">
+      <div
+        aria-label="Cabecera del panel"
+        className="flex flex-wrap items-end justify-between gap-6 border-b border-ink-line pb-8"
+      >
         <div>
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
             Catálogo
@@ -72,7 +75,7 @@ export default async function AdminDashboardPage() {
           + Nuevo producto
           <span aria-hidden>→</span>
         </Link>
-      </header>
+      </div>
 
       <ProductList products={products} />
     </div>

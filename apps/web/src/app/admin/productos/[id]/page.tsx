@@ -73,7 +73,10 @@ export default async function EditProductPage({
       aria-label={`Editar producto ${product.name}`}
       className="mx-auto w-full max-w-[1440px] px-6 py-12 sm:px-10 lg:px-16 lg:py-16"
     >
-      <header className="border-b border-paper-line-on-ink pb-8">
+      <div
+        aria-label="Cabecera de edición"
+        className="border-b border-paper-line-on-ink pb-8"
+      >
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe">
@@ -87,7 +90,7 @@ export default async function EditProductPage({
           </div>
           <DeleteProductButton id={product.documentId} />
         </div>
-      </header>
+      </div>
 
       <div className="mt-10 rounded-sm border border-ink-line bg-paper-pure p-6 sm:p-10">
         <ProductForm

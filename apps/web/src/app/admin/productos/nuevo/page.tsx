@@ -31,7 +31,10 @@ export default async function NewProductPage() {
       aria-label="Crear nuevo producto"
       className="mx-auto w-full max-w-[1440px] px-6 py-12 sm:px-10 lg:px-16 lg:py-16"
     >
-      <header className="border-b border-paper-line-on-ink pb-8">
+      <div
+        aria-label="Cabecera de nuevo producto"
+        className="border-b border-paper-line-on-ink pb-8"
+      >
         <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe">
           Nuevo producto
         </p>
@@ -39,7 +42,7 @@ export default async function NewProductPage() {
         <p className="t-mono mt-3 text-sm text-paper-mute-on-ink">
           Quedará como borrador hasta que el owner lo publique.
         </p>
-      </header>
+      </div>
 
       <div className="mt-10 rounded-sm border border-ink-line bg-paper-pure p-6 sm:p-10">
         <ProductForm

@@ -37,11 +37,14 @@ function getSecret(): Uint8Array | null {
 export async function middleware(req: NextRequest) {
   const path = req.nextUrl.pathname;
 
-  // /api/admin/login must always be reachable, even when the user
-  // is not signed in. Same for /api/admin/session (it just reports
-  // null when there's no session). /api/admin/logout is a no-op
-  // without a session so it can also be reached unauthenticated.
+  // /admin/login (the page) must always be reachable, otherwise the
+  // sign-in form itself gets bounced back to /admin/login?from=...
+  // and the browser hits ERR_TOO_MANY_REDIRECTS. The page does its
+  // own session check via getServerSession() and renders the form
+  // when there is none. The corresponding API routes are also
+  // exempt for the same reason.
   if (
+    path === '/admin/login' ||
     path === '/api/admin/login' ||
     path === '/api/admin/session' ||
     path === '/api/admin/logout'

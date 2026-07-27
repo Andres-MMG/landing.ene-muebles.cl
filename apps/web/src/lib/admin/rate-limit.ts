@@ -35,10 +35,17 @@ function bucketFor(ip: string): Bucket {
     buckets.set(ip, fresh);
     return fresh;
   }
+  // If a lock is still active, the bucket stays locked regardless of
+  // window state. The lock is the contract.
   if (b.lockedUntil > now) return b;
+  // Window expired AND no active lock: full reset. Both `count` and
+  // `lockedUntil` must clear together — leaving stale `lockedUntil`
+  // makes the bucket effectively permanently locked because the
+  // window never resets the lock field on its own.
   if (now - b.windowStart > WINDOW_MS) {
     b.count = 0;
     b.windowStart = now;
+    b.lockedUntil = 0;
   }
   return b;
 }

@@ -59,7 +59,9 @@ function Initialize-LocalEnvironment {
         "MYSQL_PASSWORD",
         "MYSQL_ROOT_PASSWORD",
         "STRAPI_API_TOKEN",
-        "REVALIDATE_SECRET"
+        "STRAPI_ADMIN_TOKEN",
+        "REVALIDATE_SECRET",
+        "ADMIN_SESSION_SECRET"
     )
 
     $generatedLines = foreach ($line in [System.IO.File]::ReadAllLines($EnvFile)) {

@@ -43,7 +43,10 @@ services:
     volumes:
       - proxy_letsencrypt_local:/letsencrypt
     healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
+      # The Traefik v3.1 `traefik healthcheck` command can report
+      # "please enable ping" even when the diagnostic dashboard is
+      # reachable in Docker Desktop. Probe the actual HTTP API instead.
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:8080/api/overview"]
       interval: 15s
       timeout: 5s
       retries: 10

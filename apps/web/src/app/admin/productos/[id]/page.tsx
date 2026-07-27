@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
 import { ProductForm } from '../ProductForm';
 import { DeleteProductButton } from './DeleteProductButton';
 
@@ -10,7 +11,7 @@ export const metadata = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
-const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
+const TOKEN = getStrapiAdminToken();
 
 type AdminProduct = {
   id: number;
@@ -25,6 +26,13 @@ type AdminProduct = {
   featured: boolean;
   publishedAt: string | null;
   category?: { documentId: string; name: string } | null;
+  images?: {
+    id: number;
+    documentId: string;
+    url: string;
+    formats?: { thumbnail?: { url: string } };
+    name: string;
+  }[];
 };
 
 type AdminCategory = { documentId: string; name: string };
@@ -33,7 +41,7 @@ async function getProduct(
   documentId: string
 ): Promise<AdminProduct | null> {
   const res = await fetch(
-    `${STRAPI}/api/products/${documentId}?populate=category&publicationState=preview&locale=es`,
+    `${STRAPI}/api/products/${documentId}?populate[category]=true&populate[images]=true&publicationState=preview&locale=es`,
     { headers: { Authorization: `Bearer ${TOKEN}` }, cache: 'no-store' }
   );
   if (!res.ok) return null;
@@ -96,6 +104,14 @@ export default async function EditProductPage({
         <ProductForm
           mode="edit"
           categories={categories}
+          productDocumentId={product.documentId}
+          images={(product.images ?? []).map((image) => ({
+            id: image.id,
+            documentId: image.documentId,
+            url: image.url,
+            thumbnailUrl: image.formats?.thumbnail?.url ?? image.url,
+            name: image.name,
+          }))}
           initial={{
             documentId: product.documentId,
             name: product.name,

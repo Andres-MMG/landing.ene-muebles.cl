@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
+import { assertAdminAuth } from '@/lib/admin/client';
+import { ImageGallery, type ImageRecord } from './ImageGallery';
 
 type Category = { documentId: string; name: string };
 type Initial = {
@@ -28,10 +30,14 @@ export function ProductForm({
   initial,
   categories,
   mode,
+  images,
+  productDocumentId,
 }: {
   initial: Initial;
   categories: Category[];
   mode: 'create' | 'edit';
+  images: ImageRecord[];
+  productDocumentId: string | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState<Initial>(initial);
@@ -73,16 +79,30 @@ export function ProductForm({
           ? '/api/admin/products'
           : `/api/admin/products/${initial.documentId}`;
       const method = mode === 'create' ? 'POST' : 'PUT';
-      const res = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+      const res = assertAdminAuth(
+        await fetch(url, {
+          method,
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body),
+        })
+      );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
         setError(
           (data as { error?: string }).error ?? 'No se pudo guardar el producto.'
         );
+        return;
+      }
+      if (mode === 'create') {
+        const data = (await res.json().catch(() => null)) as {
+          data?: { documentId?: string };
+        } | null;
+        const documentId = data?.data?.documentId;
+        if (!documentId) {
+          setError('El producto se creó, pero no se pudo abrir el editor.');
+          return;
+        }
+        router.push(`/admin/productos/${documentId}` as never);
         return;
       }
       router.push('/admin' as never);
@@ -235,6 +255,17 @@ export function ProductForm({
           </label>
         </div>
       </fieldset>
+
+      {productDocumentId ? (
+        <ImageGallery
+          productDocumentId={productDocumentId}
+          initialImages={images}
+        />
+      ) : (
+        <p className="border-l-2 border-ink-line px-4 py-2 text-sm text-ink-mute">
+          Las imágenes se podrán cargar una vez creado el producto.
+        </p>
+      )}
 
       {error ? (
         <p

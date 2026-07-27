@@ -83,19 +83,19 @@ Chain strategy: pending (orchestrator will pause and ask user)
 
 ## Slice B — Image gallery headline (~340 Δ)
 
-- [ ] B.1 Create `ImageGallery` (tiles, uploader, up/down, delete; optimistic snapshot+rollback)
+- [x] B.1 Create `ImageGallery` (tiles, uploader, up/down, delete; optimistic snapshot+rollback)
   - File: `apps/web/src/app/admin/productos/ImageGallery.tsx`
   - Acceptance: `assertAdminAuth` wired on 3 endpoints; rollback on non-2xx; max 8 enforced in UI.
   - Evidence: `grep -n "assertAdminAuth" ImageGallery.tsx` returns 3.
-- [ ] B.2 Embed `<ImageGallery>` into `ProductForm` (edit mode only)
+- [x] B.2 Embed `<ImageGallery>` into `ProductForm` (edit mode only)
   - File: `apps/web/src/app/admin/productos/ProductForm.tsx`
   - Acceptance: gallery renders below Comercial fieldset; image fetches wrapped.
   - Evidence: `grep -n "ImageGallery" ProductForm.tsx` returns ≥ 1.
-- [ ] B.3 Populate images in product edit page
+- [x] B.3 Populate images in product edit page
   - File: `apps/web/src/app/admin/productos/[id]/page.tsx`
   - Acceptance: `populate[images]=true` query string; `initialImages` passed to ProductForm.
   - Evidence: `grep -n "populate\[images\]" page.tsx` returns 1.
-- [ ] B.4 Create-then-redirect in `/admin/productos/nuevo`
+- [x] B.4 Create-then-redirect in `/admin/productos/nuevo`
   - File: `apps/web/src/app/admin/productos/nuevo/page.tsx`
   - Acceptance: on 201, `router.push('/admin/productos/' + documentId)`.
   - Evidence: `grep -n "router.push.*productos" nuevo/page.tsx` returns 1.

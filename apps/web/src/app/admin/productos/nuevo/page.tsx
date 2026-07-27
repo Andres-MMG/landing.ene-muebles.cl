@@ -1,3 +1,4 @@
+import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
 import { ProductForm } from '../ProductForm';
 
 export const dynamic = 'force-dynamic';
@@ -8,7 +9,7 @@ export const metadata = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
-const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
+const TOKEN = getStrapiAdminToken();
 
 async function listCategories(): Promise<{ documentId: string; name: string }[]> {
   const res = await fetch(
@@ -48,6 +49,8 @@ export default async function NewProductPage() {
         <ProductForm
           mode="create"
           categories={categories}
+          productDocumentId={null}
+          images={[]}
           initial={{
             documentId: null,
             name: '',

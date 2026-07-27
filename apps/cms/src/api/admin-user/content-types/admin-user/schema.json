@@ -1,0 +1,45 @@
+{
+  "kind": "collectionType",
+  "collectionName": "ene_admin_users",
+  "info": {
+    "singularName": "admin-user",
+    "pluralName": "admin-users",
+    "displayName": "Admin User",
+    "description": "Ene Muebles admin panel users (client + future staff)."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "email": {
+      "type": "email",
+      "required": true,
+      "unique": true
+    },
+    "name": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "passwordHash": {
+      "type": "string",
+      "required": true
+    },
+    "role": {
+      "type": "enumeration",
+      "enum": ["owner", "client"],
+      "default": "client",
+      "required": true
+    },
+    "active": {
+      "type": "boolean",
+      "required": true,
+      "default": true
+    },
+    "lastLoginAt": {
+      "type": "datetime"
+    }
+  }
+}

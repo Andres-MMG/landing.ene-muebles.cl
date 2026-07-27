@@ -18,7 +18,13 @@ type Product = {
   publishedAt: string | null;
   updatedAt?: string;
   category?: { documentId?: string; name: string; slug: string } | null;
-  cover?: { url: string } | null;
+  images?: {
+    id: number;
+    documentId: string;
+    url: string;
+    formats?: { thumbnail?: { url: string } };
+    name: string;
+  }[];
 };
 
 type CategoryRow = {

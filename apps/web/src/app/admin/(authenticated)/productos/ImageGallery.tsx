@@ -2,6 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { adminDelete, adminPut, adminUpload } from '@/lib/admin/client';
+import { strapiMediaUrl } from '@/lib/strapi-media';
 
 export type ImageRecord = {
   id: number;
@@ -165,16 +166,26 @@ export function ImageGallery({
         </p>
       ) : (
         <ul role="list" className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {images.map((image, index) => (
+          {images.map((image, index) => {
+            const thumbSrc = strapiMediaUrl(image.thumbnailUrl ?? image.url);
+            return (
             <li key={image.id} className="relative border border-ink-line bg-paper-pure p-3">
               <div className="aspect-square overflow-hidden bg-cream-soft">
-                {/* Strapi media URLs are dynamic; use a plain image element intentionally. */}
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img
-                  src={image.thumbnailUrl ?? image.url}
-                  alt={image.name}
-                  className="h-full w-full object-cover"
-                />
+                {thumbSrc ? (
+                  /* Strapi media URLs are dynamic; use a plain image element intentionally. */
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img
+                    src={thumbSrc}
+                    alt={image.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center">
+                    <span className="t-mono text-[9px] uppercase tracking-[0.22em] text-ink-soft">
+                      N/A
+                    </span>
+                  </div>
+                )}
               </div>
               <p title={image.name} className="t-mono mt-3 truncate text-[10px] text-ink-mute">
                 {image.name.length > 24 ? `${image.name.slice(0, 24)}…` : image.name}
@@ -216,7 +227,8 @@ export function ImageGallery({
                 </div>
               ) : null}
             </li>
-          ))}
+            );
+          })}
         </ul>
       )}
 

@@ -1,5 +1,6 @@
 import { notFound } from 'next/navigation';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { strapiMediaUrl } from '@/lib/strapi-media';
 import { ProductForm } from '../ProductForm';
 import { DeleteProductButton } from './DeleteProductButton';
 
@@ -105,13 +106,17 @@ export default async function EditProductPage({
           mode="edit"
           categories={categories}
           productDocumentId={product.documentId}
-          images={(product.images ?? []).map((image) => ({
-            id: image.id,
-            documentId: image.documentId,
-            url: image.url,
-            thumbnailUrl: image.formats?.thumbnail?.url ?? image.url,
-            name: image.name,
-          }))}
+          images={(product.images ?? []).map((image) => {
+            const url = strapiMediaUrl(image.url) ?? '';
+            const thumb = strapiMediaUrl(image.formats?.thumbnail?.url) ?? url;
+            return {
+              id: image.id,
+              documentId: image.documentId,
+              url,
+              thumbnailUrl: thumb,
+              name: image.name,
+            };
+          })}
           initial={{
             documentId: product.documentId,
             name: product.name,

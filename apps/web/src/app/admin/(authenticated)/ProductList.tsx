@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
+import { strapiMediaUrl } from '@/lib/strapi-media';
 
 type Product = {
   id: number;
@@ -14,7 +15,13 @@ type Product = {
   publishedAt: string | null;
   updatedAt?: string;
   category?: { documentId?: string; name: string; slug: string } | null;
-  cover?: { url: string } | null;
+  images?: {
+    id: number;
+    documentId: string;
+    url: string;
+    formats?: { thumbnail?: { url: string } };
+    name: string;
+  }[];
 };
 
 type CategoryOption = {
@@ -28,8 +35,11 @@ type StatusFilter = 'all' | 'live' | 'draft';
 const STRAPI_BASE = (process.env.NEXT_PUBLIC_STRAPI_URL ?? 'http://localhost:4781').replace(/\/+$/, '');
 
 function coverUrl(p: Product): string | null {
-  if (!p.cover?.url) return null;
-  return p.cover.url.startsWith('http') ? p.cover.url : `${STRAPI_BASE}${p.cover.url}`;
+  // Use the first image's thumbnail (smaller download) when available.
+  const first = p.images?.[0];
+  if (!first) return null;
+  const candidate = first.formats?.thumbnail?.url ?? first.url;
+  return strapiMediaUrl(candidate);
 }
 
 const priceLabel = (p: Product) =>

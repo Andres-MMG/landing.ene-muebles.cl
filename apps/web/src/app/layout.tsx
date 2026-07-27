@@ -1,8 +1,5 @@
 import type { ReactNode } from "react";
 import { Hanken_Grotesk, Source_Serif_4 } from "next/font/google";
-import { Header } from "@/components/Header";
-import { Footer } from "@/components/Footer";
-import { getSiteSettings } from "@/lib/strapi";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({
@@ -42,33 +39,22 @@ export const metadata = {
   },
 };
 
-export default async function RootLayout({
+/**
+ * Root layout: minimal shell (html + body + fonts). The marketing pages
+ * render the public Header + Footer via app/(marketing)/layout.tsx, and
+ * the admin pages render their own chrome via app/admin/(authenticated)/
+ * layout.tsx. Both groups intentionally live OUTSIDE this root so they
+ * don't double-render the public chrome.
+ */
+export default function RootLayout({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  // site-settings is best-effort: if the CMS is unreachable the layout
-  // still renders, just with fallback contact data.
-  let settings = null;
-  try {
-    settings = await getSiteSettings();
-  } catch (err) {
-    console.warn("[layout] site-setting fetch failed:", err);
-  }
-
-  const fallbackName = "Ene Muebles";
-
   return (
     <html lang="es-CL">
       <body
         className={`${sourceSerif.variable} ${hankenGrotesk.variable} font-body antialiased`}
       >
-        <Header
-          siteName={settings?.siteName ?? fallbackName}
-          whatsappNumber={settings?.whatsappNumber}
-          contactPhone={settings?.contactPhone}
-          contactEmail={settings?.contactEmail}
-        />
-        <div className="bg-paper text-ink">{children}</div>
-        {settings ? <Footer settings={settings} /> : null}
+        {children}
       </body>
     </html>
   );

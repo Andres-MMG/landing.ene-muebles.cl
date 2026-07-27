@@ -44,6 +44,38 @@ export default async function MarketingPage() {
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify({
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            name: settings.siteName,
+            url: "https://ene-muebles.cl",
+            description:
+              settings.tagline ||
+              "Mobiliario escolar y de oficina para instituciones en Chile.",
+            address: settings.address
+              ? {
+                  "@type": "PostalAddress",
+                  streetAddress: settings.address,
+                  addressCountry: "CL",
+                }
+              : undefined,
+            contactPoint: [
+              {
+                "@type": "ContactPoint",
+                contactType: "sales",
+                email: settings.contactEmail,
+                telephone: settings.contactPhone,
+                areaServed: "CL",
+                availableLanguage: ["es-CL"],
+              },
+            ],
+            sameAs: Object.values(settings.socialLinks ?? {}).filter(Boolean),
+          }),
+        }}
+      />
       <Hero settings={settings} />
       <CategoryGrid categories={categories} />
       <AboutSection

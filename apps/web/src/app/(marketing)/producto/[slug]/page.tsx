@@ -21,9 +21,43 @@ export async function generateMetadata({ params }: Props) {
   const { slug } = await params;
   const product = await getProductBySlug(slug);
   if (!product) return { title: "Producto" };
+
+  const SITE_URL =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
+    "https://ene-muebles.cl";
+  const canonical = `${SITE_URL}/producto/${product.slug}`;
+
+  const coverUrl = product.images?.[0]?.url;
+  const ogImages = coverUrl
+    ? [
+        {
+          url: coverUrl.startsWith("http") ? coverUrl : `${SITE_URL}${coverUrl}`,
+          width: 1200,
+          height: 630,
+          alt: product.images?.[0]?.alternativeText || product.name,
+        },
+      ]
+    : [];
+
   return {
     title: product.name,
     description: product.shortDescription || product.description,
+    alternates: { canonical },
+    openGraph: {
+      title: `${product.name} · Ene Muebles`,
+      description: product.shortDescription || product.description,
+      url: canonical,
+      siteName: "Ene Muebles",
+      locale: "es_CL",
+      type: "website",
+      images: ogImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: product.name,
+      description: product.shortDescription || product.description,
+      images: ogImages.map((i) => i.url),
+    },
   };
 }
 
@@ -55,8 +89,44 @@ export default async function ProductDetailPage({ params }: Props) {
   const cover = product.images?.[0];
   const gallery = product.images?.slice(1, 4) ?? [];
 
+  // JSON-LD structured data. Helps Google display rich snippets
+  // (price, availability, image) directly in search results. Built
+  // once on the server and inlined as a <script> tag.
+  const SITE_URL =
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
+    "https://ene-muebles.cl";
+
+  const productJsonLd = {
+    "@context": "https://schema.org/",
+    "@type": "Product",
+    name: product.name,
+    description: product.shortDescription || product.description,
+    image: product.images?.map((i) =>
+      i.url.startsWith("http") ? i.url : `${SITE_URL}${i.url}`
+    ),
+    category: product.category?.name,
+    brand: { "@type": "Brand", name: "Ene Muebles" },
+    offers: {
+      "@type": "Offer",
+      url: `${SITE_URL}/producto/${product.slug}`,
+      price: product.price,
+      priceCurrency: product.currency,
+      availability: "https://schema.org/InStock",
+      seller: {
+        "@type": "Organization",
+        name: "Ene Muebles",
+      },
+    },
+  };
+
   return (
     <>
+      <script
+        type="application/ld+json"
+        // Safe: the payload is built from a typed object, no untrusted
+        // user input is interpolated.
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+      />
       <article>
         <section aria-labelledby="producto-heading" className="bg-paper">
           <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-12 px-6 pt-16 pb-16 sm:px-10 sm:pt-20 lg:grid-cols-12 lg:gap-16 lg:px-16 lg:pt-24 lg:pb-24">

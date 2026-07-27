@@ -17,11 +17,15 @@ type Product = {
   currency: string;
   publishedAt: string | null;
   updatedAt?: string;
-  category?: { name: string; slug: string } | null;
+  category?: { documentId?: string; name: string; slug: string } | null;
   cover?: { url: string } | null;
 };
 
-type StrapiList = { data: Product[]; meta?: unknown };
+type CategoryRow = {
+  documentId: string;
+  name: string;
+  active: boolean;
+};
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
 const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
@@ -38,16 +42,35 @@ async function listProducts(): Promise<Product[]> {
     headers: { Authorization: `Bearer ${TOKEN}` },
     cache: 'no-store',
   });
-  const json = (await res.json().catch(() => null)) as StrapiList | null;
+  const json = (await res.json().catch(() => null)) as { data: Product[] } | null;
+  return json?.data ?? [];
+}
+
+async function listCategories(): Promise<CategoryRow[]> {
+  const qs = new URLSearchParams();
+  qs.set('pagination[pageSize]', '100');
+  qs.set('fields[0]', 'documentId');
+  qs.set('fields[1]', 'name');
+  qs.set('fields[2]', 'active');
+  qs.set('publicationState', 'preview');
+  qs.set('locale', 'es');
+  const res = await fetch(`${STRAPI}/api/categories?${qs.toString()}`, {
+    headers: { Authorization: `Bearer ${TOKEN}` },
+    cache: 'no-store',
+  });
+  const json = (await res.json().catch(() => null)) as { data: CategoryRow[] } | null;
   return json?.data ?? [];
 }
 
 export default async function AdminDashboardPage() {
   // Auth + user lookup are owned by the shared admin layout.
-  // The page focuses on the product catalogue for the signed-in user.
-  const products = await listProducts();
-  const draftCount = products.filter((p) => !p.publishedAt).length;
-  const liveCount = products.length - draftCount;
+  const [products, categories] = await Promise.all([
+    listProducts(),
+    listCategories(),
+  ]);
+  const liveCount = products.filter((p) => p.publishedAt).length;
+  const draftCount = products.length - liveCount;
+  const activeCategories = categories.filter((c) => c.active).length;
 
   return (
     <div
@@ -63,10 +86,6 @@ export default async function AdminDashboardPage() {
             Catálogo
           </p>
           <h1 className="t-display mt-3 text-4xl text-ink">Productos</h1>
-          <p className="t-mono mt-3 text-sm text-ink-mute">
-            {products.length} productos · {liveCount} publicados ·{' '}
-            {draftCount} en borrador
-          </p>
         </div>
         <Link
           href={'/admin/productos/nuevo' as never}
@@ -77,7 +96,35 @@ export default async function AdminDashboardPage() {
         </Link>
       </div>
 
-      <ProductList products={products} />
+      <dl
+        aria-label="Resumen del catálogo"
+        className="mt-8 grid grid-cols-2 gap-px border border-ink-line bg-ink-line sm:grid-cols-4"
+      >
+        <StatTile label="Total" value={products.length} />
+        <StatTile label="Publicados" value={liveCount} />
+        <StatTile label="Borradores" value={draftCount} />
+        <StatTile label="Categorías" value={activeCategories} />
+      </dl>
+
+      <ProductList
+        products={products}
+        categories={categories.map((c) => ({
+          documentId: c.documentId,
+          name: c.name,
+          active: c.active,
+        }))}
+      />
+    </div>
+  );
+}
+
+function StatTile({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col gap-2 bg-paper-pure px-5 py-6">
+      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+        {label}
+      </dt>
+      <dd className="t-display text-3xl text-ink">{value}</dd>
     </div>
   );
 }

@@ -61,6 +61,44 @@ function buildCrumbs(pathname: string): Crumb[] {
     ];
   }
 
+  // /admin/categorias (index)
+  if (segments.length === 2 && segments[1] === 'categorias') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Categorías', href: '/admin/categorias' },
+    ];
+  }
+
+  // /admin/categorias/nuevo
+  if (
+    segments.length === 3 &&
+    segments[1] === 'categorias' &&
+    segments[2] === 'nuevo'
+  ) {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Categorías', href: '/admin/categorias' },
+      { label: 'Nueva' },
+    ];
+  }
+
+  // /admin/categorias/:id
+  if (segments.length >= 3 && segments[1] === 'categorias') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Categorías', href: '/admin/categorias' },
+      { label: 'Editar' },
+    ];
+  }
+
+  // /admin/ajustes
+  if (segments.length === 2 && segments[1] === 'ajustes') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Ajustes' },
+    ];
+  }
+
   return [];
 }
 

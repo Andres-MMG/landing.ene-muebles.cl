@@ -102,39 +102,39 @@ Chain strategy: pending (orchestrator will pause and ask user)
 
 ## Slice C — Categories + Settings + Dashboard + Session expiry UX (~650 Δ)
 
-- [ ] C.1 List page at `/admin/categorias`
+- [x] C.1 List page at `/admin/categorias`
   - File: `apps/web/src/app/admin/categorias/page.tsx`
   - Acceptance: rows show name, slug, image, active pill, product count.
   - Evidence: `GET /admin/categorias` returns 200; rows visible.
-- [ ] C.2 Create form at `/admin/categorias/nuevo`
+- [x] C.2 Create form at `/admin/categorias/nuevo`
   - File: `apps/web/src/app/admin/categorias/nuevo/page.tsx`
   - Acceptance: posts to `/api/admin/categories`; redirects to `/admin/categorias/[id]`.
   - Evidence: `grep -n "POST.*categories" nuevo/page.tsx` returns 1.
-- [ ] C.3 Edit form at `/admin/categorias/[id]`
+- [x] C.3 Edit form at `/admin/categorias/[id]`
   - File: `apps/web/src/app/admin/categorias/[id]/page.tsx`
   - Acceptance: replaces image via A.7, removes via `Sin imagen` checkbox; PUT updates category.
   - Evidence: `grep -n "DELETE.*media\|Sin imagen" page.tsx` returns ≥ 1.
-- [ ] C.4 Delete confirmation with 409 messaging
+- [x] C.4 Delete confirmation with 409 messaging
   - File: `apps/web/src/app/admin/categorias/[id]/page.tsx`
   - Acceptance: `confirm()` before DELETE; API 409 surfaces Spanish message.
   - Evidence: `grep -n "window.confirm" page.tsx` returns 1.
-- [ ] C.5 Singleton editor at `/admin/ajustes`
+- [x] C.5 Singleton editor at `/admin/ajustes`
   - File: `apps/web/src/app/admin/ajustes/page.tsx`
   - Acceptance: pre-fills from GET; PUTs via `Guardar ajustes`; success banner.
   - Evidence: `grep -n "PUT.*site-setting" page.tsx` returns 1.
-- [ ] C.6 Stats block on dashboard
+- [x] C.6 Stats block on dashboard
   - File: `apps/web/src/app/admin/page.tsx`
   - Acceptance: `Total · Publicados · Borradores · Categorías` rendered; counts active only.
   - Evidence: `grep -n "Publicados\|Borradores" page.tsx` returns ≥ 2.
-- [ ] C.7 Search + filters in `ProductList`
+- [x] C.7 Search + filters in `ProductList`
   - File: `apps/web/src/app/admin/ProductList.tsx`
   - Acceptance: search (≤50), category select, status select (Todos/Publicados/Borradores).
   - Evidence: `grep -n "Buscar\|Categoría\|Estado" ProductList.tsx` returns 3.
-- [ ] C.8 Sidebar + DeleteProductButton wrap + Breadcrumb labels
+- [x] C.8 Sidebar + DeleteProductButton wrap + Breadcrumb labels
   - File: `apps/web/src/app/admin/layout.tsx`, `apps/web/src/app/admin/productos/DeleteProductButton.tsx`, `apps/web/src/app/admin/productos/Breadcrumb.tsx`
   - Acceptance: `Categorías` + `Ajustes` links present; DELETE wrapped; new breadcrumb labels.
   - Evidence: `grep -n "Categorías\|Ajustes" layout.tsx` returns 2.
-- [ ] C.9 Login banner + LoginForm assertion
+- [x] C.9 Login banner + LoginForm assertion
   - File: `apps/web/src/app/admin/login/page.tsx`, `apps/web/src/app/admin/login/LoginForm.tsx`
   - Acceptance: `?expired=1` renders banner with `role="status"`; `assertAdminAuth` on login fetch.
   - Evidence: `grep -n "expired=1\|useSearchParams" login/page.tsx` returns ≥ 1.

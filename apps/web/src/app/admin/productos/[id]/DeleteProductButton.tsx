@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
+import { assertAdminAuth } from '@/lib/admin/client';
+
+type DeleteError = { error?: string };
 
 export function DeleteProductButton({ id }: { id: string }) {
   const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   return (
     <form
@@ -17,16 +21,23 @@ export function DeleteProductButton({ id }: { id: string }) {
           return;
         }
         setPending(true);
-        const res = await fetch(`/api/admin/products/${id}`, {
-          method: 'DELETE',
-        });
+        setError(null);
+        const res = assertAdminAuth(
+          await fetch(`/api/admin/products/${id}`, {
+            method: 'DELETE',
+          })
+        );
         if (res.ok) {
           window.location.href = '/admin';
-        } else {
-          setPending(false);
-          alert('No se pudo eliminar el producto.');
+          return;
         }
+        const data = (await res.json().catch(() => ({}))) as DeleteError;
+        setError(
+          data.error ?? 'No se pudo eliminar el producto.'
+        );
+        setPending(false);
       }}
+      className="flex flex-col items-end gap-2"
     >
       <button
         type="submit"
@@ -35,6 +46,14 @@ export function DeleteProductButton({ id }: { id: string }) {
       >
         {pending ? 'Eliminando…' : 'Eliminar producto'}
       </button>
+      {error ? (
+        <p
+          role="alert"
+          className="border-l-2 border-paper-line-on-ink bg-ink px-3 py-2 text-xs text-paper"
+        >
+          {error}
+        </p>
+      ) : null}
     </form>
   );
 }

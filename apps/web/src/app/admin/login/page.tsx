@@ -7,7 +7,7 @@ export const metadata = {
   robots: { index: false, follow: false },
 };
 
-type SearchParams = Promise<{ from?: string | string[] }>;
+type SearchParams = Promise<{ from?: string | string[]; expired?: string | string[] }>;
 
 export default async function AdminLoginPage({
   searchParams,
@@ -15,11 +15,15 @@ export default async function AdminLoginPage({
   searchParams: SearchParams;
 }) {
   const sp = await searchParams;
-  const raw = sp.from;
-  const from = Array.isArray(raw) ? raw[0] : raw;
+  const rawFrom = sp.from;
+  const from = Array.isArray(rawFrom) ? rawFrom[0] : rawFrom;
   // Defense in depth: only allow internal redirects.
   const safeFrom =
     from && from.startsWith('/admin') && !from.startsWith('//') ? from : null;
+
+  const rawExpired = sp.expired;
+  const expiredValue = Array.isArray(rawExpired) ? rawExpired[0] : rawExpired;
+  const expired = expiredValue === '1';
 
   return (
     <main className="min-h-screen bg-paper text-ink">
@@ -62,7 +66,7 @@ export default async function AdminLoginPage({
               </p>
             </header>
 
-            <LoginForm from={safeFrom ?? ''} />
+            <LoginForm from={safeFrom ?? ''} expired={expired} />
 
             <p className="mt-12 border-t border-ink-line pt-6 text-sm text-ink-mute">
               Si perdiste el acceso, escribinos a{' '}

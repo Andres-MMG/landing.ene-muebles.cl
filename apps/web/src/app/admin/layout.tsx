@@ -7,6 +7,18 @@ import { Breadcrumb } from './productos/Breadcrumb';
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
+type NavItem = {
+  href: string;
+  label: string;
+};
+
+const NAV_ITEMS: NavItem[] = [
+  { href: '/admin', label: 'Productos' },
+  { href: '/admin/productos/nuevo', label: '+ Nuevo producto' },
+  { href: '/admin/categorias', label: 'Categorías' },
+  { href: '/admin/ajustes', label: 'Ajustes' },
+];
+
 /**
  * Shared chrome for every page under `/admin` (except `/admin/login`,
  * which intentionally renders its own focused two-column layout).
@@ -42,6 +54,11 @@ export default async function AdminLayout({
 
   const rolePillClass =
     't-mono inline-block border border-ink-line px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-ink';
+
+  const sidebarLinkClass =
+    't-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60';
+  const mobileLinkClass =
+    't-mono block px-6 py-3 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60';
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -94,22 +111,16 @@ export default async function AdminLayout({
         >
           <nav aria-label="Secciones del panel">
             <ul className="flex flex-col gap-1">
-              <li>
-                <Link
-                  href={'/admin' as never}
-                  className="t-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60"
-                >
-                  Productos
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href={'/admin/productos/nuevo' as never}
-                  className="t-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60"
-                >
-                  + Nuevo producto
-                </Link>
-              </li>
+              {NAV_ITEMS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href as never}
+                    className={sidebarLinkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </nav>
         </aside>
@@ -122,22 +133,16 @@ export default async function AdminLayout({
             className="border-b border-ink-line md:hidden"
           >
             <ul className="flex flex-col">
-              <li>
-                <Link
-                  href={'/admin' as never}
-                  className="t-mono block px-6 py-3 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60"
-                >
-                  Productos
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href={'/admin/productos/nuevo' as never}
-                  className="t-mono block px-6 py-3 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60"
-                >
-                  + Nuevo producto
-                </Link>
-              </li>
+              {NAV_ITEMS.map((item) => (
+                <li key={item.href}>
+                  <Link
+                    href={item.href as never}
+                    className={mobileLinkClass}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              ))}
             </ul>
           </nav>
 

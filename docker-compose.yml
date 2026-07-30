@@ -1,14 +1,19 @@
 # Coolify Compose Stack — root-level deployment entry point
 #
-# Topology: proxy (Traefik v3) -> web (Next.js, port 3000)
-#                                    + cms (Strapi, port 1337)
-#                                    -> db (MySQL, port 3306)
+# Topology: Coolify-managed Traefik -> web (Next.js, port 3000)
+#                                       + cms (Strapi, port 1337)
+#                                       -> db (MySQL, port 3306)
 #
-# The `proxy` service publishes host ports 80/443. All other services are
-# reachable only through the internal `landing_internal` Docker network.
-# Traefik routes public traffic as follows:
-#   web router: Host(ene-muebles.cl) || Host(www.ene-muebles.cl)
-#   cms router: Host(cms.ene-muebles.cl) && (PathPrefix(/api) || PathPrefix(/uploads))
+# Public routing is handled by Coolify's managed Traefik proxy.
+# The `coolify` external network is created by Coolify on the VPS
+# and already has a running Traefik instance that handles SSL,
+# Let's Encrypt, and port publishing.
+#
+# Configure routing in Coolify UI for each service:
+#   web: ene-muebles.cl, www.ene-muebles.cl -> port 3000
+#   cms: cms.ene-muebles.cl -> port 1337
+#
+# No Traefik labels needed — Coolify generates them from the UI config.
 #
 # Why root-level? Coolify's BuildKit resolves `context: .` from the compose
 # file location. With the file at the repo root, `context: .` correctly
@@ -17,36 +22,6 @@
 name: landing
 
 services:
-  proxy:
-    image: traefik:v3.1
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=landing_internal"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL:-admin@landing.ene-muebles.cl}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--log.level=INFO"
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - landing_internal
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - proxy_letsencrypt:/letsencrypt
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
-
   web:
     build:
       context: .
@@ -68,14 +43,7 @@ services:
         condition: service_healthy
     networks:
       - landing_internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=landing_internal"
-      - "traefik.http.routers.web.rule=Host(`${WEB_PUBLIC_HOSTNAME:-ene-muebles.cl}`) || Host(`${WEB_PUBLIC_WWW_HOSTNAME:-www.ene-muebles.cl}`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls=true"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.web.loadbalancer.server.port=3000"
+      - coolify
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -112,17 +80,16 @@ services:
         condition: service_healthy
     networks:
       - landing_internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=landing_internal"
-      - "traefik.http.routers.cms-public.rule=Host(`${CMS_PUBLIC_HOSTNAME:-cms.ene-muebles.cl}`) && (PathPrefix(`/api`) || PathPrefix(`/uploads`))"
-      - "traefik.http.routers.cms-public.entrypoints=websecure"
-      - "traefik.http.routers.cms-public.tls=true"
-      - "traefik.http.routers.cms-public.service=cms-public"
-      - "traefik.http.services.cms-public.loadbalancer.server.port=1337"
+      - coolify
     volumes:
       - cms_uploads:/repo/apps/cms/public/uploads
       - cms_tmp:/repo/apps/cms/.tmp
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:1337/_health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   db:
@@ -160,9 +127,11 @@ networks:
   landing_internal:
     driver: bridge
     name: landing_internal
+  coolify:
+    name: coolify
+    external: true
 
 volumes:
-  proxy_letsencrypt:
   cms_uploads:
   cms_tmp:
   db_data:

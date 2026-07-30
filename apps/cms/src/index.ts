@@ -223,7 +223,6 @@ async function ensureEditorPermissions(
 
 async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Promise<void> {
   const email = 'cliente@ene-muebles.cl';
-  const password = process.env.CLIENT_ADMIN_PASSWORD ?? 'Cliente2026!';
 
   // The user service is the only way to create an admin user that
   // runs the password-hash lifecycle. Direct
@@ -239,6 +238,11 @@ async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Prom
   if (existing) {
     log(`Client user already exists (${email}).`);
     return;
+  }
+
+  const password = process.env.CLIENT_ADMIN_PASSWORD;
+  if (!password) {
+    throw new Error('CLIENT_ADMIN_PASSWORD is required to create the client admin user.');
   }
 
   try {

@@ -1,9 +1,8 @@
 # Coolify Compose Stack
 #
-# Topology: web (public) -> cms (internal) -> db (internal)
-# Only the `proxy` service (Traefik v3) publishes host ports 80/443.
-# Only the `web` service carries Traefik labels that route public traffic
-# to https://landing.ene-muebles.cl via the Let's Encrypt resolver.
+# Topology: Coolify proxy -> web (port 3000) -> cms (internal) -> db (internal)
+# Coolify owns host ports 80/443, TLS certificates, and its Traefik instance.
+# Configure the web service domain in Coolify with container port 3000.
 # `cms` and `db` are reachable only through the internal Docker network.
 #
 # Image SHAs are pinned at deploy time by Coolify; this file is the
@@ -12,36 +11,6 @@
 name: landing
 
 services:
-  proxy:
-    image: traefik:v3.1
-    command:
-      - "--providers.docker=true"
-      - "--providers.docker.exposedbydefault=false"
-      - "--providers.docker.network=landing_internal"
-      - "--entrypoints.web.address=:80"
-      - "--entrypoints.websecure.address=:443"
-      - "--entrypoints.web.http.redirections.entryPoint.to=websecure"
-      - "--entrypoints.web.http.redirections.entryPoint.scheme=https"
-      - "--certificatesresolvers.letsencrypt.acme.tlschallenge=true"
-      - "--certificatesresolvers.letsencrypt.acme.email=${LETSENCRYPT_EMAIL:-admin@landing.ene-muebles.cl}"
-      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
-      - "--log.level=INFO"
-    ports:
-      - "80:80"
-      - "443:443"
-    networks:
-      - landing_internal
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - proxy_letsencrypt:/letsencrypt
-    healthcheck:
-      test: ["CMD", "traefik", "healthcheck"]
-      interval: 30s
-      timeout: 5s
-      retries: 5
-      start_period: 20s
-    restart: unless-stopped
-
   web:
     build:
       context: ..
@@ -49,23 +18,26 @@ services:
     environment:
       NODE_ENV: production
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL}
-      CMS_INTERNAL_URL: ${CMS_INTERNAL_URL}
-      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN}
-      REVALIDATE_SECRET: ${REVALIDATE_SECRET}
+      STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL:?STRAPI_INTERNAL_URL is required}
+      NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:?NEXT_PUBLIC_STRAPI_URL is required}
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:?STRAPI_API_TOKEN is required}
+      STRAPI_ADMIN_TOKEN: ${STRAPI_ADMIN_TOKEN:?STRAPI_ADMIN_TOKEN is required}
+      REVALIDATE_SECRET: ${REVALIDATE_SECRET:?REVALIDATE_SECRET is required}
+      ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:?ADMIN_SESSION_SECRET is required}
       NEXT_PUBLIC_FEATURE_LEAD_FORM: ${NEXT_PUBLIC_FEATURE_LEAD_FORM:-off}
+    expose:
+      - "3000"
     depends_on:
       cms:
         condition: service_healthy
     networks:
       - landing_internal
-    labels:
-      - "traefik.enable=true"
-      - "traefik.docker.network=landing_internal"
-      - "traefik.http.routers.web.rule=Host(`${DOMAIN:-landing.ene-muebles.cl}`)"
-      - "traefik.http.routers.web.entrypoints=websecure"
-      - "traefik.http.routers.web.tls=true"
-      - "traefik.http.routers.web.tls.certresolver=letsencrypt"
-      - "traefik.http.services.web.loadbalancer.server.port=3000"
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   cms:
@@ -88,6 +60,7 @@ services:
       DATABASE_USERNAME: ${MYSQL_USER}
       DATABASE_PASSWORD: ${MYSQL_PASSWORD}
       DATABASE_SSL: "false"
+      CLIENT_ADMIN_PASSWORD: ${CLIENT_ADMIN_PASSWORD:?CLIENT_ADMIN_PASSWORD is required}
     depends_on:
       db:
         condition: service_healthy
@@ -103,7 +76,7 @@ services:
         - "--no-verbose"
         - "--tries=1"
         - "--spider"
-        - "http://localhost:1337/_health"
+        - "http://localhost:1337/admin"
       interval: 30s
       timeout: 5s
       retries: 5
@@ -147,7 +120,6 @@ networks:
     name: landing_internal
 
 volumes:
-  proxy_letsencrypt:
   cms_uploads:
   cms_tmp:
   db_data:

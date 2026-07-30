@@ -3,7 +3,7 @@
 # Next.js 16 production image for the Coolify Compose stack.
 # Image SHAs are pinned at Coolify deploy time.
 # The web service reaches Strapi via the internal Docker DNS at
-# `CMS_INTERNAL_URL` (http://cms:1337). No production URLs are baked
+# `STRAPI_INTERNAL_URL` (http://cms:1337). No production URLs are baked
 # into this image.
 
 ARG NODE_IMAGE=node:20-alpine

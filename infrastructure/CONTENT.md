@@ -33,9 +33,9 @@ There are two roles in the local CMS:
   create unattended; the bootstrap intentionally does not touch it.
 - **Editor (cliente@ene-muebles.cl).** Created by the Strapi
   `bootstrap()` hook in `apps/cms/src/index.ts` on every container
-  start. Password: `Cliente2026!` (override with
-  `CLIENT_ADMIN_PASSWORD` env var). The role is scoped to the Content
-  Manager for `product` and `category` only — no access to
+  start when `CLIENT_ADMIN_PASSWORD` is set. The bootstrap never provides a
+  fallback password. The role is scoped to the Content Manager for `product`
+  and `category` only — no access to
   `site-setting`, Settings, Plugins, Marketplace, or any other admin
   panel.
 
@@ -55,8 +55,9 @@ There are two roles in the local CMS:
 | View other plugins | **no** (no Upload library in the left menu) |
 
 The Editor logs in at `http://localhost:4781/admin` with
-`cliente@ene-muebles.cl` / `Cliente2026!`. The left nav will show only
-**Content Manager → Product** and **Content Manager → Category**.
+`cliente@ene-muebles.cl` and the password from `CLIENT_ADMIN_PASSWORD`.
+The left nav will show only **Content Manager → Product** and
+**Content Manager → Category**.
 
 ### Rotating the client password
 

@@ -13,7 +13,8 @@
     "@ene/ui-tokens": "workspace:*",
     "next": "16.2.9",
     "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "react-dom": "19.2.0",
+    "zod": "3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.18",

@@ -1,39 +1,36 @@
 # Coolify Compose Topology
 
-This directory is the single source of truth for the production stack: a
-Coolify-routed web service, with Strapi v5 and MySQL 8 on a private Docker
-network. Coolify owns the host proxy, TLS certificates, and ports 80/443.
+The production Compose stack lives at the repo root (`docker-compose.yml`)
+because Coolify's BuildKit resolves `context: .` from the compose file location,
+and the root context correctly encompasses the full source tree (apps/, packages/).
+
+`infrastructure/` contains the environment contract (`.env.example`), the local
+development compose file, and supporting documentation. The root compose file is
+the single source of truth for production.
 
 ## Services
 
 | Service | Image | Public exposure | Role |
 | --- | --- | --- | --- |
-| `web` | built from `apps/web/Dockerfile` | Coolify domain → container port `3000` | Next.js 16 App Router |
-| `cms` | built from `apps/cms/Dockerfile` | Coolify public host: `/api` + `/uploads` only | Strapi v5 REST API and media; admin remains internal |
+| `proxy` | `traefik:v3.1` | host ports 80/443 | TLS termination, LetsEncrypt, routing |
+| `web` | built from `apps/web/Dockerfile` | `ene-muebles.cl` + `www.ene-muebles.cl` → port 3000 | Next.js 16 App Router |
+| `cms` | built from `apps/cms/Dockerfile` | `cms.ene-muebles.cl: /api` + `/uploads` only | Strapi v5 REST API and media; admin remains internal |
 | `db` | `mysql:8.0` | **internal only** | Persistent storage |
 
-The Compose stack does not publish host ports or run Traefik. Both `web` and
-`cms` join Coolify's existing external Docker network named `coolify` so the
-managed proxy can reach them; `traefik.docker.network=coolify` makes that proxy
-path explicit when a service also has a private network. Its managed proxy routes
-both `https://${WEB_PUBLIC_HOSTNAME}` and
-`https://${WEB_PUBLIC_WWW_HOSTNAME}` to web on port `3000`, and routes only
-`https://${CMS_PUBLIC_HOSTNAME}/api/**` and
-`https://${CMS_PUBLIC_HOSTNAME}/uploads/**` to the CMS on port `1337`.
-The CMS admin UI and every other CMS path have no public router; operators reach
-them over the private network. `db` has no public route or port mapping.
+The `proxy` service (self-hosted Traefik v3.1) publishes host ports 80/443 and
+handles TLS termination via LetsEncrypt. No external proxy or Coolify-managed
+proxy is needed. All services communicate exclusively through the internal
+`landing_internal` Docker network.
 
 ## Network
 
 ```
-Internet -> Coolify proxy (80/443, TLS)
-              -> coolify (external proxy network) -> web (3000):
-                 WEB_PUBLIC_HOSTNAME
-                 WEB_PUBLIC_WWW_HOSTNAME
-             -> web -> landing_internal -> cms (1337, internal)
-             -> coolify (external proxy network) -> cms (1337):
-                CMS_PUBLIC_HOSTNAME /api + /uploads only
-             -> landing_internal -> db (3306, internal)
+Internet -> proxy (Traefik v3.1, ports 80/443, TLS)
+              -> landing_internal -> web (3000):
+                 Host(ene-muebles.cl) || Host(www.ene-muebles.cl)
+              -> landing_internal -> cms (1337):
+                 Host(cms.ene-muebles.cl) && (PathPrefix(/api) || PathPrefix(/uploads))
+              -> landing_internal -> db (3306, internal only)
 ```
 
 `web` reaches Strapi over Docker DNS via `STRAPI_INTERNAL_URL`
@@ -47,14 +44,16 @@ secret is passed as a build argument or embedded in the image.
 
 | Service | Probe | Gates |
 | --- | --- | --- |
+| `proxy` | `traefik healthcheck` | N/A (proxy health) |
 | `db` | `mysqladmin ping` over TCP | `cms` startup |
-| `cms` | `wget --spider http://localhost:1337/admin` | `web` readiness |
+| `cms` | `wget --spider http://localhost:1337/admin` (built into Dockerfile) | `web` readiness |
 | `web` | `wget --spider http://localhost:3000/api/health` | Container liveness only; it does not probe CMS or MySQL |
 
 ## Volumes
 
 | Volume | Mounted in | Purpose |
 | --- | --- | --- |
+| `proxy_letsencrypt` | `/letsencrypt` in `proxy` | TLS certificate storage |
 | `cms_uploads` | `/repo/apps/cms/public/uploads` in `cms` | Media library persistence |
 | `cms_tmp` | `/repo/apps/cms/.tmp` in `cms` | Strapi runtime cache |
 | `db_data` | `/var/lib/mysql` in `db` | MySQL data files |
@@ -67,10 +66,8 @@ and the volumes are untouched.
 `infrastructure/.env.example` is the source of truth for required deployment
 variables. Copy it to `.env`, generate strong values for application and
 database secrets, and load them via Coolify's Environment UI. Compose uses
-required-variable expansion for secrets needed before startup. The `.env`
-filename is ignored by `.gitignore`. Coolify must have its managed proxy enabled
-so its externally managed Docker network named `coolify` exists; do not create
-that network in the project or publish a CMS host port.
+required-variable expansion (`${VAR:?message}`) for secrets needed before
+startup. The `.env` filename is ignored by `.gitignore`.
 
 Required variables:
 
@@ -78,6 +75,7 @@ Required variables:
   `WEB_PUBLIC_WWW_HOSTNAME`, `CMS_PUBLIC_HOSTNAME`, `CORS_ORIGINS`,
   `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
+- Proxy: `LETSENCRYPT_EMAIL`
 - Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
   `NEXT_PUBLIC_FEATURE_LEAD_FORM`
 - Strapi secrets: `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
@@ -106,11 +104,9 @@ router accepts both hosts and sends them to `web` on port `3000`; neither host
 is a redirect-only DNS alias. Strapi reads the comma-separated `CORS_ORIGINS`
 allowlist, which MUST include both HTTPS web origins and MUST NOT use the
 retired `landing.ene-muebles.cl` hostname as its production origin.
-`cms.ene-muebles.cl` is the CMS hostname and Coolify routes only its `/api` and
+`cms.ene-muebles.cl` is the CMS hostname; Traefik routes only its `/api` and
 `/uploads` paths to `cms` on port `1337`. Configure the corresponding apex,
-`www`, and `cms` DNS records at the DNS provider to the Coolify server IP. Do
-not create application-owned Traefik services or host-port mappings; Coolify
-manages the proxy, TLS, and public ports.
+`www`, and `cms` DNS records at the DNS provider to the Coolify server IP.
 
 ### Strapi-issued tokens
 
@@ -126,15 +122,6 @@ are rejected.
 
 ## Local development
 
-Slice B is a Coolify-only artifact. Local development of the web and
-CMS surfaces runs against each surface's own dev server, not through
-this compose file:
-
-```bash
-pnpm --filter web dev      # http://localhost:3000
-pnpm --filter cms develop  # http://localhost:1337
-```
-
 For the local Docker Desktop stack, copy `.env.local.example` through either
 `scripts/local-up.ps1` or `scripts/local-up.sh`. Those scripts generate only
 cryptographic application/database secrets. After the first CMS bootstrap,
@@ -149,11 +136,11 @@ using other browser origins.
 ## Validation
 
 ```bash
-docker compose -f infrastructure/docker-compose.yml config
+docker compose config
 ```
 
-The command must exit `0`. The rendered output must show exactly three
-services (`web`, `cms`, `db`), no host `ports:` bindings, a `web` build argument
-for `NEXT_PUBLIC_STRAPI_URL`, and one web router that includes both
-`WEB_PUBLIC_HOSTNAME` and `WEB_PUBLIC_WWW_HOSTNAME` to port `3000`. CMS router
-labels must remain limited to `/api` and `/uploads`.
+The command must exit `0`. The rendered output must show exactly four
+services (`proxy`, `web`, `cms`, `db`), no host `ports:` bindings on app
+services, a `web` build argument for `NEXT_PUBLIC_STRAPI_URL`, a web router
+for both apex and www hostnames to port 3000, and a CMS router limited to
+`/api` and `/uploads` on port 1337.

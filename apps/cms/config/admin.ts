@@ -11,14 +11,14 @@ const envBool = (key: string, fallback = false): boolean => {
 
 export default {
   auth: {
-    secret: envStr('ADMIN_JWT_SECRET', 'CHANGE_ME'),
+    secret: envStr('ADMIN_JWT_SECRET'),
   },
   apiToken: {
-    salt: envStr('API_TOKEN_SALT', 'CHANGE_ME'),
+    salt: envStr('API_TOKEN_SALT'),
   },
   transfer: {
     token: {
-      salt: envStr('TRANSFER_TOKEN_SALT', 'CHANGE_ME'),
+      salt: envStr('TRANSFER_TOKEN_SALT'),
     },
   },
   flags: {

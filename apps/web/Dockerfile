@@ -3,8 +3,9 @@
 # Next.js 16 production image for the Coolify Compose stack.
 # Image SHAs are pinned at Coolify deploy time.
 # The web service reaches Strapi via the internal Docker DNS at
-# `STRAPI_INTERNAL_URL` (http://cms:1337). No production URLs are baked
-# into this image.
+# `STRAPI_INTERNAL_URL` (http://cms:1337). The browser-visible
+# `NEXT_PUBLIC_STRAPI_URL` is intentionally supplied as a build argument so
+# Next.js can inline it into client bundles; no server-only values are baked.
 
 ARG NODE_IMAGE=node:20-alpine
 ARG PNPM_VERSION=9.15.9
@@ -26,6 +27,8 @@ RUN pnpm install --filter web... --frozen-lockfile
 
 # ---- build ----
 FROM deps AS build
+ARG NEXT_PUBLIC_STRAPI_URL
+ENV NEXT_PUBLIC_STRAPI_URL=${NEXT_PUBLIC_STRAPI_URL}
 COPY packages/ui-tokens packages/ui-tokens
 COPY apps/web apps/web
 RUN pnpm --filter web build

@@ -1,22 +1,23 @@
 # Coolify Compose Topology
 
-This directory is the single source of truth for the production stack: one
-Coolify-routed web service, with Strapi v5 and MySQL 8 isolated on a private
-Docker network. Coolify owns the host proxy, TLS certificates, and ports 80/443.
+This directory is the single source of truth for the production stack: a
+Coolify-routed web service, with Strapi v5 and MySQL 8 on a private Docker
+network. Coolify owns the host proxy, TLS certificates, and ports 80/443.
 
 ## Services
 
 | Service | Image | Public exposure | Role |
 | --- | --- | --- | --- |
 | `web` | built from `apps/web/Dockerfile` | Coolify domain → container port `3000` | Next.js 16 App Router |
-| `cms` | built from `apps/cms/Dockerfile` | **internal only** | Strapi v5 REST API + admin (operator tunnel) |
+| `cms` | built from `apps/cms/Dockerfile` | Coolify public host: `/api` + `/uploads` only | Strapi v5 REST API and media; admin remains internal |
 | `db` | `mysql:8.0` | **internal only** | Persistent storage |
 
-The Compose stack does not publish host ports or run Traefik. In Coolify,
-assign `https://landing.ene-muebles.cl:3000` to `web`; the `:3000` tells
-Coolify the container port while its managed proxy handles public routing and
-TLS. `cms` and `db` have no public port mapping and are reachable only through
-the `landing_internal` bridge network.
+The Compose stack does not publish host ports or run Traefik. Coolify routes the
+web service to container port `3000`. Its managed proxy also routes only
+`https://${CMS_PUBLIC_HOSTNAME}/api/**` and
+`https://${CMS_PUBLIC_HOSTNAME}/uploads/**` to the CMS on port `1337`.
+The CMS admin UI and every other CMS path have no public router; operators reach
+them over the private network. `db` has no public route or port mapping.
 
 ## Network
 
@@ -25,12 +26,15 @@ Internet -> Coolify proxy (80/443, TLS)
             -> web (3000)
                -> landing_internal -> cms (1337, internal)
                                     -> db  (3306, internal)
+            -> cms (1337): CMS_PUBLIC_HOSTNAME /api + /uploads only
 ```
 
 `web` reaches Strapi over Docker DNS via `STRAPI_INTERNAL_URL`
 (`http://cms:1337`). `NEXT_PUBLIC_STRAPI_URL` is intentionally separate: it
-must be a browser-reachable media origin and must never be set to `cms`.
-No production hostname is baked into the web image.
+MUST be `https://${CMS_PUBLIC_HOSTNAME}` so browsers can fetch media and the
+limited public API. It is passed as a Docker build argument because Next.js
+inlines `NEXT_PUBLIC_*` values into browser bundles. No server-only token or
+secret is passed as a build argument or embedded in the image.
 
 ## Health checks
 
@@ -38,7 +42,7 @@ No production hostname is baked into the web image.
 | --- | --- | --- |
 | `db` | `mysqladmin ping` over TCP | `cms` startup |
 | `cms` | `wget --spider http://localhost:1337/admin` | `web` readiness |
-| `web` | `wget --spider http://localhost:3000/api/health` | Coolify readiness |
+| `web` | `wget --spider http://localhost:3000/api/health` | Container liveness only; it does not probe CMS or MySQL |
 
 ## Volumes
 
@@ -53,14 +57,16 @@ and the volumes are untouched.
 
 ## Environment contract
 
-`infrastructure/.env.example` is the source of truth for required
-deployment variables. Copy it to `.env`, replace every `CHANGE_ME`
-placeholder with a real value, and load via Coolify's Environment UI.
-The `.env` filename is ignored by `.gitignore`.
+`infrastructure/.env.example` is the source of truth for required deployment
+variables. Copy it to `.env`, generate strong values for every secret, and load
+them via Coolify's Environment UI. Compose uses required-variable expansion so
+production startup fails before serving traffic when a value is missing. The
+`.env` filename is ignored by `.gitignore`.
 
 Required variables:
 
-- Public origins: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_STRAPI_URL`
+- Public origins: `NEXT_PUBLIC_SITE_URL`, `CMS_PUBLIC_HOSTNAME`,
+  `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
 - Web secrets: `STRAPI_API_TOKEN` (read-only), `STRAPI_ADMIN_TOKEN`
   (least-privileged admin), `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
@@ -93,6 +99,5 @@ docker compose -f infrastructure/docker-compose.yml config
 ```
 
 The command must exit `0`. The rendered output must show exactly three
-services (`web`, `cms`, `db`), no host `ports:` bindings, `web` exposing
-container port `3000`, and persistent `cms_uploads`, `cms_tmp`, and `db_data`
-volumes.
+services (`web`, `cms`, `db`), no host `ports:` bindings, a `web` build argument
+for `NEXT_PUBLIC_STRAPI_URL`, CMS router labels limited to `/api` and `/uploads`,

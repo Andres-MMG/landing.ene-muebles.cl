@@ -20,7 +20,7 @@ Slice A / PR-3a provides the pnpm workspace, the shared UI token package, and th
 - `apps/web/` — Next.js App Router application
 - `apps/cms/` — Strapi v5 placeholder scaffold (`site-setting` singleton only)
 - `packages/ui-tokens/` — shared Tailwind theme tokens and Chilean Spanish copy
-- `infrastructure/` — Coolify Compose stack (`web`, `cms`, `db`, `proxy`)
+- `infrastructure/` — Coolify Compose stack (`web`, `cms`, `db`)
 - `openspec/changes/landing-page-initial/` — authoritative proposal, specifications, design, and tasks
 - `.github/` — contribution templates and pull-request validation workflows
 - `skills-lock.json` — portable source and integrity metadata for project skills
@@ -42,16 +42,16 @@ Use Node.js 20 LTS and pnpm 9.
 
 ## Production Topology
 
-The Coolify Compose stack in `infrastructure/` is the single source of
-truth for the production layout: a Traefik v3 reverse proxy fronting one
-public web service, with Strapi v5 and MySQL 8 isolated on a private
-Docker network. See `infrastructure/README.md` for the full topology,
-health checks, volumes, and environment contract.
+The Coolify Compose stack in `infrastructure/` is the single source of truth
+for the production layout: Coolify's managed proxy fronts the public web
+service and the CMS public `/api` and `/uploads` paths only; Strapi admin and
+MySQL remain on the private Docker network. See `infrastructure/README.md` for
+the full topology, health checks, volumes, and environment contract.
 
-Required deployment variables live in `infrastructure/.env.example`.
-Copy to `.env`, replace every `CHANGE_ME` placeholder with a real value,
-and load via Coolify's Environment UI. The `.env` filename is ignored
-by `.gitignore`; only `.env.example` files are tracked.
+Required deployment variables live in `infrastructure/.env.example`. Copy to
+`.env`, generate real secret values, and load them via Coolify's Environment
+UI. The `.env` filename is ignored by `.gitignore`; only `.env.example` files
+are tracked.
 
 ## OpenSpec Change
 

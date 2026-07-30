@@ -61,7 +61,8 @@ function Initialize-LocalEnvironment {
         "STRAPI_API_TOKEN",
         "STRAPI_ADMIN_TOKEN",
         "REVALIDATE_SECRET",
-        "ADMIN_SESSION_SECRET"
+        "ADMIN_SESSION_SECRET",
+        "CLIENT_ADMIN_PASSWORD"
     )
 
     $generatedLines = foreach ($line in [System.IO.File]::ReadAllLines($EnvFile)) {

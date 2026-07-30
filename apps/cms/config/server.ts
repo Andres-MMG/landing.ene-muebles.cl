@@ -28,7 +28,7 @@ export default {
   port: envInt('PORT', 1337),
   url: envStr('PUBLIC_URL', ''),
   app: {
-    keys: envArray('APP_KEYS', ['CHANGE_ME', 'CHANGE_ME', 'CHANGE_ME', 'CHANGE_ME']),
+    keys: envArray('APP_KEYS'),
   },
   webhooks: {
     populateRelations: envBool('WEBHOOKS_POPULATE_RELATIONS', false),

@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 import path from "node:path";
 
-const STRAPI_URL = process.env.STRAPI_PUBLIC_URL ?? "http://localhost:4781";
+const STRAPI_URL = process.env.NEXT_PUBLIC_STRAPI_URL ?? "http://localhost:4781";
 
 let strapiHostname = "localhost";
 let strapiPort: string | undefined = "4781";
@@ -14,7 +14,7 @@ try {
   }
   if (u.port) strapiPort = u.port;
 } catch {
-  // STRAPI_PUBLIC_URL is not a valid URL — fall back to localhost defaults.
+  // NEXT_PUBLIC_STRAPI_URL is not a valid URL — fall back to localhost defaults.
 }
 
 const nextConfig: NextConfig = {

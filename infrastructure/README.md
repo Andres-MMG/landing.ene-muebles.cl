@@ -73,7 +73,7 @@ that network in the project or publish a CMS host port.
 Required variables:
 
 - Public origins: `NEXT_PUBLIC_SITE_URL`, `WEB_PUBLIC_HOSTNAME`,
-  `CMS_PUBLIC_HOSTNAME`,
+  `CMS_PUBLIC_HOSTNAME`, `CORS_ORIGINS`,
   `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
 - Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
@@ -94,14 +94,18 @@ the Coolify server. For the production domain contract, configure:
 ```dotenv
 WEB_PUBLIC_HOSTNAME=ene-muebles.cl
 CMS_PUBLIC_HOSTNAME=cms.ene-muebles.cl
+CORS_ORIGINS=https://ene-muebles.cl,https://www.ene-muebles.cl
 ```
 
 `ene-muebles.cl` is the apex landing site and Coolify routes it to `web` on port
-`3000`. `cms.ene-muebles.cl` is the CMS hostname and Coolify routes only its
-`/api` and `/uploads` paths to `cms` on port `1337`. Configure the corresponding
-apex and `cms` DNS records at the DNS provider to the Coolify server IP. Do not
-create application-owned Traefik services or host-port mappings; Coolify manages
-the proxy, TLS, and public ports.
+`3000`; configure `www.ene-muebles.cl` to serve the same web origin. Strapi reads
+the comma-separated `CORS_ORIGINS` allowlist, which MUST include both HTTPS web
+origins and MUST NOT use the retired `landing.ene-muebles.cl` hostname as its
+production origin. `cms.ene-muebles.cl` is the CMS hostname and Coolify routes
+only its `/api` and `/uploads` paths to `cms` on port `1337`. Configure the
+corresponding apex, `www`, and `cms` DNS records at the DNS provider to the
+Coolify server IP. Do not create application-owned Traefik services or host-port
+mappings; Coolify manages the proxy, TLS, and public ports.
 
 ### Strapi-issued tokens
 
@@ -133,7 +137,9 @@ create Strapi API tokens in the admin panel and add them to `.env.local` if the
 public role is not sufficient for catalog reads or if protected admin actions
 are needed. The local web image receives `NEXT_PUBLIC_STRAPI_URL` as a build
 argument; leave it unset to derive `http://localhost:${CMS_PORT}` or set a
-custom browser-visible origin explicitly.
+custom browser-visible origin explicitly. Local Strapi CORS defaults to
+`http://localhost:3000` and `http://localhost:4780`; set `CORS_ORIGINS` when
+using other browser origins.
 
 ## Validation
 

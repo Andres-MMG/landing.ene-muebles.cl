@@ -1,7 +1,7 @@
 /**
  * Strapi v5 bootstrap entry.
  *
- * Idempotent on every container start. Three responsibilities, each
+ * Idempotent on every container start. Four responsibilities, each
  * wrapped in its own try/catch so a single failure does not abort the
  * rest of the bootstrap or block the container from coming up healthy.
  *
@@ -12,7 +12,10 @@
  *     `strapi.db.query('plugin::users-permissions.permission')` with
  *     `action: "api::<uid>.<op>"`.
  *
- *  2. Editor admin role: a scoped admin role for the client with
+ *  2. Public singletons: create missing marketing singleton documents as
+ *     published, but never change an existing draft or published document.
+ *
+ *  3. Editor admin role: a scoped admin role for the client with
  *     `read / create / update` (no delete, no publish) on product
  *     and category only. Admin role permissions live in the action
  *     provider; hand-rolling the action name throws
@@ -24,7 +27,7 @@
  *     expand them with the nested field rules, and finally
  *     `roleService.assignPermissions(roleId, expanded)`.
  *
- *  3. Client admin user: `cliente@ene-muebles.cl` with the Editor
+ *  4. Client admin user: `cliente@ene-muebles.cl` with the Editor
  *     role. Must be created via `strapi.service('admin::user').add`
  *     so the password-hash lifecycle runs. Direct
  *     `strapi.db.query('admin::user').create()` BYPASSES the lifecycle
@@ -32,46 +35,96 @@
  *     broke the previous client login.
  */
 
-import type { Core } from '@strapi/strapi';
-import bcrypt from 'bcryptjs';
+import type { Core } from "@strapi/strapi";
+import bcrypt from "bcryptjs";
 
-const PUBLIC_OPERATIONS = ['find', 'findOne'] as const;
+const PUBLIC_OPERATIONS = ["find", "findOne"] as const;
 
 const SCOPED_TYPES = [
-  'api::product.product',
-  'api::category.category',
-  'api::site-setting.site-setting',
+  "api::product.product",
+  "api::category.category",
+  "api::site-setting.site-setting",
   // Batch 2: marketing-section singletons consumed read-only by the
   // public Next.js frontend. They are written by the Next.js admin
   // panel via the full STRAPI_ADMIN_TOKEN, not by the Editor role,
   // so they intentionally stay out of EDITOR_CONTENT_TYPES below.
-  'api::about-section.about-section',
-  'api::hero-section.hero-section',
-  'api::contact-cta-section.contact-cta-section',
-  'api::footer-block.footer-block',
+  "api::about-section.about-section",
+  "api::hero-section.hero-section",
+  "api::contact-cta-section.contact-cta-section",
+  "api::footer-block.footer-block",
   // S2: catalog-import — auto-created by the bulk import endpoint and
   // read by the public catalog to filter products by subcategory.
-  'api::subcategory.subcategory',
+  "api::subcategory.subcategory",
 ] as const;
 
-const EDITOR_CONTENT_TYPES = [
-  'api::product.product',
-  'api::category.category',
-] as const;
+const EDITOR_CONTENT_TYPES = ["api::product.product", "api::category.category"] as const;
 
 // Editor gets read/create/update only — no delete, no publish. Delete
 // and publish stay reserved for the Super Admin. The client can
 // unpublish (active=false) but cannot fully remove entries.
-const EDITOR_ACTIONS = ['read', 'create', 'update'] as const;
+const EDITOR_ACTIONS = ["read", "create", "update"] as const;
+
+// Schema-valid bootstrap value only. Public renderers must never display it.
+export const PENDING_RUT_SENTINEL = "Pending confirmation";
+
+type SingletonSeed = {
+  uid:
+    | "api::site-setting.site-setting"
+    | "api::footer-block.footer-block"
+    | "api::hero-section.hero-section"
+    | "api::about-section.about-section"
+    | "api::contact-cta-section.contact-cta-section";
+  data: Record<string, unknown>;
+};
+
+export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
+  {
+    uid: "api::site-setting.site-setting",
+    data: {
+      siteName: "Ene Muebles",
+      whatsappDefaultMessage: "Hola, quisiera información sobre mobiliario.",
+      rut: PENDING_RUT_SENTINEL,
+    },
+  },
+  {
+    uid: "api::footer-block.footer-block",
+    data: {
+      copyrightText: `© ${new Date().getFullYear()} Ene Muebles`,
+    },
+  },
+  {
+    uid: "api::hero-section.hero-section",
+    data: {
+      eyebrow: "Ene Muebles",
+      title: "Mobiliario para instituciones.",
+      primaryCtaLabel: "Ver catálogo",
+      primaryCtaHref: "/catalogo",
+    },
+  },
+  {
+    uid: "api::about-section.about-section",
+    data: {
+      eyebrow: "Información",
+      title: "Ene Muebles",
+    },
+  },
+  {
+    uid: "api::contact-cta-section.contact-cta-section",
+    data: {
+      title: "Contáctanos",
+      buttonLabel: "Contactar",
+    },
+  },
+] as const;
 
 const log = (...args: unknown[]) => {
   // eslint-disable-next-line no-console
-  console.log('[bootstrap]', ...args);
+  console.log("[bootstrap]", ...args);
 };
 
 const logWarn = (...args: unknown[]) => {
   // eslint-disable-next-line no-console
-  console.warn('[bootstrap]', ...args);
+  console.warn("[bootstrap]", ...args);
 };
 
 const logError = (msg: string, err: unknown) => {
@@ -86,17 +139,17 @@ const actionId = (uid: string, op: string): string => `${uid}.${op}`;
 
 async function ensurePublicRolePermissions(strapi: Core.Strapi): Promise<void> {
   const role = await strapi.db
-    .query('plugin::users-permissions.role')
-    .findOne({ where: { type: 'public' } });
+    .query("plugin::users-permissions.role")
+    .findOne({ where: { type: "public" } });
 
   if (!role) {
-    logWarn('Public role not found; skipping public-role permission seeding.');
+    logWarn("Public role not found; skipping public-role permission seeding.");
     return;
   }
 
   // Snapshot the existing permissions so we don't churn the DB on every boot.
   const current = await strapi.db
-    .query('plugin::users-permissions.permission')
+    .query("plugin::users-permissions.permission")
     .findMany({ where: { role: role.id } });
   const existingActions = new Set((current as Array<{ action: string }>).map((p) => p.action));
 
@@ -116,12 +169,34 @@ async function ensurePublicRolePermissions(strapi: Core.Strapi): Promise<void> {
 
   for (const perm of toCreate) {
     try {
-      await strapi.db
-        .query('plugin::users-permissions.permission')
-        .create({ data: perm });
+      await strapi.db.query("plugin::users-permissions.permission").create({ data: perm });
       log(`Granted public: ${perm.action}`);
     } catch (err) {
       logError(`Failed to grant public ${perm.action}`, err);
+    }
+  }
+}
+
+export async function ensurePublicSingletons(strapi: Core.Strapi): Promise<void> {
+  for (const singleton of PUBLIC_SINGLETON_SEEDS) {
+    try {
+      // `status: 'draft'` includes documents that have a published version,
+      // so an existing draft OR published singleton is left completely untouched.
+      const existing = await strapi.documents(singleton.uid).findFirst({ status: "draft" });
+      if (existing) {
+        log(`Singleton already exists: ${singleton.uid}`);
+        continue;
+      }
+
+      await strapi.documents(singleton.uid).create({
+        data: singleton.data,
+        status: "published",
+      });
+      log(`Created published singleton: ${singleton.uid}`);
+    } catch (err) {
+      // Each singleton is independent: a schema or data error must not stop
+      // the remaining public documents or the rest of the bootstrap.
+      logError(`Failed to seed singleton ${singleton.uid}`, err);
     }
   }
 }
@@ -131,10 +206,12 @@ async function ensureEditorRole(strapi: Core.Strapi): Promise<number | null> {
   // Author. We pick the existing "Editor" role (id 2 in fresh DBs)
   // and refresh its permissions on every boot. We do NOT create a
   // duplicate role if one already exists.
-  const roles = (await strapi.db
-    .query('admin::role')
-    .findMany({})) as Array<{ id: number; name: string; code: string }>;
-  const existing = roles.find((r) => r.name === 'Editor' || r.code === 'editor');
+  const roles = (await strapi.db.query("admin::role").findMany({})) as Array<{
+    id: number;
+    name: string;
+    code: string;
+  }>;
+  const existing = roles.find((r) => r.name === "Editor" || r.code === "editor");
 
   if (existing) {
     log(`Editor role already exists (id=${existing.id}); will refresh permissions.`);
@@ -142,25 +219,22 @@ async function ensureEditorRole(strapi: Core.Strapi): Promise<number | null> {
   }
 
   try {
-    const created = (await strapi.db.query('admin::role').create({
+    const created = (await strapi.db.query("admin::role").create({
       data: {
-        name: 'Editor',
-        code: 'editor',
-        description: 'Catalog content manager for Ene Muebles (client).',
+        name: "Editor",
+        code: "editor",
+        description: "Catalog content manager for Ene Muebles (client).",
       },
     })) as { id: number };
     log(`Editor role created (id=${created.id}).`);
     return created.id;
   } catch (err) {
-    logError('Editor role creation failed', err);
+    logError("Editor role creation failed", err);
     return null;
   }
 }
 
-async function ensureEditorPermissions(
-  strapi: Core.Strapi,
-  roleId: number
-): Promise<void> {
+async function ensureEditorPermissions(strapi: Core.Strapi, roleId: number): Promise<void> {
   // Strapi v5 admin role permissions live in two systems that must
   // be in sync:
   //   - The actionProvider (the catalog of every valid `action` and
@@ -176,7 +250,7 @@ async function ensureEditorPermissions(
   // Hand-rolling the action names will throw
   //   YupValidationError: "X is not an existing permission action"
   // because the actionProvider doesn't accept ad-hoc strings.
-  const permissionService = strapi.service('admin::permission') as {
+  const permissionService = strapi.service("admin::permission") as {
     actionProvider: {
       values: () => Array<{
         actionId: string;
@@ -185,16 +259,16 @@ async function ensureEditorPermissions(
       }>;
     };
   };
-  const contentTypeService = strapi.service('admin::content-type') as {
+  const contentTypeService = strapi.service("admin::content-type") as {
     getPermissionsWithNestedFields: (
       actions: Array<unknown>,
-      options?: { restrictedSubjects?: string[] }
+      options?: { restrictedSubjects?: string[] },
     ) => Array<{ action: string; subject: string | null }>;
   };
-  const roleService = strapi.service('admin::role') as {
+  const roleService = strapi.service("admin::role") as {
     assignPermissions: (
       roleId: number,
-      permissions: Array<{ action: string; subject: string | null }>
+      permissions: Array<{ action: string; subject: string | null }>,
     ) => Promise<unknown>;
   };
 
@@ -208,7 +282,7 @@ async function ensureEditorPermissions(
     // actions. Delete and publish are intentionally excluded so the
     // client cannot remove entries or push unapproved changes live.
     const relevant = allActions.filter((a) => {
-      if (a.section !== 'contentTypes') return false;
+      if (a.section !== "contentTypes") return false;
       if (!Array.isArray(a.subjects)) return false;
       const matchesType = EDITOR_CONTENT_TYPES.some((uid) => a.subjects!.includes(uid));
       if (!matchesType) return false;
@@ -217,31 +291,33 @@ async function ensureEditorPermissions(
     });
 
     const expanded = contentTypeService.getPermissionsWithNestedFields(relevant, {
-      restrictedSubjects: ['plugin::users-permissions.user'],
+      restrictedSubjects: ["plugin::users-permissions.user"],
     });
 
     if (expanded.length === 0) {
-      logWarn('Editor permissions: no matching actions found in actionProvider.');
+      logWarn("Editor permissions: no matching actions found in actionProvider.");
       return;
     }
 
     await roleService.assignPermissions(roleId, expanded);
-    log(`Editor permissions assigned: ${expanded.length} rules across ${EDITOR_CONTENT_TYPES.length} content types.`);
+    log(
+      `Editor permissions assigned: ${expanded.length} rules across ${EDITOR_CONTENT_TYPES.length} content types.`,
+    );
   } catch (err) {
-    logError('Failed to assign Editor role permissions', err);
+    logError("Failed to assign Editor role permissions", err);
   }
 }
 
 async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Promise<void> {
-  const email = 'cliente@ene-muebles.cl';
-  const password = process.env.CLIENT_ADMIN_PASSWORD ?? 'Cliente2026!';
+  const email = "cliente@ene-muebles.cl";
+  const password = process.env.CLIENT_ADMIN_PASSWORD ?? "Cliente2026!";
 
   // The user service is the only way to create an admin user that
   // runs the password-hash lifecycle. Direct
   // `strapi.db.query('admin::user').create()` BYPASSES the lifecycle
   // and stores the password in plaintext, which is the bug the
   // previous bootstrap had.
-  const userService = strapi.service('admin::user') as {
+  const userService = strapi.service("admin::user") as {
     findOneByEmail: (email: string) => Promise<{ id: number } | null>;
     create: (attributes: Record<string, unknown>) => Promise<{ id: number }>;
   };
@@ -255,9 +331,9 @@ async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Prom
   try {
     await userService.create({
       email,
-      firstname: 'Cliente',
-      lastname: 'Ene Muebles',
-      username: 'cliente',
+      firstname: "Cliente",
+      lastname: "Ene Muebles",
+      username: "cliente",
       password,
       blocked: false,
       isActive: true,
@@ -265,7 +341,7 @@ async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Prom
     });
     log(`Client user created (${email}).`);
   } catch (err) {
-    logError('Failed to create client user', err);
+    logError("Failed to create client user", err);
   }
 }
 
@@ -284,8 +360,10 @@ export default {
     try {
       await ensurePublicRolePermissions(strapi);
     } catch (err) {
-      logError('Public-role seeding failed', err);
+      logError("Public-role seeding failed", err);
     }
+
+    await ensurePublicSingletons(strapi);
 
     const editorRoleId = await ensureEditorRole(strapi);
 
@@ -293,16 +371,16 @@ export default {
       try {
         await ensureEditorPermissions(strapi, editorRoleId);
       } catch (err) {
-        logError('Editor permissions failed', err);
+        logError("Editor permissions failed", err);
       }
 
       try {
         await ensureClientUser(strapi, editorRoleId);
       } catch (err) {
-        logError('Client user creation failed', err);
+        logError("Client user creation failed", err);
       }
     } else {
-      logWarn('Skipping Editor permissions and client user: role not found.');
+      logWarn("Skipping Editor permissions and client user: role not found.");
     }
 
     // Frontend admin user (Ene Muebles admin panel via Next.js).
@@ -312,24 +390,24 @@ export default {
     try {
       await ensureAdminUser(strapi);
     } catch (err) {
-      logError('Admin user seeding failed', err);
+      logError("Admin user seeding failed", err);
     }
 
-    log('Bootstrap complete.');
+    log("Bootstrap complete.");
   },
 };
 
 async function ensureAdminUser(strapi: Core.Strapi): Promise<void> {
   // The default password can be overridden via env var. The hash is
   // bcrypt (cost 10) so the plaintext never lands in the DB.
-  const email = 'cliente@ene-muebles.cl';
-  const defaultPassword = 'Cliente2026!';
+  const email = "cliente@ene-muebles.cl";
+  const defaultPassword = "Cliente2026!";
   const password =
     process.env.CLIENT_ADMIN_PASSWORD && process.env.CLIENT_ADMIN_PASSWORD.length >= 8
       ? process.env.CLIENT_ADMIN_PASSWORD
       : defaultPassword;
 
-  const existing = await strapi.db.query('api::admin-user.admin-user').findOne({
+  const existing = await strapi.db.query("api::admin-user.admin-user").findOne({
     where: { email },
   });
   if (existing) {
@@ -340,17 +418,17 @@ async function ensureAdminUser(strapi: Core.Strapi): Promise<void> {
   const passwordHash = await bcrypt.hash(password, 10);
 
   try {
-    await strapi.db.query('api::admin-user.admin-user').create({
+    await strapi.db.query("api::admin-user.admin-user").create({
       data: {
         email,
-        name: 'Cliente',
+        name: "Cliente",
         passwordHash,
-        role: 'client',
+        role: "client",
         active: true,
       },
     });
     log(`Admin user created (${email}) with bcrypt-hashed password.`);
   } catch (err) {
-    logError('Failed to create admin user', err);
+    logError("Failed to create admin user", err);
   }
 }

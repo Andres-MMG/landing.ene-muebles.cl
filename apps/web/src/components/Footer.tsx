@@ -1,5 +1,5 @@
 import Link from "next/link";
-import type { FooterBlock, SiteSetting } from "@/lib/strapi";
+import { getPublicRut, type FooterBlock, type SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type FooterProps = {
@@ -53,6 +53,7 @@ export function Footer({ settings, block }: FooterProps) {
   const defaultCopyright = `© ${year} ${settings.siteName}`;
   const copyrightText = block?.copyrightText ?? defaultCopyright;
   const legalSnippet = block?.legalSnippet ?? "Proveedor institucional · Chile";
+  const rut = getPublicRut(settings.rut);
 
   return (
     <footer className="bg-ink text-paper">
@@ -68,17 +69,17 @@ export function Footer({ settings, block }: FooterProps) {
       {/* 4-column grid. */}
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-12 px-6 pt-12 pb-16 sm:px-10 sm:grid-cols-2 lg:grid-cols-12 lg:gap-10 lg:px-16 lg:pt-16 lg:pb-20">
         <div className="lg:col-span-4">
-          <p className="t-h2 text-3xl text-paper sm:text-4xl">
-            {settings.siteName}
-          </p>
+          <p className="t-h2 text-3xl text-paper sm:text-4xl">{settings.siteName}</p>
           {settings.tagline ? (
             <p className="t-body mt-4 max-w-[36ch] text-base text-paper-mute-on-ink">
               {settings.tagline}
             </p>
           ) : null}
-          <p className="t-mono mt-8 text-[11px] uppercase tracking-[0.22em] text-taupe">
-            {settings.rut?.trim() ? `RUT ${settings.rut.trim()}` : "RUT 76.XXX.XXX-X"}
-          </p>
+          {rut ? (
+            <p className="t-mono mt-8 text-[11px] uppercase tracking-[0.22em] text-taupe">
+              {`RUT ${rut}`}
+            </p>
+          ) : null}
         </div>
 
         <div className="lg:col-span-2">
@@ -148,12 +149,8 @@ export function Footer({ settings, block }: FooterProps) {
                 </a>
               </li>
             ) : null}
-            {settings.whatsappNumber ? (
-              <li>{settings.whatsappNumber}</li>
-            ) : null}
-            {settings.address ? (
-              <li className="text-xs">{settings.address}</li>
-            ) : null}
+            {settings.whatsappNumber ? <li>{settings.whatsappNumber}</li> : null}
+            {settings.address ? <li className="text-xs">{settings.address}</li> : null}
           </ul>
         </div>
 
@@ -163,34 +160,23 @@ export function Footer({ settings, block }: FooterProps) {
           </p>
           <ul className="mt-6 space-y-3 t-mono text-sm text-paper-mute-on-ink">
             <li>
-              <Link
-                href="/nosotros"
-                className="transition-colors hover:text-taupe tap-target"
-              >
+              <Link href="/nosotros" className="transition-colors hover:text-taupe tap-target">
                 Sobre nosotros
               </Link>
             </li>
             <li>
-              <Link
-                href="/terminos"
-                className="transition-colors hover:text-taupe tap-target"
-              >
+              <Link href="/terminos" className="transition-colors hover:text-taupe tap-target">
                 Términos y condiciones
               </Link>
             </li>
             <li>
-              <Link
-                href="/privacidad"
-                className="transition-colors hover:text-taupe tap-target"
-              >
+              <Link href="/privacidad" className="transition-colors hover:text-taupe tap-target">
                 Política de privacidad
               </Link>
             </li>
             <li>{copyrightText || defaultCopyright}</li>
             <li>{legalSnippet}</li>
-            {settings.businessHours ? (
-              <li className="text-xs">{settings.businessHours}</li>
-            ) : null}
+            {settings.businessHours ? <li className="text-xs">{settings.businessHours}</li> : null}
           </ul>
           {Object.keys(socials).length > 0 ? (
             <div className="mt-8">

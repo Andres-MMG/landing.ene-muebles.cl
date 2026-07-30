@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { HeroSection, SiteSetting } from "@/lib/strapi";
+import { getPublicRut, type HeroSection, type SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type HeroProps = {
@@ -35,8 +35,7 @@ type HeroProps = {
  */
 export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps) {
   const eyebrow = section?.eyebrow ?? `${site.brand} · Proveedor institucional`;
-  const headline =
-    section?.title?.trim() || settings.tagline?.trim() || site.promise;
+  const headline = section?.title?.trim() || settings.tagline?.trim() || site.promise;
   const subtitle =
     section?.subtitle ??
     "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.";
@@ -48,18 +47,13 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
   const hasPhoto = Boolean(image?.url);
 
   return (
-    <section
-      aria-labelledby="hero-heading"
-      className="relative isolate bg-paper"
-    >
+    <section aria-labelledby="hero-heading" className="relative isolate bg-paper">
       <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-16 px-6 pt-28 pb-20 sm:px-10 sm:pt-32 sm:pb-24 lg:grid-cols-12 lg:gap-12 lg:px-16 lg:pt-40 lg:pb-28">
         {/* Type block — 7 of 12 cols on desktop. */}
         <div className="lg:col-span-7">
           <div className="flex items-center gap-3">
             <span className="block h-px w-10 bg-ink" aria-hidden />
-            <span className="t-label text-ink">
-              {eyebrow}
-            </span>
+            <span className="t-label text-ink">{eyebrow}</span>
           </div>
 
           <h1
@@ -69,9 +63,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
             {headline}
           </h1>
 
-          <p className="t-body mt-10 max-w-[52ch] text-lg text-ink-mute sm:text-xl">
-            {subtitle}
-          </p>
+          <p className="t-body mt-10 max-w-[52ch] text-lg text-ink-mute sm:text-xl">{subtitle}</p>
 
           <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
             <Link
@@ -142,6 +134,8 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
  * Functions as a brand-spec readout: brand name, contact essence, RUT-lite.
  */
 function SystemCard({ settings }: { settings: SiteSetting }) {
+  const rut = getPublicRut(settings.rut);
+
   return (
     <aside
       className="relative aspect-[4/5] w-full overflow-hidden border border-ink bg-paper-pure"
@@ -154,15 +148,13 @@ function SystemCard({ settings }: { settings: SiteSetting }) {
 
       <div className="flex h-full flex-col justify-between p-7 pt-16">
         <div>
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-            Proveedor
-          </p>
-          <p className="t-h2 mt-2 text-3xl text-ink sm:text-4xl">
-            {settings.siteName}
-          </p>
-          <p className="t-mono mt-3 text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
-            {settings.rut?.trim() ? `RUT ${settings.rut.trim()}` : "RUT 76.XXX.XXX-X"}
-          </p>
+          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">Proveedor</p>
+          <p className="t-h2 mt-2 text-3xl text-ink sm:text-4xl">{settings.siteName}</p>
+          {rut ? (
+            <p className="t-mono mt-3 text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
+              {`RUT ${rut}`}
+            </p>
+          ) : null}
         </div>
 
         <div className="border-y border-ink-line py-5">
@@ -170,17 +162,15 @@ function SystemCard({ settings }: { settings: SiteSetting }) {
             Pliego público
           </p>
           <p className="t-h3 mt-2 text-base text-ink">
-            Muebles certificados bajo normativa vigente. Ficha técnica y
-            declaración de materiales por escrito.
+            Muebles certificados bajo normativa vigente. Ficha técnica y declaración de materiales
+            por escrito.
           </p>
         </div>
 
         <dl className="space-y-3">
           {settings.contactPhone ? (
             <div className="flex items-baseline justify-between gap-3">
-              <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-                Tel
-              </dt>
+              <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">Tel</dt>
               <dd className="t-mono text-sm text-ink">{settings.contactPhone}</dd>
             </div>
           ) : null}

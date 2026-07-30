@@ -20,7 +20,7 @@ const mockFetch = (status: number, body: unknown) => {
     new Response(JSON.stringify(body), {
       status,
       headers: { "Content-Type": "application/json" },
-    })
+    }),
   );
 };
 
@@ -45,23 +45,108 @@ describe("getSiteSettings", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
-  it("throws on 500", async () => {
+  it("returns the minimal fallback on a 404", async () => {
+    mockFetch(404, {
+      data: null,
+      error: { status: 404, name: "NotFoundError", message: "Not Found", details: {} },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).resolves.toEqual({ siteName: "Ene Muebles" });
+  });
+
+  it("rejects a generic JSON 404", async () => {
+    mockFetch(404, { error: { status: 404, name: "NotFoundError" } });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/404/);
+  });
+
+  it("rejects a partial Strapi 404 envelope without error status", async () => {
+    mockFetch(404, { data: null, error: { name: "NotFoundError" } });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/404/);
+  });
+
+  it("rejects an HTML 404", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-      new Response("Server Error", {
-        status: 500,
-        statusText: "Internal Server Error",
-      })
+      new Response("<html>Not Found</html>", { status: 404 }),
     );
 
     const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/404/);
+  });
+
+  it("rejects null data on an HTTP 200 response", async () => {
+    mockFetch(200, { data: null });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed data/);
+  });
+
+  it("rejects authorization failures", async () => {
+    mockFetch(403, { error: { message: "Forbidden" } });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/403/);
+  });
+
+  it("rejects unauthenticated failures", async () => {
+    mockFetch(401, { error: { message: "Unauthorized" } });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/401/);
+  });
+
+  it("rejects server failures", async () => {
+    mockFetch(500, { error: { message: "Internal Server Error" } });
+
+    const { getSiteSettings } = await import("./strapi");
+
     await expect(getSiteSettings()).rejects.toThrow(/500/);
   });
 
-  it("throws if siteName is missing", async () => {
+  it("rejects network failures", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/Network error/);
+  });
+
+  it("rejects malformed non-null data", async () => {
     mockFetch(200, { data: { id: 1 } });
 
     const { getSiteSettings } = await import("./strapi");
-    await expect(getSiteSettings()).rejects.toThrow(/siteName/);
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed data/);
+  });
+
+  it("rejects invalid JSON", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response("not JSON", {
+        status: 200,
+        headers: { "Content-Type": "application/json" },
+      }),
+    );
+
+    const { getSiteSettings } = await import("./strapi");
+    await expect(getSiteSettings()).rejects.toThrow(/Invalid JSON/);
+  });
+
+  it("does not expose the bootstrap RUT sentinel", async () => {
+    const { getPublicRut } = await import("./strapi");
+
+    expect(getPublicRut("Pending confirmation")).toBeUndefined();
+    expect(getPublicRut("  76.123.456-7  ")).toBe("76.123.456-7");
   });
 });
 
@@ -119,8 +204,7 @@ describe("getProducts", () => {
     const { getProducts } = await import("./strapi");
     await getProducts("living");
 
-    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0]?.[0] as string;
+    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
     const decoded = decodeURIComponent(url);
     expect(decoded).toMatch(/filters\[category\]\[slug\]\[\$eq\]=living/);
     expect(decoded).toMatch(/filters\[active\]\[\$eq\]=true/);
@@ -135,9 +219,7 @@ describe("getProducts", () => {
   });
 
   it("throws on network error", async () => {
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error("ECONNREFUSED")
-    );
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const { getProducts } = await import("./strapi");
     await expect(getProducts("test")).rejects.toThrow(/Network error/);
   });
@@ -360,12 +442,9 @@ describe("normalizeProduct — catalog-import fields", () => {
 describe("buildWhatsAppLink", () => {
   it("strips + and encodes the message", async () => {
     const { buildWhatsAppLink } = await import("./strapi");
-    const link = buildWhatsAppLink(
-      "+56912345678",
-      "Hola, me interesa el Sofá Oslo"
-    );
+    const link = buildWhatsAppLink("+56912345678", "Hola, me interesa el Sofá Oslo");
     expect(link).toBe(
-      "https://wa.me/56912345678?text=Hola%2C%20me%20interesa%20el%20Sof%C3%A1%20Oslo"
+      "https://wa.me/56912345678?text=Hola%2C%20me%20interesa%20el%20Sof%C3%A1%20Oslo",
     );
   });
 });

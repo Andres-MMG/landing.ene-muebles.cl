@@ -1,4 +1,4 @@
-import { site as siteTokens } from '@ene/ui-tokens';
+import { site as siteTokens } from "@ene/ui-tokens";
 
 /**
  * Strapi v5 client for the public Next.js frontend.
@@ -9,9 +9,9 @@ import { site as siteTokens } from '@ene/ui-tokens';
  * or Route Handlers inside the Next.js server runtime.
  *
  * ISR (`revalidate: 60`) is used implicitly via `next: { revalidate: 60 }`.
- * Errors are re-thrown so the error boundary can render them.
+ * Singleton helpers return typed fallbacks when the CMS is unavailable.
  */
-const DEFAULT_STRAPI_URL = 'http://localhost:1337';
+const DEFAULT_STRAPI_URL = "http://localhost:1337";
 // Public origin (browser-reachable) used for media URLs. When unset we fall
 // back to NEXT_PUBLIC_STRAPI_URL; if that's also unset we derive a sensible
 // default from STRAPI_INTERNAL_URL by swapping the docker DNS for localhost.
@@ -19,21 +19,18 @@ const PUBLIC_STRAPI_URL_FALLBACK = (() => {
   const internal = process.env.STRAPI_INTERNAL_URL;
   if (!internal) return DEFAULT_STRAPI_URL;
   // e.g. http://cms:1337 -> http://localhost:4781 (local dev maps 4781->1337).
-  if (internal.includes('://cms:') || internal.includes('://strapi:')) {
-    return 'http://localhost:4781';
+  if (internal.includes("://cms:") || internal.includes("://strapi:")) {
+    return "http://localhost:4781";
   }
   return internal;
 })();
 
 export const STRAPI_URL =
-  process.env.STRAPI_INTERNAL_URL ||
-  process.env.NEXT_PUBLIC_STRAPI_URL ||
-  DEFAULT_STRAPI_URL;
+  process.env.STRAPI_INTERNAL_URL || process.env.NEXT_PUBLIC_STRAPI_URL || DEFAULT_STRAPI_URL;
 
-export const STRAPI_PUBLIC_URL =
-  process.env.NEXT_PUBLIC_STRAPI_URL || PUBLIC_STRAPI_URL_FALLBACK;
+export const STRAPI_PUBLIC_URL = process.env.NEXT_PUBLIC_STRAPI_URL || PUBLIC_STRAPI_URL_FALLBACK;
 
-const STRAPI_TOKEN = process.env.STRAPI_API_TOKEN || '';
+const STRAPI_TOKEN = process.env.STRAPI_API_TOKEN || "";
 
 export const REVALIDATE_SECONDS = 60;
 
@@ -56,7 +53,7 @@ export type SocialLinks = {
 };
 
 export type SiteSetting = {
-  id: number;
+  id?: number;
   documentId?: string;
   siteName: string;
   tagline?: string;
@@ -158,7 +155,7 @@ export type Product = {
   featured?: boolean;
   active?: boolean;
   order?: number;
-  category?: Pick<Category, 'id' | 'documentId' | 'name' | 'slug'> | null;
+  category?: Pick<Category, "id" | "documentId" | "name" | "slug"> | null;
   images?: StrapiMedia[];
   /**
    * Catalog-import (S1) — new optional fields sourced from the Excel
@@ -185,14 +182,14 @@ export type Product = {
    * points to the batch record that produced this product.
    */
   importSource?: ProductImportSource;
-  importBatch?: Pick<ImportBatch, 'id' | 'documentId' | 'fileName' | 'uploadedAt'> | null;
+  importBatch?: Pick<ImportBatch, "id" | "documentId" | "fileName" | "uploadedAt"> | null;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string | null;
 };
 
 /** Catalog-import (S2b) — provenance enum for `Product.importSource`. */
-export const PRODUCT_IMPORT_SOURCE_VALUES = ['manual', 'imported'] as const;
+export const PRODUCT_IMPORT_SOURCE_VALUES = ["manual", "imported"] as const;
 export type ProductImportSource = (typeof PRODUCT_IMPORT_SOURCE_VALUES)[number];
 
 /** Catalog-import (S2b) — `ImportBatch` audit-trail record. One row
@@ -207,9 +204,9 @@ export type ImportBatch = {
   createdCount?: number;
   updatedCount?: number;
   failedCount?: number;
-  importSource: 'imported';
+  importSource: "imported";
   importedProductIds?: number[];
-  importedProducts?: Array<Pick<Product, 'id' | 'documentId' | 'name' | 'externalId'>>;
+  importedProducts?: Array<Pick<Product, "id" | "documentId" | "name" | "externalId">>;
 };
 
 /**
@@ -219,22 +216,22 @@ export type ImportBatch = {
  * the design contract in `openspec/changes/catalog-excel-import/design.md`.
  */
 export const PRODUCT_CONFIDENCE_VALUES = [
-  'alta',
-  'media-variante-visual',
-  'media-nombre-generico-pdf',
-  'baja',
-  'revision-manual',
+  "alta",
+  "media-variante-visual",
+  "media-nombre-generico-pdf",
+  "baja",
+  "revision-manual",
 ] as const;
 
 export type ProductConfidence = (typeof PRODUCT_CONFIDENCE_VALUES)[number];
 
 export const PRODUCT_TYPE_VALUES = [
-  'Silla',
-  'Mesa',
-  'Escritorio',
-  'Banca',
-  'Piso',
-  'Cuna',
+  "Silla",
+  "Mesa",
+  "Escritorio",
+  "Banca",
+  "Piso",
+  "Cuna",
 ] as const;
 
 export type ProductType = (typeof PRODUCT_TYPE_VALUES)[number];
@@ -244,27 +241,38 @@ type SingleEnvelope<T> = { data: T; meta?: unknown };
 
 const buildHeaders = (): HeadersInit => {
   const headers: Record<string, string> = {
-    Accept: 'application/json',
+    Accept: "application/json",
   };
   if (STRAPI_TOKEN) headers.Authorization = `Bearer ${STRAPI_TOKEN}`;
   return headers;
 };
 
 const ensureAbsoluteUrl = (url: string): string => {
-  if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  if (url.startsWith('/')) return `${STRAPI_PUBLIC_URL.replace(/\/+$/, '')}${url}`;
-  return `${STRAPI_PUBLIC_URL.replace(/\/+$/, '')}/${url}`;
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  if (url.startsWith("/")) return `${STRAPI_PUBLIC_URL.replace(/\/+$/, "")}${url}`;
+  return `${STRAPI_PUBLIC_URL.replace(/\/+$/, "")}/${url}`;
 };
 
-const requireField = <T,>(value: T | null | undefined, name: string): T => {
+const requireField = <T>(value: T | null | undefined, name: string): T => {
   if (value === null || value === undefined) {
     throw new Error(`[strapi] Missing required field: ${name}`);
   }
   return value;
 };
 
+class StrapiResponseError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+    readonly body: string,
+  ) {
+    super(message);
+    this.name = "StrapiResponseError";
+  }
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${STRAPI_URL.replace(/\/+$/, '')}${path}`;
+  const url = `${STRAPI_URL.replace(/\/+$/, "")}${path}`;
   let res: Response;
   try {
     res = await fetch(url, {
@@ -273,24 +281,22 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
       next: { revalidate: REVALIDATE_SECONDS },
     });
   } catch (err) {
-    throw new Error(
-      `[strapi] Network error contacting ${url}: ${(err as Error).message}`
-    );
+    throw new Error(`[strapi] Network error contacting ${url}: ${(err as Error).message}`);
   }
 
   if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(
-      `[strapi] ${init?.method || 'GET'} ${path} failed: ${res.status} ${res.statusText} ${body}`
+    const body = await res.text().catch(() => "");
+    throw new StrapiResponseError(
+      `[strapi] ${init?.method || "GET"} ${path} failed: ${res.status} ${res.statusText} ${body}`,
+      res.status,
+      body,
     );
   }
 
   try {
     return (await res.json()) as T;
   } catch (err) {
-    throw new Error(
-      `[strapi] Invalid JSON response from ${path}: ${(err as Error).message}`
-    );
+    throw new Error(`[strapi] Invalid JSON response from ${path}: ${(err as Error).message}`);
   }
 }
 
@@ -321,16 +327,97 @@ const normalizeImageList = (images: any): StrapiMedia[] => {
 };
 
 export async function getSiteSettings(): Promise<SiteSetting> {
-  const json = await request<SingleEnvelope<SiteSetting> | SiteSetting>(
-    '/api/site-setting?populate=*'
-  );
-  const raw = (json as { data?: SiteSetting }).data ?? (json as SiteSetting);
-  if (!raw || !raw.siteName) {
-    throw new Error('[strapi] getSiteSettings: response missing siteName');
+  try {
+    const json = await request<SingleEnvelope<unknown> | unknown>("/api/site-setting?populate=*");
+    if (!isRecord(json) || !("data" in json)) {
+      throw new Error("[strapi] getSiteSettings: malformed response envelope");
+    }
+    return normalizeSiteSettings(json.data);
+  } catch (err) {
+    if (err instanceof StrapiResponseError && isMissingSingletonNotFound(err)) {
+      return FALLBACK_SITE_SETTINGS;
+    }
+    throw err;
   }
+}
+
+const FALLBACK_SITE_SETTINGS: SiteSetting = {
+  siteName: "Ene Muebles",
+};
+
+const PENDING_RUT_SENTINEL = "Pending confirmation";
+
+export function getPublicRut(rut: string | null | undefined): string | undefined {
+  const normalized = rut?.trim();
+  return normalized && normalized !== PENDING_RUT_SENTINEL ? normalized : undefined;
+}
+
+function isMissingSingletonNotFound(error: StrapiResponseError): boolean {
+  if (error.status !== 404) return false;
+
+  try {
+    const payload: unknown = JSON.parse(error.body);
+    return (
+      isRecord(payload) &&
+      payload.data === null &&
+      isRecord(payload.error) &&
+      payload.error.name === "NotFoundError" &&
+      payload.error.status === 404
+    );
+  } catch {
+    return false;
+  }
+}
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);
+
+function optionalString(value: unknown, field: string): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value;
+  throw new Error(`[strapi] getSiteSettings: malformed ${field}`);
+}
+
+function normalizeSiteSettings(raw: unknown): SiteSetting {
+  if (!isRecord(raw) || typeof raw.siteName !== "string" || raw.siteName.trim() === "") {
+    throw new Error("[strapi] getSiteSettings: malformed data");
+  }
+
+  if (raw.id !== undefined && typeof raw.id !== "number") {
+    throw new Error("[strapi] getSiteSettings: malformed id");
+  }
+
+  const socialLinksValue = raw.socialLinks;
+  const socialLinks =
+    socialLinksValue === undefined || socialLinksValue === null
+      ? undefined
+      : isRecord(socialLinksValue) &&
+          Object.values(socialLinksValue).every((value) => typeof value === "string")
+        ? socialLinksValue
+        : (() => {
+            throw new Error("[strapi] getSiteSettings: malformed socialLinks");
+          })();
+
+  const heroImage = raw.heroImage;
+  if (heroImage !== undefined && heroImage !== null && normalizeMedia(heroImage) === null) {
+    throw new Error("[strapi] getSiteSettings: malformed heroImage");
+  }
+
   return {
-    ...raw,
-    heroImage: normalizeMedia(raw.heroImage),
+    id: raw.id,
+    documentId: optionalString(raw.documentId, "documentId"),
+    siteName: raw.siteName.trim(),
+    tagline: optionalString(raw.tagline, "tagline"),
+    contactEmail: optionalString(raw.contactEmail, "contactEmail"),
+    contactPhone: optionalString(raw.contactPhone, "contactPhone"),
+    whatsappNumber: optionalString(raw.whatsappNumber, "whatsappNumber"),
+    whatsappDefaultMessage: optionalString(raw.whatsappDefaultMessage, "whatsappDefaultMessage"),
+    address: optionalString(raw.address, "address"),
+    socialLinks,
+    businessHours: optionalString(raw.businessHours, "businessHours"),
+    aboutText: optionalString(raw.aboutText, "aboutText"),
+    rut: optionalString(raw.rut, "rut"),
+    heroImage: normalizeMedia(heroImage),
   };
 }
 
@@ -369,11 +456,11 @@ const FALLBACK_HERO: HeroSection = {
   eyebrow: `${siteTokens.brand} · Proveedor institucional`,
   title: siteTokens.promise,
   subtitle:
-    'Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.',
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.",
   primaryCtaLabel: siteTokens.catalogAll,
-  primaryCtaHref: '/catalogo',
+  primaryCtaHref: "/catalogo",
   secondaryCtaLabel: siteTokens.quoteCta,
-  secondaryCtaHref: '#contacto',
+  secondaryCtaHref: "#contacto",
   image: null,
 };
 
@@ -391,7 +478,7 @@ function currentYearCopyright(): string {
 export async function getAboutSection(): Promise<AboutSection> {
   try {
     const json = await request<SingleEnvelope<AboutSection> | { data: null }>(
-      '/api/about-section?populate=*'
+      "/api/about-section?populate=*",
     );
     const raw = (json as { data?: AboutSection | null }).data;
     if (!raw) return FALLBACK_ABOUT;
@@ -404,7 +491,7 @@ export async function getAboutSection(): Promise<AboutSection> {
 export async function getHeroSection(): Promise<HeroSection> {
   try {
     const json = await request<SingleEnvelope<HeroSection> | { data: null }>(
-      '/api/hero-section?populate=*'
+      "/api/hero-section?populate=*",
     );
     const raw = (json as { data?: HeroSection | null }).data;
     if (!raw) return FALLBACK_HERO;
@@ -417,7 +504,7 @@ export async function getHeroSection(): Promise<HeroSection> {
 export async function getContactCTASection(): Promise<ContactCTASection> {
   try {
     const json = await request<SingleEnvelope<ContactCTASection> | { data: null }>(
-      '/api/contact-cta-section?populate=*'
+      "/api/contact-cta-section?populate=*",
     );
     const raw = (json as { data?: ContactCTASection | null }).data;
     if (!raw) return FALLBACK_CONTACT_CTA;
@@ -429,15 +516,13 @@ export async function getContactCTASection(): Promise<ContactCTASection> {
 
 export async function getFooterBlock(): Promise<FooterBlock> {
   try {
-    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>(
-      '/api/footer-block'
-    );
+    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>("/api/footer-block");
     const raw = (json as { data?: FooterBlock | null }).data;
     if (!raw) {
       return {
         copyrightText: currentYearCopyright(),
         tagline: undefined,
-        legalSnippet: 'Proveedor institucional · Chile',
+        legalSnippet: "Proveedor institucional · Chile",
       };
     }
     return raw;
@@ -445,7 +530,7 @@ export async function getFooterBlock(): Promise<FooterBlock> {
     return {
       copyrightText: currentYearCopyright(),
       tagline: undefined,
-      legalSnippet: 'Proveedor institucional · Chile',
+      legalSnippet: "Proveedor institucional · Chile",
     };
   }
 }
@@ -488,7 +573,7 @@ export const sectionFallbacks = {
   footer: (): FooterBlock => ({
     copyrightText: currentYearCopyright(),
     tagline: undefined,
-    legalSnippet: 'Proveedor institucional · Chile',
+    legalSnippet: "Proveedor institucional · Chile",
   }),
 };
 
@@ -506,9 +591,9 @@ export const sectionFallbacks = {
  */
 export function resolveSection<T extends Record<string, unknown>>(
   data: T | null | undefined,
-  fallback: T
+  fallback: T,
 ): T {
-  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+  if (!data || typeof data !== "object" || Object.keys(data).length === 0) {
     return fallback;
   }
   return data;
@@ -516,7 +601,7 @@ export function resolveSection<T extends Record<string, unknown>>(
 
 export async function getCategories(): Promise<Category[]> {
   const json = await request<CollectionEnvelope<Category>>(
-    '/api/categories?filters[active][$eq]=true&sort=order&populate=*'
+    "/api/categories?filters[active][$eq]=true&sort=order&populate=*",
   );
   return (json.data ?? []).map((c) => ({
     ...c,
@@ -529,34 +614,32 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
   // back to the most recently published active products so the home page
   // never renders an empty section while the catalog is still being curated.
   const featured = await request<CollectionEnvelope<Product>>(
-    `/api/products?filters[featured][$eq]=true&filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`
+    `/api/products?filters[featured][$eq]=true&filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`,
   );
   const featuredData = (featured.data ?? []).map(normalizeProduct);
   if (featuredData.length > 0) return featuredData;
 
   const fallback = await request<CollectionEnvelope<Product>>(
-    `/api/products?filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`
+    `/api/products?filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`,
   );
   return (fallback.data ?? []).map(normalizeProduct);
 }
 
 export async function getProducts(categorySlug?: string): Promise<Product[]> {
   const params = new URLSearchParams();
-  params.set('filters[active][$eq]', 'true');
-  params.set('sort', 'order');
-  params.set('populate', '*');
+  params.set("filters[active][$eq]", "true");
+  params.set("sort", "order");
+  params.set("populate", "*");
   if (categorySlug) {
-    params.set('filters[category][slug][$eq]', categorySlug);
+    params.set("filters[category][slug][$eq]", categorySlug);
   }
-  const json = await request<CollectionEnvelope<Product>>(
-    `/api/products?${params.toString()}`
-  );
+  const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
   return (json.data ?? []).map(normalizeProduct);
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const json = await request<CollectionEnvelope<Product>>(
-    `/api/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`
+    `/api/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`,
   );
   const raw = json.data?.[0];
   if (!raw) return null;
@@ -576,12 +659,12 @@ function normalizeProduct(raw: any): Product {
   // optional and may be missing/null for products that pre-date the
   // catalog-import feature.
   const importSource: ProductImportSource | undefined =
-    typeof raw.importSource === 'string' &&
+    typeof raw.importSource === "string" &&
     (PRODUCT_IMPORT_SOURCE_VALUES as readonly string[]).includes(raw.importSource)
       ? (raw.importSource as ProductImportSource)
       : undefined;
   const importBatch =
-    raw.importBatch && typeof raw.importBatch === 'object'
+    raw.importBatch && typeof raw.importBatch === "object"
       ? {
           id: raw.importBatch.id,
           documentId: raw.importBatch.documentId,
@@ -589,17 +672,17 @@ function normalizeProduct(raw: any): Product {
           uploadedAt: raw.importBatch.uploadedAt,
         }
       : raw.importBatch === null
-      ? null
-      : undefined;
+        ? null
+        : undefined;
   return {
     id: raw.id,
     documentId: raw.documentId,
-    name: requireField(raw.name, 'product.name'),
-    slug: requireField(raw.slug, 'product.slug'),
-    description: requireField(raw.description, 'product.description'),
+    name: requireField(raw.name, "product.name"),
+    slug: requireField(raw.slug, "product.slug"),
+    description: requireField(raw.description, "product.description"),
     shortDescription: raw.shortDescription,
-    price: typeof raw.price === 'number' ? raw.price : Number(raw.price),
-    currency: raw.currency || 'CLP',
+    price: typeof raw.price === "number" ? raw.price : Number(raw.price),
+    currency: raw.currency || "CLP",
     dimensions: raw.dimensions,
     materials: raw.materials,
     featured: Boolean(raw.featured),
@@ -614,13 +697,13 @@ function normalizeProduct(raw: any): Product {
     observableColor: raw.observableColor ?? undefined,
     observableMaterial: raw.observableMaterial ?? undefined,
     catalogPage:
-      typeof raw.catalogPage === 'number'
+      typeof raw.catalogPage === "number"
         ? raw.catalogPage
         : raw.catalogPage == null
-        ? undefined
-        : Number(raw.catalogPage),
+          ? undefined
+          : Number(raw.catalogPage),
     confidence:
-      typeof raw.confidence === 'string' &&
+      typeof raw.confidence === "string" &&
       (PRODUCT_CONFIDENCE_VALUES as readonly string[]).includes(raw.confidence)
         ? (raw.confidence as ProductConfidence)
         : undefined,
@@ -634,19 +717,19 @@ function normalizeProduct(raw: any): Product {
   };
 }
 
-export const formatPrice = (product: Pick<Product, 'price' | 'currency'>): string => {
-  const value = typeof product.price === 'number' ? product.price : Number(product.price);
-  if (!Number.isFinite(value)) return '';
-  return new Intl.NumberFormat('es-CL', {
-    style: 'currency',
-    currency: product.currency || 'CLP',
+export const formatPrice = (product: Pick<Product, "price" | "currency">): string => {
+  const value = typeof product.price === "number" ? product.price : Number(product.price);
+  if (!Number.isFinite(value)) return "";
+  return new Intl.NumberFormat("es-CL", {
+    style: "currency",
+    currency: product.currency || "CLP",
     maximumFractionDigits: 0,
   }).format(value);
 };
 
 export const buildWhatsAppLink = (number: string, message: string): string => {
-  const sanitized = (number || '').replace(/[^0-9+]/g, '');
-  return `https://wa.me/${sanitized.replace(/^\+/, '')}?text=${encodeURIComponent(message)}`;
+  const sanitized = (number || "").replace(/[^0-9+]/g, "");
+  return `https://wa.me/${sanitized.replace(/^\+/, "")}?text=${encodeURIComponent(message)}`;
 };
 
 // Internal helpers reused by tests.

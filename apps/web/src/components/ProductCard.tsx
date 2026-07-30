@@ -92,13 +92,32 @@ export function ProductCard({
         </div>
 
         <header className="flex items-start justify-between gap-4">
-          <h3
-            className={`t-h2 text-ink transition-colors duration-500 group-hover:text-taupe-deep ${
-              isHero ? "text-3xl sm:text-4xl" : "text-xl"
-            }`}
-          >
-            {product.name}
-          </h3>
+          <div className="min-w-0">
+            <h3
+              className={`t-h2 text-ink transition-colors duration-500 group-hover:text-taupe-deep ${
+                isHero ? "text-3xl sm:text-4xl" : "text-xl"
+              }`}
+            >
+              {product.name}
+            </h3>
+            {(product.productType || product.subcategory) && (
+              <p
+                data-testid="product-meta-chips"
+                className="t-mono mt-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-taupe-deep"
+              >
+                {product.productType ? (
+                  <span className="border border-taupe-faint px-2 py-0.5">
+                    {product.productType}
+                  </span>
+                ) : null}
+                {product.subcategory ? (
+                  <span className="border border-taupe-faint px-2 py-0.5">
+                    {product.subcategory}
+                  </span>
+                ) : null}
+              </p>
+            )}
+          </div>
           <p className="t-mono whitespace-nowrap text-base text-ink sm:text-lg">
             {formatPrice({ price: product.price, currency: product.currency })}
           </p>

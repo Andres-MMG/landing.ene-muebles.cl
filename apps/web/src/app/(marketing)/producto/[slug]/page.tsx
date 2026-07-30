@@ -1,7 +1,7 @@
-import Image from "next/image";
 import { notFound } from "next/navigation";
 import { ContactCTA } from "@/components/ContactCTA";
 import { ProductCard } from "@/components/ProductCard";
+import { ProductGallery } from "@/components/ProductGallery";
 import {
   getProductBySlug,
   getProducts,
@@ -9,6 +9,13 @@ import {
   formatPrice,
   buildWhatsAppLink,
 } from "@/lib/strapi";
+import {
+  THEME_COLOR,
+  buildJsonLdAdditionalProperty,
+  buildMetaDescription,
+  buildProductJsonLd,
+  buildSpecsStrip,
+} from "@/lib/product-attributes";
 
 export const revalidate = 60;
 export const dynamic = "force-dynamic";
@@ -39,13 +46,29 @@ export async function generateMetadata({ params }: Props) {
       ]
     : [];
 
+  // Catalog-import (S4) — meta description now weaves the
+  // catalog-import attributes (subcategory, color, material, usage)
+  // into the existing shortDescription when present. Capped at 280
+  // chars for the regular `<meta name="description">` and 200 chars
+  // for the OG variant. `buildMetaDescription` returns null when
+  // nothing is available so we can fall back to the legacy
+  // `shortDescription || description` shape.
+  const metaDescription =
+    buildMetaDescription(product) ??
+    product.shortDescription ??
+    product.description;
+  const ogDescription =
+    buildMetaDescription(product, 200) ??
+    product.shortDescription ??
+    product.description;
+
   return {
     title: product.name,
-    description: product.shortDescription || product.description,
+    description: metaDescription,
     alternates: { canonical },
     openGraph: {
       title: `${product.name} · Ene Muebles`,
-      description: product.shortDescription || product.description,
+      description: ogDescription,
       url: canonical,
       siteName: "Ene Muebles",
       locale: "es_CL",
@@ -55,8 +78,14 @@ export async function generateMetadata({ params }: Props) {
     twitter: {
       card: "summary_large_image",
       title: product.name,
-      description: product.shortDescription || product.description,
+      description: ogDescription,
       images: ogImages.map((i) => i.url),
+    },
+    other: {
+      ...(product.externalId
+        ? { "product:retailer_item_id": product.externalId }
+        : {}),
+      "theme-color": THEME_COLOR,
     },
   };
 }
@@ -82,12 +111,10 @@ export default async function ProductDetailPage({ params }: Props) {
   const whatsappHref = settings.whatsappNumber
     ? buildWhatsAppLink(
         settings.whatsappNumber,
-        `Hola, me gustaría cotizar ${product.name} para mi institución.`
+        settings.whatsappDefaultMessage?.trim() ||
+          `Hola, me gustaría cotizar ${product.name} para mi institución.`,
       )
     : null;
-
-  const cover = product.images?.[0];
-  const gallery = product.images?.slice(1, 4) ?? [];
 
   // JSON-LD structured data. Helps Google display rich snippets
   // (price, availability, image) directly in search results. Built
@@ -96,28 +123,24 @@ export default async function ProductDetailPage({ params }: Props) {
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
     "https://ene-muebles.cl";
 
-  const productJsonLd = {
-    "@context": "https://schema.org/",
-    "@type": "Product",
-    name: product.name,
-    description: product.shortDescription || product.description,
-    image: product.images?.map((i) =>
-      i.url.startsWith("http") ? i.url : `${SITE_URL}${i.url}`
-    ),
-    category: product.category?.name,
-    brand: { "@type": "Brand", name: "Ene Muebles" },
-    offers: {
-      "@type": "Offer",
-      url: `${SITE_URL}/producto/${product.slug}`,
-      price: product.price,
-      priceCurrency: product.currency,
-      availability: "https://schema.org/InStock",
-      seller: {
-        "@type": "Organization",
-        name: "Ene Muebles",
-      },
-    },
-  };
+  // Catalog-import (S4) — `buildProductJsonLd` is strictly additive:
+  // every previously-existing field is preserved verbatim, and the
+  // catalog-import fields surface as `additionalProperty` entries
+  // only when populated. See `product-attributes.ts`.
+  const productJsonLd = buildProductJsonLd(product, SITE_URL);
+  // Smoke check — keeps the additionalProperty branch alive even if
+  // the helper inlines the property block. Cheap O(1) assertion.
+  const additional = buildJsonLdAdditionalProperty(product);
+  if (additional.length > 0) {
+    productJsonLd.additionalProperty = additional;
+  }
+
+  // Catalog-import (S4) — pre-compute the visual specs strip that
+  // appears under the price. The helper returns an empty array when
+  // nothing is populated so the strip itself is skipped.
+  const specsStrip = buildSpecsStrip(product);
+  const hasObservation = Boolean(product.observation?.trim());
+  const hasSource = Boolean(product.source?.trim());
 
   return (
     <>
@@ -127,44 +150,23 @@ export default async function ProductDetailPage({ params }: Props) {
         // user input is interpolated.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
       />
+      {/* Catalog-import (S4) — sr-only aside so screen readers and AEO
+          engines can see the transparency metadata (observation notes +
+          source PDF reference). Hidden visually but reachable by AT. */}
+      {(hasObservation || hasSource) && (
+        <aside className="sr-only" aria-label="Metadatos del catálogo">
+          {hasObservation ? <p>{product.observation}</p> : null}
+          {hasSource ? <p>Fuente: {product.source}</p> : null}
+        </aside>
+      )}
       <article>
         <section aria-labelledby="producto-heading" className="bg-paper">
           <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-12 px-6 pt-16 pb-16 sm:px-10 sm:pt-20 lg:grid-cols-12 lg:gap-16 lg:px-16 lg:pt-24 lg:pb-24">
-            <div className="lg:col-span-7 space-y-4">
-              <div className="img-zoom relative aspect-[4/5] overflow-hidden bg-cream-soft">
-                {cover ? (
-                  <Image
-                    src={cover.url}
-                    alt={cover.alternativeText || product.name}
-                    fill
-                    priority
-                    sizes="(min-width: 1024px) 58vw, 100vw"
-                    className="object-cover"
-                  />
-                ) : (
-                  <div className="flex h-full w-full items-center justify-center text-ink-mute">
-                    Sin imagen
-                  </div>
-                )}
-              </div>
-              {gallery.length > 0 ? (
-                <ul className="grid grid-cols-3 gap-3">
-                  {gallery.map((image) => (
-                    <li
-                      key={image.id}
-                      className="img-zoom relative aspect-square overflow-hidden bg-cream-soft"
-                    >
-                      <Image
-                        src={image.url}
-                        alt={image.alternativeText || `${product.name} detalle`}
-                        fill
-                        sizes="(min-width: 1024px) 16vw, 33vw"
-                        className="object-cover"
-                      />
-                    </li>
-                  ))}
-                </ul>
-              ) : null}
+            <div className="lg:col-span-7">
+              <ProductGallery
+                images={product.images ?? []}
+                productName={product.name}
+              />
             </div>
 
             <div className="lg:col-span-5 flex flex-col">
@@ -185,6 +187,27 @@ export default async function ProductDetailPage({ params }: Props) {
               <p className="t-mono mt-4 text-2xl text-ink">
                 {formatPrice({ price: product.price, currency: product.currency })}
               </p>
+              {/* Catalog-import (S4) — visual specs strip under the
+                  price. Only populated fields are emitted. Hairline
+                  border + t-mono micro-labels match the existing
+                  typography system. */}
+              {specsStrip.length > 0 ? (
+                <dl
+                  data-testid="specs-strip"
+                  className="mt-6 grid grid-cols-2 gap-x-6 gap-y-3 border-t border-ink-line pt-5 sm:grid-cols-3"
+                >
+                  {specsStrip.map((entry) => (
+                    <div key={entry.label}>
+                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                        {entry.label}
+                      </dt>
+                      <dd className="mt-1.5 t-mono text-sm text-ink">
+                        {entry.value}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              ) : null}
               {product.shortDescription ? (
                 <p className="t-body mt-8 text-lg text-ink">
                   {product.shortDescription}
@@ -278,12 +301,12 @@ export default async function ProductDetailPage({ params }: Props) {
                 {settings.contactEmail ? (
                   <a
                     href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(
-                      `Consulta: ${product.name}`
+                      `Consulta: ${product.name}`,
                     )}`}
-className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
-                >
-                  Enviar correo
-                </a>
+                    className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
+                  >
+                    Enviar correo
+                  </a>
                 ) : null}
               </div>
             </div>

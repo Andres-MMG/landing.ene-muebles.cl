@@ -31,6 +31,11 @@
     "whatsappNumber": {
       "type": "string"
     },
+    "whatsappDefaultMessage": {
+      "type": "text",
+      "required": true,
+      "minLength": 1
+    },
     "address": {
       "type": "text"
     },
@@ -42,6 +47,12 @@
     },
     "aboutText": {
       "type": "text"
+    },
+    "rut": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 20
     },
     "heroImage": {
       "type": "media",

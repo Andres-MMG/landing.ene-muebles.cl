@@ -1,0 +1,36 @@
+{
+  "kind": "singleType",
+  "collectionName": "contact_cta_sections",
+  "info": {
+    "singularName": "contact-cta-section",
+    "pluralName": "contact-cta-sections",
+    "displayName": "Contact CTA Section",
+    "description": "Singleton content for the dark contact call-to-action block on the marketing pages."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "body": {
+      "type": "text",
+      "maxLength": 1000
+    },
+    "buttonLabel": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "buttonHref": {
+      "type": "string",
+      "maxLength": 300
+    }
+  }
+}

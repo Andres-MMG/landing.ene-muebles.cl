@@ -1,0 +1,67 @@
+{
+  "kind": "collectionType",
+  "collectionName": "import_batches",
+  "info": {
+    "singularName": "import-batch",
+    "pluralName": "import-batches",
+    "displayName": "Import Batch",
+    "description": "Audit trail for a single Excel catalog import: tracks the file uploaded, who triggered it, and the row-level counters produced. One batch = one POST to /api/admin/products/import."
+  },
+  "options": {
+    "draftAndPublish": false
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "fileName": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "uploadedAt": {
+      "type": "datetime",
+      "required": true,
+      "default": "now"
+    },
+    "uploadedByEmail": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "totalRows": {
+      "type": "integer",
+      "min": 0
+    },
+    "createdCount": {
+      "type": "integer",
+      "min": 0,
+      "default": 0
+    },
+    "updatedCount": {
+      "type": "integer",
+      "min": 0,
+      "default": 0
+    },
+    "failedCount": {
+      "type": "integer",
+      "min": 0,
+      "default": 0
+    },
+    "importSource": {
+      "type": "enumeration",
+      "enum": [
+        "imported"
+      ],
+      "default": "imported",
+      "required": true
+    },
+    "importedProductIds": {
+      "type": "json"
+    },
+    "importedProducts": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::product.product",
+      "mappedBy": "importBatch"
+    }
+  }
+}

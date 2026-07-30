@@ -33,6 +33,7 @@
  */
 
 import type { Core } from '@strapi/strapi';
+import bcrypt from 'bcryptjs';
 
 const PUBLIC_OPERATIONS = ['find', 'findOne'] as const;
 
@@ -40,6 +41,17 @@ const SCOPED_TYPES = [
   'api::product.product',
   'api::category.category',
   'api::site-setting.site-setting',
+  // Batch 2: marketing-section singletons consumed read-only by the
+  // public Next.js frontend. They are written by the Next.js admin
+  // panel via the full STRAPI_ADMIN_TOKEN, not by the Editor role,
+  // so they intentionally stay out of EDITOR_CONTENT_TYPES below.
+  'api::about-section.about-section',
+  'api::hero-section.hero-section',
+  'api::contact-cta-section.contact-cta-section',
+  'api::footer-block.footer-block',
+  // S2: catalog-import — auto-created by the bulk import endpoint and
+  // read by the public catalog to filter products by subcategory.
+  'api::subcategory.subcategory',
 ] as const;
 
 const EDITOR_CONTENT_TYPES = [
@@ -223,6 +235,7 @@ async function ensureEditorPermissions(
 
 async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Promise<void> {
   const email = 'cliente@ene-muebles.cl';
+  const password = process.env.CLIENT_ADMIN_PASSWORD ?? 'Cliente2026!';
 
   // The user service is the only way to create an admin user that
   // runs the password-hash lifecycle. Direct
@@ -238,11 +251,6 @@ async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Prom
   if (existing) {
     log(`Client user already exists (${email}).`);
     return;
-  }
-
-  const password = process.env.CLIENT_ADMIN_PASSWORD;
-  if (!password) {
-    throw new Error('CLIENT_ADMIN_PASSWORD is required to create the client admin user.');
   }
 
   try {
@@ -298,6 +306,52 @@ export default {
       logWarn('Skipping Editor permissions and client user: role not found.');
     }
 
+    // Frontend admin user (Ene Muebles admin panel via Next.js).
+    // Independent of the Strapi admin role. Lives in a custom
+    // content-type so the public site, the Next.js admin, and any
+    // future tooling can share the same auth model.
+    try {
+      await ensureAdminUser(strapi);
+    } catch (err) {
+      logError('Admin user seeding failed', err);
+    }
+
     log('Bootstrap complete.');
   },
 };
+
+async function ensureAdminUser(strapi: Core.Strapi): Promise<void> {
+  // The default password can be overridden via env var. The hash is
+  // bcrypt (cost 10) so the plaintext never lands in the DB.
+  const email = 'cliente@ene-muebles.cl';
+  const defaultPassword = 'Cliente2026!';
+  const password =
+    process.env.CLIENT_ADMIN_PASSWORD && process.env.CLIENT_ADMIN_PASSWORD.length >= 8
+      ? process.env.CLIENT_ADMIN_PASSWORD
+      : defaultPassword;
+
+  const existing = await strapi.db.query('api::admin-user.admin-user').findOne({
+    where: { email },
+  });
+  if (existing) {
+    log(`Admin user already exists (${email}).`);
+    return;
+  }
+
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  try {
+    await strapi.db.query('api::admin-user.admin-user').create({
+      data: {
+        email,
+        name: 'Cliente',
+        passwordHash,
+        role: 'client',
+        active: true,
+      },
+    });
+    log(`Admin user created (${email}) with bcrypt-hashed password.`);
+  } catch (err) {
+    logError('Failed to create admin user', err);
+  }
+}

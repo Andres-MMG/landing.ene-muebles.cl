@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "@ene/ui-tokens": "workspace:*",
+    "bcryptjs": "2.4.3",
+    "jose": "5.9.6",
     "next": "16.2.9",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "zod": "3.25.76"
+    "xlsx": "^0.18.5",
+    "zod": "3.23.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "4.1.18",
+    "@types/bcryptjs": "2.4.6",
     "@types/node": "20.17.10",
     "@types/react": "19.2.2",
     "@types/react-dom": "19.2.2",

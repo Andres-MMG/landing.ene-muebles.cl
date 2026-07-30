@@ -1,10 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
-import type { SiteSetting } from "@/lib/strapi";
+import type { HeroSection, SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type HeroProps = {
   settings: SiteSetting;
+  /**
+   * Batch 2: hero copy and CTA targets come from the Strapi
+   * `hero-section` singleton (always returns a typed fallback). The
+   * legacy `settings.heroImage` and `settings.tagline` keep working
+   * as a bottom-of-the-chain fallback for environments where the
+   * singleton has not been seeded yet.
+   */
+  section?: HeroSection;
+  /**
+   * B2 batch 2 fix: opt-out for the hero's secondary CTA. The home
+   * page already has a near-the-end WhatsApp CTA in the dark
+   * `ContactCTA` block; rendering the secondary "Solicitar
+   * cotización" anchor in the hero would stack two same-intent CTAs
+   * ~1900 px apart. Other pages (`/contacto`, `/nosotros`) keep the
+   * secondary CTA — they don't have a terminal dark block.
+   */
+  omitSecondaryCta?: boolean;
 };
 
 /**
@@ -12,13 +29,23 @@ type HeroProps = {
  *
  * Single source of authority: the display serif headline. No kicker above
  * it (the brand name already lives in the navigation). One photo element
- * if `settings.heroImage` is provided; otherwise a typographic "system
+ * if a hero image is resolved; otherwise a typographic "system
  * card" that doubles as a brand-spec readout. The bottom rail is a mono
  * one-liner that consolidates the proof points.
  */
-export function Hero({ settings }: HeroProps) {
-  const headline = settings.tagline?.trim() || site.promise;
-  const hasPhoto = Boolean(settings.heroImage?.url);
+export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps) {
+  const eyebrow = section?.eyebrow ?? `${site.brand} · Proveedor institucional`;
+  const headline =
+    section?.title?.trim() || settings.tagline?.trim() || site.promise;
+  const subtitle =
+    section?.subtitle ??
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.";
+  const primaryLabel = section?.primaryCtaLabel ?? site.catalogAll;
+  const primaryHref = section?.primaryCtaHref ?? "/catalogo";
+  const secondaryLabel = section?.secondaryCtaLabel ?? site.quoteCta;
+  const secondaryHref = section?.secondaryCtaHref ?? "#contacto";
+  const image = section?.image ?? settings.heroImage ?? null;
+  const hasPhoto = Boolean(image?.url);
 
   return (
     <section
@@ -31,7 +58,7 @@ export function Hero({ settings }: HeroProps) {
           <div className="flex items-center gap-3">
             <span className="block h-px w-10 bg-ink" aria-hidden />
             <span className="t-label text-ink">
-              {site.brand} · Proveedor institucional
+              {eyebrow}
             </span>
           </div>
 
@@ -43,18 +70,15 @@ export function Hero({ settings }: HeroProps) {
           </h1>
 
           <p className="t-body mt-10 max-w-[52ch] text-lg text-ink-mute sm:text-xl">
-            Sillas, escritorios, estanterías y mesones para colegios, universidades,
-            municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados,
-            estructura reforzada. Catálogo certificado, despacho a todo Chile y
-            garantía escrita.
+            {subtitle}
           </p>
 
           <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
             <Link
-              href="/catalogo"
+              href={(primaryHref || "/catalogo") as never}
               className="group inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
             >
-              {site.catalogAll}
+              {primaryLabel}
               <span
                 aria-hidden
                 className="transition-transform duration-500 group-hover:translate-x-1"
@@ -62,12 +86,14 @@ export function Hero({ settings }: HeroProps) {
                 →
               </span>
             </Link>
-            <Link
-              href="#contacto"
-              className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
-            >
-              {site.quoteCta}
-            </Link>
+            {!omitSecondaryCta && secondaryLabel ? (
+              <Link
+                href={(secondaryHref || "#contacto") as never}
+                className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
+              >
+                {secondaryLabel}
+              </Link>
+            ) : null}
           </div>
         </div>
 
@@ -77,8 +103,8 @@ export function Hero({ settings }: HeroProps) {
             {hasPhoto ? (
               <figure className="img-zoom relative aspect-[4/5] w-full overflow-hidden">
                 <Image
-                  src={settings.heroImage!.url}
-                  alt={settings.heroImage!.alternativeText || site.brand}
+                  src={image!.url}
+                  alt={image!.alternativeText || site.brand}
                   fill
                   sizes="(min-width: 1024px) 40vw, 100vw"
                   priority
@@ -135,7 +161,7 @@ function SystemCard({ settings }: { settings: SiteSetting }) {
             {settings.siteName}
           </p>
           <p className="t-mono mt-3 text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
-            RUT 76.XXX.XXX-X
+            {settings.rut?.trim() ? `RUT ${settings.rut.trim()}` : "RUT 76.XXX.XXX-X"}
           </p>
         </div>
 

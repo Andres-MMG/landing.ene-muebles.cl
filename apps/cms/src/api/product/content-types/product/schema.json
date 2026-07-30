@@ -72,6 +72,74 @@
       "allowedTypes": [
         "images"
       ]
+    },
+    "externalId": {
+      "type": "string",
+      "unique": true,
+      "sparse": true,
+      "maxLength": 32
+    },
+    "productType": {
+      "type": "string",
+      "enum": [
+        "Silla",
+        "Mesa",
+        "Escritorio",
+        "Banca",
+        "Piso",
+        "Cuna"
+      ]
+    },
+    "subcategory": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "usageEnvironment": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "observableColor": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "observableMaterial": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "catalogPage": {
+      "type": "integer",
+      "min": 1
+    },
+    "confidence": {
+      "type": "string",
+      "enum": [
+        "alta",
+        "media-variante-visual",
+        "media-nombre-generico-pdf",
+        "baja",
+        "revision-manual"
+      ]
+    },
+    "source": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "observation": {
+      "type": "text"
+    },
+    "importSource": {
+      "type": "enumeration",
+      "enum": [
+        "manual",
+        "imported"
+      ],
+      "default": "manual"
+    },
+    "importBatch": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::import-batch.import-batch",
+      "inversedBy": "importedProducts"
     }
   }
 }

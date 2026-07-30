@@ -1,5 +1,6 @@
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
 import { ProductForm } from '../ProductForm';
+import { emptyProductFormValues } from '../_lib/productFormData';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -51,18 +52,7 @@ export default async function NewProductPage() {
           categories={categories}
           productDocumentId={null}
           images={[]}
-          initial={{
-            documentId: null,
-            name: '',
-            slug: '',
-            shortDescription: '',
-            description: '',
-            price: '',
-            currency: 'CLP',
-            category: '',
-            active: true,
-            featured: false,
-          }}
+          initial={emptyProductFormValues()}
         />
       </div>
     </div>

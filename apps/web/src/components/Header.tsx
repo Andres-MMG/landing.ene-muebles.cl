@@ -2,16 +2,20 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { MobileMenu } from "./MobileMenu";
 import { buildWhatsAppLink } from "@/lib/strapi";
 
 type HeaderProps = {
   siteName: string;
   whatsappNumber?: string;
+  whatsappDefaultMessage?: string;
   contactPhone?: string;
   contactEmail?: string;
 };
+
+const DEFAULT_WHATSAPP_MESSAGE =
+  "Hola, me gustaría una cotización de su catálogo de mobiliario institucional.";
 
 const navItems: { label: string; href: string }[] = [
   { label: "Inicio", href: "/" },
@@ -36,17 +40,17 @@ const isActive = (pathname: string, href: string): boolean => {
 export function Header({
   siteName,
   whatsappNumber,
+  whatsappDefaultMessage,
   contactPhone,
   contactEmail,
 }: HeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
+  const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
+  const message = whatsappDefaultMessage?.trim() || DEFAULT_WHATSAPP_MESSAGE;
   const whatsappHref = whatsappNumber
-    ? buildWhatsAppLink(
-        whatsappNumber,
-        "Hola, me gustaría una cotización de su catálogo de mobiliario institucional."
-      )
+    ? buildWhatsAppLink(whatsappNumber, message)
     : null;
 
   return (
@@ -101,10 +105,12 @@ export function Header({
 
           <button
             type="button"
+            ref={menuTriggerRef}
             onClick={() => setMenuOpen(true)}
             aria-label="Abrir menú"
             aria-expanded={menuOpen}
-            className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper lg:hidden"
+            aria-controls="mobile-menu"
+            className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink lg:hidden"
           >
             <svg
               width="14"
@@ -132,6 +138,7 @@ export function Header({
         whatsappHref={whatsappHref}
         contactPhone={contactPhone}
         contactEmail={contactEmail}
+        triggerRef={menuTriggerRef}
       />
     </header>
   );

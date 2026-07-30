@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getSiteSettings } from "@/lib/strapi";
+import { getAboutSection, getContactCTASection, getSiteSettings } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 import { ContactCTA } from "@/components/ContactCTA";
 
@@ -14,6 +14,14 @@ export const metadata = {
 
 export default async function NosotrosPage() {
   const settings = await getSiteSettings();
+  // Batch 2: mission/vision/values copy comes from the `about-section`
+  // singleton (always with a fallback). The hero "Sobre nosotros"
+  // overline/heading stays on ui-tokens because those are page-level
+  // page-title chrome, not section copy.
+  const [aboutSection, contactCtaSection] = await Promise.all([
+    getAboutSection(),
+    getContactCTASection(),
+  ]);
   const productCount = 20;
   const categoryCount = 2;
   const years = 30;
@@ -36,7 +44,7 @@ export default async function NosotrosPage() {
               {site.aboutHeadingSec}
             </h1>
             <p className="t-body mt-8 max-w-[55ch] text-lg text-ink-mute sm:text-xl">
-              {site.aboutIntro}
+              {aboutSection.intro ?? site.aboutIntro}
             </p>
           </div>
           <aside className="lg:col-span-4 lg:col-start-9">
@@ -83,16 +91,16 @@ export default async function NosotrosPage() {
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
                 <span className="t-label text-taupe">
-                  {site.missionHeading}
+                  {aboutSection.missionLabel ?? site.missionLabel}
                 </span>
               </div>
               <h2 className="t-h2 mt-6 text-[clamp(2rem,1.2rem+3vw,3rem)] text-paper">
-                {site.missionHeading}
+                {aboutSection.missionHeading ?? site.missionHeading}
               </h2>
             </div>
             <div className="lg:col-span-7 lg:col-start-6">
               <p className="t-h3 text-2xl text-paper-mute-on-ink">
-                {site.missionBody}
+                {aboutSection.missionBody ?? site.missionBody}
               </p>
             </div>
           </div>
@@ -106,16 +114,16 @@ export default async function NosotrosPage() {
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
                 <span className="t-label text-taupe-deep">
-                  {site.visionHeading}
+                  {aboutSection.visionLabel ?? site.visionLabel}
                 </span>
               </div>
               <h2 className="t-h2 mt-6 text-[clamp(2rem,1.2rem+3vw,3rem)] text-ink">
-                {site.visionHeading}
+                {aboutSection.visionHeading ?? site.visionHeading}
               </h2>
             </div>
             <div className="lg:col-span-7 lg:col-start-6">
               <p className="t-h3 text-2xl text-ink-mute">
-                {site.visionBody}
+                {aboutSection.visionBody ?? site.visionBody}
               </p>
             </div>
           </div>
@@ -128,17 +136,19 @@ export default async function NosotrosPage() {
             <div className="lg:col-span-7">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe-deep">Valores</span>
+                <span className="t-label text-taupe-deep">
+                  {aboutSection.valuesLabel ?? site.valuesLabel}
+                </span>
               </div>
               <h2 className="t-h2 mt-6 max-w-[24ch] text-[clamp(2rem,1.2rem+3vw,3.25rem)] text-ink">
-                Cuatro compromisos por escrito.
+                {aboutSection.valuesHeading ?? site.valuesHeading}
               </h2>
             </div>
           </header>
           <ol className="mt-12 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {site.values.map((value, index) => (
+            {(aboutSection.values ?? site.values).map((value, index) => (
               <li
-                key={value.title}
+                key={value.title ?? index}
                 className="relative border-t border-ink-line pt-6"
               >
                 <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
@@ -179,7 +189,7 @@ export default async function NosotrosPage() {
         </div>
       </section>
 
-      <ContactCTA settings={settings} />
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

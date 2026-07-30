@@ -39,12 +39,22 @@ export const site = {
   aboutHeadingSec: "Un proveedor que entrega lo que promete.",
   aboutIntro:
     "Ene Muebles fabrica y distribuye mobiliario escolar y de oficina bajo estándares de pliego público. Cada pieza se entrega con ficha técnica, declaración de materiales y plazo de despacho por escrito.",
-  missionHeading: "Misión",
+  // B2 batch 2 fix: split kicker (label) from statement (heading) so the
+  // /nosotros page can render a small mono label and a longer h2 instead of
+  // collapsing both to the same string. `missionLabel` / `visionLabel` are
+  // the small kickers; `missionHeading` / `visionHeading` are the h2.
+  missionLabel: "Misión",
+  missionHeading:
+    "Suministrar mobiliario institucional bajo estándares de pliego público.",
   missionBody:
     "Suministrar mobiliario escolar y de oficina que cumple con los estándares de pliego público, con despacho a todo Chile y respaldo escrito por cada operación.",
-  visionHeading: "Visión",
+  visionLabel: "Visión",
+  visionHeading:
+    "Ser el proveedor de referencia en mobiliario institucional en Chile.",
   visionBody:
     "Ser el proveedor de referencia de mobiliario institucional en Chile, reconocido por cumplimiento, continuidad de servicio y calidad declarada.",
+  valuesLabel: "Valores",
+  valuesHeading: "Cuatro compromisos por escrito.",
   values: [
     {
       title: "Cumplimiento",

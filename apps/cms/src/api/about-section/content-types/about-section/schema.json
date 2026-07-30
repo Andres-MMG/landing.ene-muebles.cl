@@ -1,0 +1,79 @@
+{
+  "kind": "singleType",
+  "collectionName": "about_sections",
+  "info": {
+    "singularName": "about-section",
+    "pluralName": "about-sections",
+    "displayName": "About Section",
+    "description": "Singleton content for the about / mission / vision / values blocks consumed by the marketing pages."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "eyebrow": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "intro": {
+      "type": "text",
+      "maxLength": 600
+    },
+    "body": {
+      "type": "text",
+      "maxLength": 4000
+    },
+    "missionLabel": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "missionHeading": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "missionBody": {
+      "type": "text",
+      "maxLength": 1000
+    },
+    "visionLabel": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "visionHeading": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "visionBody": {
+      "type": "text",
+      "maxLength": 1000
+    },
+    "valuesLabel": {
+      "type": "string",
+      "maxLength": 40
+    },
+    "valuesHeading": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "values": {
+      "type": "json"
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  }
+}

@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getServerSession } from '@/lib/admin/session';
 import { findAdminUserByDocumentId } from '@/lib/admin/strapi-admin';
+import { AdminHeader } from '@/components/AdminHeader';
 import { Breadcrumb } from './productos/Breadcrumb';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,17 @@ type NavItem = {
 const NAV_ITEMS: NavItem[] = [
   { href: '/admin', label: 'Productos' },
   { href: '/admin/productos/nuevo', label: '+ Nuevo producto' },
+  { href: '/admin/productos/importar', label: 'Importar (Excel)' },
   { href: '/admin/categorias', label: 'Categorías' },
+  { href: '/admin/importaciones', label: 'Historial Excel' },
+  // Batch 2: marketing-section editors. Order mirrors the visual order
+  // on the public page (hero first, then about, then contact CTA,
+  // then footer) so the sidebar reads top-to-bottom in the same
+  // rhythm as the consumer-facing site.
+  { href: '/admin/hero', label: 'Hero' },
+  { href: '/admin/about', label: 'Nosotros (about)' },
+  { href: '/admin/contacto-cta', label: 'Contacto CTA' },
+  { href: '/admin/footer', label: 'Footer' },
   { href: '/admin/ajustes', label: 'Ajustes' },
 ];
 
@@ -25,8 +36,8 @@ const NAV_ITEMS: NavItem[] = [
  *
  * Responsibilities:
  *   - Enforce authentication (redirect to /admin/login if no session).
- *   - Render the brand header (wordmark + user.name + role pill + logout form).
- *   - Render the sidebar nav (md+) and the stacked-tabs nav (sm).
+ *   - Render the responsive brand header and mobile navigation.
+ *   - Render the sidebar nav on desktop.
  *   - Mount a skip-link as the first focusable element on the page.
  *   - Render the breadcrumb above the page content.
  *
@@ -52,13 +63,8 @@ export default async function AdminLayout({
     redirect('/admin/login' as never);
   }
 
-  const rolePillClass =
-    't-mono inline-block border border-ink-line px-2 py-0.5 text-[10px] uppercase tracking-[0.22em] text-ink';
-
   const sidebarLinkClass =
     't-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60';
-  const mobileLinkClass =
-    't-mono block px-6 py-3 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60';
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -71,43 +77,14 @@ export default async function AdminLayout({
         Saltar al contenido
       </a>
 
-      {/* Brand header. */}
-      <header className="border-b border-ink-line">
-        <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-6 px-6 py-6 sm:px-10 lg:px-16">
-          <Link
-            href={'/admin' as never}
-            className="t-display text-xl font-semibold tracking-tight text-ink"
-          >
-            Ene Muebles
-          </Link>
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
-            Panel · {user.name}
-          </p>
-          <nav
-            aria-label="Acciones de sesión"
-            className="ml-auto flex items-center gap-4"
-          >
-            <span className={rolePillClass} aria-label={`Rol: ${user.role}`}>
-              {user.role}
-            </span>
-            <form action="/api/admin/logout" method="POST">
-              <button
-                type="submit"
-                className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
-              >
-                Cerrar sesión
-              </button>
-            </form>
-          </nav>
-        </div>
-      </header>
+      <AdminHeader user={{ name: user.name, role: user.role }} navItems={NAV_ITEMS} />
 
-      {/* Body grid: sidebar (md+) on the left, content on the right. */}
-      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 px-0 sm:px-10 md:grid-cols-[16rem_1fr] md:px-10 lg:px-16">
-        {/* Sidebar nav (md+). */}
+      {/* Body grid: sidebar on desktop, content full-width below it. */}
+      <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 px-0 sm:px-10 lg:grid-cols-[16rem_1fr] lg:px-16">
+        {/* Sidebar nav (desktop). */}
         <aside
           aria-label="Navegación del panel"
-          className="hidden border-r border-ink-line py-10 md:block"
+          className="hidden border-r border-ink-line py-10 lg:block"
         >
           <nav aria-label="Secciones del panel">
             <ul className="flex flex-col gap-1">
@@ -127,25 +104,6 @@ export default async function AdminLayout({
 
         {/* Content column. */}
         <div>
-          {/* Stacked-tabs nav (sm only). */}
-          <nav
-            aria-label="Secciones del panel"
-            className="border-b border-ink-line md:hidden"
-          >
-            <ul className="flex flex-col">
-              {NAV_ITEMS.map((item) => (
-                <li key={item.href}>
-                  <Link
-                    href={item.href as never}
-                    className={mobileLinkClass}
-                  >
-                    {item.label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
           <main
             id="admin-main"
             tabIndex={-1}

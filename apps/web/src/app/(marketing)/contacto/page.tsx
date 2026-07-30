@@ -1,5 +1,6 @@
-import { getSiteSettings, buildWhatsAppLink } from "@/lib/strapi";
+import { buildWhatsAppLink, getContactCTASection, getSiteSettings } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
+import { ContactCTA } from "@/components/ContactCTA";
 
 export const revalidate = 60;
 export const dynamic = "force-dynamic";
@@ -31,12 +32,16 @@ const regiones = [
 
 export default async function ContactoPage() {
   const settings = await getSiteSettings();
+  // Batch 2: the bottom CTA on this page reads from the same singleton
+  // as the home page so the editor can swap copy once and have it
+  // propagate to every page that renders the dark contact block.
+  const contactCtaSection = await getContactCTASection();
 
+  const whatsappMessage =
+    settings.whatsappDefaultMessage?.trim() ||
+    "Hola, me gustaría una cotización de mobiliario institucional.";
   const whatsappHref = settings.whatsappNumber
-    ? buildWhatsAppLink(
-        settings.whatsappNumber,
-        "Hola, me gustaría una cotización de mobiliario institucional."
-      )
+    ? buildWhatsAppLink(settings.whatsappNumber, whatsappMessage)
     : null;
 
   return (
@@ -254,6 +259,8 @@ export default async function ContactoPage() {
           </div>
         </div>
       </section>
+
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

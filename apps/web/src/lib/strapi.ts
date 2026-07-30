@@ -1,3 +1,5 @@
+import { site as siteTokens } from '@ene/ui-tokens';
+
 /**
  * Strapi v5 client for the public Next.js frontend.
  *
@@ -9,7 +11,6 @@
  * ISR (`revalidate: 60`) is used implicitly via `next: { revalidate: 60 }`.
  * Errors are re-thrown so the error boundary can render them.
  */
-
 const DEFAULT_STRAPI_URL = 'http://localhost:1337';
 // Public origin (browser-reachable) used for media URLs. When unset we fall
 // back to NEXT_PUBLIC_STRAPI_URL; if that's also unset we derive a sensible
@@ -62,11 +63,74 @@ export type SiteSetting = {
   contactEmail?: string;
   contactPhone?: string;
   whatsappNumber?: string;
+  whatsappDefaultMessage?: string;
   address?: string;
   socialLinks?: SocialLinks;
   businessHours?: string;
   aboutText?: string;
+  rut?: string;
   heroImage?: StrapiMedia | null;
+};
+
+/**
+ * Batch 2 marketing-section singletons. Every field is optional
+ * because the read helpers return a typed fallback on any failure
+ * (network error, Strapi 404, missing record). Consumers must treat
+ * any individual field as missing if it is `undefined`/`null` and
+ * fall back to per-section defaults baked into each helper.
+ */
+export type AboutSection = {
+  id?: number;
+  documentId?: string;
+  eyebrow?: string;
+  title?: string;
+  intro?: string;
+  body?: string;
+  /**
+   * B2 batch 2 fix: kicker (small mono label) is split from the
+   * h2 (longer statement) so the public page no longer renders the
+   * same string in both slots. Same shape for vision and values.
+   */
+  missionLabel?: string;
+  missionHeading?: string;
+  missionBody?: string;
+  visionLabel?: string;
+  visionHeading?: string;
+  visionBody?: string;
+  valuesLabel?: string;
+  valuesHeading?: string;
+  values?: Array<{ title?: string; body?: string }>;
+  image?: StrapiMedia | null;
+};
+
+export type HeroSection = {
+  id?: number;
+  documentId?: string;
+  eyebrow?: string;
+  title?: string;
+  subtitle?: string;
+  primaryCtaLabel?: string;
+  primaryCtaHref?: string;
+  secondaryCtaLabel?: string;
+  secondaryCtaHref?: string;
+  image?: StrapiMedia | null;
+};
+
+export type ContactCTASection = {
+  id?: number;
+  documentId?: string;
+  title?: string;
+  body?: string;
+  buttonLabel?: string;
+  buttonHref?: string;
+};
+
+export type FooterBlock = {
+  id?: number;
+  documentId?: string;
+  copyrightText?: string;
+  tagline?: string;
+  legalSnippet?: string;
 };
 
 export type Category = {
@@ -96,10 +160,84 @@ export type Product = {
   order?: number;
   category?: Pick<Category, 'id' | 'documentId' | 'name' | 'slug'> | null;
   images?: StrapiMedia[];
+  /**
+   * Catalog-import (S1) — new optional fields sourced from the Excel
+   * importer. Backwards compatible: existing public/admin helpers
+   * treat them as `undefined` when Strapi returns null. `subcategory`
+   * is held as a string here until the Subcategory content-type ships
+   * in a later slice; the importer uses the same string shape so the
+   * promotion to a relation is a no-op for callers.
+   */
+  externalId?: string;
+  productType?: string;
+  subcategory?: string;
+  usageEnvironment?: string;
+  observableColor?: string;
+  observableMaterial?: string;
+  catalogPage?: number;
+  confidence?: ProductConfidence;
+  source?: string;
+  observation?: string;
+  /**
+   * Catalog-import (S2b) — traceability fields. `importSource` is
+   * `'manual'` for products created from the admin form, `'imported'`
+   * for products created via the bulk Excel endpoint. `importBatch`
+   * points to the batch record that produced this product.
+   */
+  importSource?: ProductImportSource;
+  importBatch?: Pick<ImportBatch, 'id' | 'documentId' | 'fileName' | 'uploadedAt'> | null;
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string | null;
 };
+
+/** Catalog-import (S2b) — provenance enum for `Product.importSource`. */
+export const PRODUCT_IMPORT_SOURCE_VALUES = ['manual', 'imported'] as const;
+export type ProductImportSource = (typeof PRODUCT_IMPORT_SOURCE_VALUES)[number];
+
+/** Catalog-import (S2b) — `ImportBatch` audit-trail record. One row
+ *  per POST to `/api/admin/products/import`. */
+export type ImportBatch = {
+  id: number;
+  documentId?: string;
+  fileName: string;
+  uploadedAt: string;
+  uploadedByEmail?: string;
+  totalRows?: number;
+  createdCount?: number;
+  updatedCount?: number;
+  failedCount?: number;
+  importSource: 'imported';
+  importedProductIds?: number[];
+  importedProducts?: Array<Pick<Product, 'id' | 'documentId' | 'name' | 'externalId'>>;
+};
+
+/**
+ * Catalog-import (S1) — confidence enum carried over from the Excel
+ * `Certeza` column. `baja` and `revision-manual` are both valid sinks
+ * for unmapped values; the importer prefers `revision-manual` per
+ * the design contract in `openspec/changes/catalog-excel-import/design.md`.
+ */
+export const PRODUCT_CONFIDENCE_VALUES = [
+  'alta',
+  'media-variante-visual',
+  'media-nombre-generico-pdf',
+  'baja',
+  'revision-manual',
+] as const;
+
+export type ProductConfidence = (typeof PRODUCT_CONFIDENCE_VALUES)[number];
+
+export const PRODUCT_TYPE_VALUES = [
+  'Silla',
+  'Mesa',
+  'Escritorio',
+  'Banca',
+  'Piso',
+  'Cuna',
+] as const;
+
+export type ProductType = (typeof PRODUCT_TYPE_VALUES)[number];
 
 type CollectionEnvelope<T> = { data: T[]; meta?: unknown };
 type SingleEnvelope<T> = { data: T; meta?: unknown };
@@ -196,6 +334,186 @@ export async function getSiteSettings(): Promise<SiteSetting> {
   };
 }
 
+/**
+ * Batch 2 marketing-section singletons. The four helpers below all
+ * share the same contract: read the singleton via `populate=*`, return
+ * the safe fallback when Strapi responds with 404 / null / missing
+ * data, and normalize any media field through `normalizeMedia`. The
+ * never-throw contract lets server components `await` these without a
+ * try/catch — the helper either returns real CMS data or returns the
+ * hardcoded fallback that mirrors what `AboutSection`, `Hero`,
+ * `ContactCTA`, and `Footer` used to render before the migration.
+ *
+ * Fallback values come from `@ene/ui-tokens/site` so there is exactly
+ * one copy of the literal strings; the tokens stay the source of truth
+ * for any copy that is reused elsewhere on the marketing pages.
+ */
+
+const FALLBACK_ABOUT: AboutSection = {
+  eyebrow: siteTokens.aboutOverline,
+  title: siteTokens.aboutHeading,
+  intro: siteTokens.aboutIntro,
+  missionLabel: siteTokens.missionLabel,
+  missionHeading: siteTokens.missionHeading,
+  missionBody: siteTokens.missionBody,
+  visionLabel: siteTokens.visionLabel,
+  visionHeading: siteTokens.visionHeading,
+  visionBody: siteTokens.visionBody,
+  valuesLabel: siteTokens.valuesLabel,
+  valuesHeading: siteTokens.valuesHeading,
+  values: siteTokens.values.map((v) => ({ title: v.title, body: v.body })),
+  image: null,
+};
+
+const FALLBACK_HERO: HeroSection = {
+  eyebrow: `${siteTokens.brand} · Proveedor institucional`,
+  title: siteTokens.promise,
+  subtitle:
+    'Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.',
+  primaryCtaLabel: siteTokens.catalogAll,
+  primaryCtaHref: '/catalogo',
+  secondaryCtaLabel: siteTokens.quoteCta,
+  secondaryCtaHref: '#contacto',
+  image: null,
+};
+
+const FALLBACK_CONTACT_CTA: ContactCTASection = {
+  title: siteTokens.contactHeading,
+  body: siteTokens.contactBody,
+  buttonLabel: siteTokens.whatsappCta,
+  buttonHref: undefined,
+};
+
+function currentYearCopyright(): string {
+  return `© ${new Date().getFullYear()} ${siteTokens.brand}`;
+}
+
+export async function getAboutSection(): Promise<AboutSection> {
+  try {
+    const json = await request<SingleEnvelope<AboutSection> | { data: null }>(
+      '/api/about-section?populate=*'
+    );
+    const raw = (json as { data?: AboutSection | null }).data;
+    if (!raw) return FALLBACK_ABOUT;
+    return { ...raw, image: normalizeMedia(raw.image) };
+  } catch {
+    return FALLBACK_ABOUT;
+  }
+}
+
+export async function getHeroSection(): Promise<HeroSection> {
+  try {
+    const json = await request<SingleEnvelope<HeroSection> | { data: null }>(
+      '/api/hero-section?populate=*'
+    );
+    const raw = (json as { data?: HeroSection | null }).data;
+    if (!raw) return FALLBACK_HERO;
+    return { ...raw, image: normalizeMedia(raw.image) };
+  } catch {
+    return FALLBACK_HERO;
+  }
+}
+
+export async function getContactCTASection(): Promise<ContactCTASection> {
+  try {
+    const json = await request<SingleEnvelope<ContactCTASection> | { data: null }>(
+      '/api/contact-cta-section?populate=*'
+    );
+    const raw = (json as { data?: ContactCTASection | null }).data;
+    if (!raw) return FALLBACK_CONTACT_CTA;
+    return raw;
+  } catch {
+    return FALLBACK_CONTACT_CTA;
+  }
+}
+
+export async function getFooterBlock(): Promise<FooterBlock> {
+  try {
+    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>(
+      '/api/footer-block'
+    );
+    const raw = (json as { data?: FooterBlock | null }).data;
+    if (!raw) {
+      return {
+        copyrightText: currentYearCopyright(),
+        tagline: undefined,
+        legalSnippet: 'Proveedor institucional · Chile',
+      };
+    }
+    return raw;
+  } catch {
+    return {
+      copyrightText: currentYearCopyright(),
+      tagline: undefined,
+      legalSnippet: 'Proveedor institucional · Chile',
+    };
+  }
+}
+
+/**
+ * Exported for tests and for callers that need to surface the literal
+ * fallback copy (e.g. the admin UI's "preview default copy" hint).
+ * Same data the helpers return when Strapi is unreachable.
+ */
+export const __sectionFallbacks = {
+  about: FALLBACK_ABOUT,
+  hero: FALLBACK_HERO,
+  contactCta: FALLBACK_CONTACT_CTA,
+};
+
+/**
+ * Per-section fallback factories. Each function returns a freshly
+ * allocated object so callers may safely mutate it. The public read
+ * helpers (`getHeroSection`, `getAboutSection`, `getContactCTASection`,
+ * `getFooterBlock`) return values equivalent to these factories when
+ * Strapi responds with `data: null`, an empty object, or the request
+ * fails.
+ *
+ * The admin pages reuse the same factories so an editor opening
+ * `/admin/hero` for the first time sees the same copy the public
+ * site currently renders — not blank inputs. When the editor saves
+ * a non-empty value the singleton becomes real, the next admin page
+ * load returns the saved value, and the fallback is no longer
+ * consulted until the editor clears the field again.
+ *
+ * `footer()` is a function (not a constant) because the copyright
+ * text embeds the current calendar year. The other three are also
+ * functions for a consistent API: callers always invoke the
+ * factory rather than dereference a property.
+ */
+export const sectionFallbacks = {
+  hero: (): HeroSection => ({ ...FALLBACK_HERO }),
+  about: (): AboutSection => ({ ...FALLBACK_ABOUT }),
+  contactCta: (): ContactCTASection => ({ ...FALLBACK_CONTACT_CTA }),
+  footer: (): FooterBlock => ({
+    copyrightText: currentYearCopyright(),
+    tagline: undefined,
+    legalSnippet: 'Proveedor institucional · Chile',
+  }),
+};
+
+/**
+ * Resolve an upstream Strapi v5 singleton payload to a non-null
+ * value. Returns the `fallback` when the upstream `data` is null,
+ * undefined, or an empty object (`{}`). Otherwise returns the
+ * upstream data verbatim.
+ *
+ * Used by the admin pages to apply the same fallback the public
+ * read helpers apply when the singleton has not been seeded yet.
+ * Without this resolver, the admin page would render blank inputs
+ * when Strapi has not saved a record for the singleton, even
+ * though the public site renders the typed fallback copy.
+ */
+export function resolveSection<T extends Record<string, unknown>>(
+  data: T | null | undefined,
+  fallback: T
+): T {
+  if (!data || typeof data !== 'object' || Object.keys(data).length === 0) {
+    return fallback;
+  }
+  return data;
+}
+
 export async function getCategories(): Promise<Category[]> {
   const json = await request<CollectionEnvelope<Category>>(
     '/api/categories?filters[active][$eq]=true&sort=order&populate=*'
@@ -254,6 +572,25 @@ function normalizeProduct(raw: any): Product {
         slug: raw.category.slug,
       }
     : null;
+  // S2b: importSource is an enum, importBatch is a relation. Both are
+  // optional and may be missing/null for products that pre-date the
+  // catalog-import feature.
+  const importSource: ProductImportSource | undefined =
+    typeof raw.importSource === 'string' &&
+    (PRODUCT_IMPORT_SOURCE_VALUES as readonly string[]).includes(raw.importSource)
+      ? (raw.importSource as ProductImportSource)
+      : undefined;
+  const importBatch =
+    raw.importBatch && typeof raw.importBatch === 'object'
+      ? {
+          id: raw.importBatch.id,
+          documentId: raw.importBatch.documentId,
+          fileName: raw.importBatch.fileName,
+          uploadedAt: raw.importBatch.uploadedAt,
+        }
+      : raw.importBatch === null
+      ? null
+      : undefined;
   return {
     id: raw.id,
     documentId: raw.documentId,
@@ -270,6 +607,27 @@ function normalizeProduct(raw: any): Product {
     order: raw.order ?? 0,
     category,
     images: normalizeImageList(raw.images),
+    externalId: raw.externalId ?? undefined,
+    productType: raw.productType ?? undefined,
+    subcategory: raw.subcategory ?? undefined,
+    usageEnvironment: raw.usageEnvironment ?? undefined,
+    observableColor: raw.observableColor ?? undefined,
+    observableMaterial: raw.observableMaterial ?? undefined,
+    catalogPage:
+      typeof raw.catalogPage === 'number'
+        ? raw.catalogPage
+        : raw.catalogPage == null
+        ? undefined
+        : Number(raw.catalogPage),
+    confidence:
+      typeof raw.confidence === 'string' &&
+      (PRODUCT_CONFIDENCE_VALUES as readonly string[]).includes(raw.confidence)
+        ? (raw.confidence as ProductConfidence)
+        : undefined,
+    source: raw.source ?? undefined,
+    observation: raw.observation ?? undefined,
+    importSource,
+    importBatch,
     createdAt: raw.createdAt,
     updatedAt: raw.updatedAt,
     publishedAt: raw.publishedAt,

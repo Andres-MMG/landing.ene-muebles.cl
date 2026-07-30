@@ -53,6 +53,18 @@ function buildCrumbs(pathname: string): Crumb[] {
     ];
   }
 
+  // /admin/productos/importar
+  if (
+    segments.length === 3 &&
+    segments[1] === 'productos' &&
+    segments[2] === 'importar'
+  ) {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Importar (Excel)' },
+    ];
+  }
+
   // /admin/productos/:id (and any other deeper path under productos)
   if (segments.length >= 3 && segments[1] === 'productos') {
     return [
@@ -96,6 +108,34 @@ function buildCrumbs(pathname: string): Crumb[] {
     return [
       { label: 'Productos', href: '/admin' },
       { label: 'Ajustes' },
+    ];
+  }
+
+  // Batch 2: marketing-section breadcrumb branches. Same shape as
+  // the existing single-segment leaves (one deep link to the parent
+  // dashboard plus the current page label).
+  if (segments.length === 2 && segments[1] === 'hero') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Hero' },
+    ];
+  }
+  if (segments.length === 2 && segments[1] === 'about') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Nosotros (about)' },
+    ];
+  }
+  if (segments.length === 2 && segments[1] === 'contacto-cta') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Contacto CTA' },
+    ];
+  }
+  if (segments.length === 2 && segments[1] === 'footer') {
+    return [
+      { label: 'Productos', href: '/admin' },
+      { label: 'Footer' },
     ];
   }
 

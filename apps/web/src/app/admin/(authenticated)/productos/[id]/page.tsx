@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
 import { strapiMediaUrl } from '@/lib/strapi-media';
 import { ProductForm } from '../ProductForm';
+import { productToFormValues } from '../_lib/productFormData';
 import { DeleteProductButton } from './DeleteProductButton';
 
 export const dynamic = 'force-dynamic';
@@ -34,6 +35,24 @@ type AdminProduct = {
     formats?: { thumbnail?: { url: string } };
     name: string;
   }[];
+  /** Catalog-import (S1) — 10 optional fields. */
+  externalId?: string;
+  productType?: string;
+  subcategory?: string;
+  usageEnvironment?: string;
+  observableColor?: string;
+  observableMaterial?: string;
+  catalogPage?: number;
+  confidence?: string;
+  source?: string;
+  observation?: string;
+  /** Catalog-import (S2b) — read-only provenance. */
+  importSource?: 'manual' | 'imported';
+  importBatch?: {
+    documentId?: string;
+    fileName?: string;
+    uploadedAt?: string;
+  } | null;
 };
 
 type AdminCategory = { documentId: string; name: string };
@@ -42,7 +61,7 @@ async function getProduct(
   documentId: string
 ): Promise<AdminProduct | null> {
   const res = await fetch(
-    `${STRAPI}/api/products/${documentId}?populate[category]=true&populate[images]=true&publicationState=preview&locale=es`,
+    `${STRAPI}/api/products/${documentId}?populate[category]=true&populate[images]=true&populate[importBatch]=true&publicationState=preview&locale=es`,
     { headers: { Authorization: `Bearer ${TOKEN}` }, cache: 'no-store' }
   );
   if (!res.ok) return null;
@@ -117,18 +136,7 @@ export default async function EditProductPage({
               name: image.name,
             };
           })}
-          initial={{
-            documentId: product.documentId,
-            name: product.name,
-            slug: product.slug,
-            description: product.description,
-            shortDescription: product.shortDescription ?? '',
-            price: String(product.price),
-            currency: product.currency || 'CLP',
-            category: product.category?.documentId ?? '',
-            active: product.active,
-            featured: product.featured,
-          }}
+          initial={productToFormValues(product)}
         />
       </div>
     </div>

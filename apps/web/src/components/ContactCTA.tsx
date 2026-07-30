@@ -1,10 +1,24 @@
-import type { SiteSetting } from "@/lib/strapi";
+import type { ContactCTASection, SiteSetting } from "@/lib/strapi";
 import { buildWhatsAppLink } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type ContactCTAProps = {
   settings: SiteSetting;
+  /**
+   * Batch 2: heading/body/button-label/button-href come from the
+   * Strapi `contact-cta-section` singleton (always returns a typed
+   * fallback). Per-field precedence: section copy wins when set,
+   * otherwise the legacy `site.contactHeading / site.contactBody /
+   * site.whatsappCta` tokens render. The contact-channel data
+   * (phone, whatsapp number, email, address, hours) stays on
+   * `site-setting` because it is institution-level identity, not
+   * section copy.
+   */
+  section?: ContactCTASection;
 };
+
+const DEFAULT_WHATSAPP_MESSAGE =
+  "Hola, me gustaría solicitar una cotización de mobiliario institucional.";
 
 /**
  * ContactCTA — full-bleed ink block.
@@ -13,13 +27,20 @@ type ContactCTAProps = {
  * data-rail with email, phone, hours, and address. Mono throughout:
  * the rail reads as a hardware spec sheet, not a sales pitch.
  */
-export function ContactCTA({ settings }: ContactCTAProps) {
-  const whatsappHref = settings.whatsappNumber
-    ? buildWhatsAppLink(
-        settings.whatsappNumber,
-        "Hola, me gustaría solicitar una cotización de mobiliario institucional."
-      )
-    : null;
+export function ContactCTA({ settings, section }: ContactCTAProps) {
+  const title = section?.title ?? site.contactHeading;
+  const body = section?.body ?? site.contactBody;
+  const buttonLabel = section?.buttonLabel ?? site.whatsappCta;
+  // `section.buttonHref` is set when the editor wants a non-WhatsApp
+  // CTA (e.g. mailto:). When absent we build the WhatsApp href from
+  // `settings.whatsappNumber` exactly like before.
+  const explicitHref = section?.buttonHref?.trim() || null;
+  const message = settings.whatsappDefaultMessage?.trim() || DEFAULT_WHATSAPP_MESSAGE;
+  const whatsAppHref =
+    !explicitHref && settings.whatsappNumber
+      ? buildWhatsAppLink(settings.whatsappNumber, message)
+      : null;
+  const buttonHref = explicitHref ?? whatsAppHref;
 
   return (
     <section
@@ -38,20 +59,24 @@ export function ContactCTA({ settings }: ContactCTAProps) {
               id="contacto-heading"
               className="t-h2 mt-6 max-w-[20ch] text-[clamp(2.25rem,1.4rem+3.6vw,4rem)] text-paper"
             >
-              {site.contactHeading}
+              {title}
             </h2>
             <p className="t-body mt-8 max-w-[52ch] text-lg text-paper-mute-on-ink">
-              {site.contactBody}
+              {body}
             </p>
             <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
-              {whatsappHref ? (
+              {buttonHref ? (
                 <a
-                  href={whatsappHref}
-                  target="_blank"
-                  rel="noopener noreferrer"
+                  href={buttonHref}
+                  target={buttonHref.startsWith("http") ? "_blank" : undefined}
+                  rel={
+                    buttonHref.startsWith("http")
+                      ? "noopener noreferrer"
+                      : undefined
+                  }
                   className="group inline-flex items-center gap-3 bg-taupe px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-ink transition-colors duration-500 hover:bg-paper"
                 >
-                  {site.whatsappCta}
+                  {buttonLabel}
                   <span
                     aria-hidden
                     className="transition-transform duration-500 group-hover:translate-x-1"

@@ -1,0 +1,60 @@
+{
+  "kind": "singleType",
+  "collectionName": "hero_sections",
+  "info": {
+    "singularName": "hero-section",
+    "pluralName": "hero-sections",
+    "displayName": "Hero Section",
+    "description": "Singleton content for the homepage hero (eyebrow, title, subtitle, primary/secondary CTAs and optional image)."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "eyebrow": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "title": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "subtitle": {
+      "type": "text",
+      "maxLength": 800
+    },
+    "primaryCtaLabel": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 60
+    },
+    "primaryCtaHref": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "secondaryCtaLabel": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "secondaryCtaHref": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "image": {
+      "type": "media",
+      "multiple": false,
+      "required": false,
+      "allowedTypes": [
+        "images"
+      ]
+    }
+  }
+}

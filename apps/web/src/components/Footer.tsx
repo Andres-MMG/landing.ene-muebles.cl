@@ -1,9 +1,17 @@
 import Link from "next/link";
-import type { SiteSetting } from "@/lib/strapi";
+import type { FooterBlock, SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type FooterProps = {
   settings: SiteSetting;
+  /**
+   * Batch 2: the Strapi `footer-block` singleton owns the copyright
+   * line and the secondary legal snippet. The four-column header
+   * labels (`site.footerCatalog / site.footerContact / site.footerLegal`)
+   * stay on ui-tokens because they are navigation chrome, not
+   * copy that ever needs translation or version control per release.
+   */
+  block?: FooterBlock;
 };
 
 const socialHref = (network: string, value: string): string => {
@@ -38,9 +46,13 @@ const navItems: { label: string; href: string }[] = [
  * across the width. Below: copyright + RUT/horario in mono. No social
  * icons; social handles are listed as text (industrial, not decorative).
  */
-export function Footer({ settings }: FooterProps) {
+export function Footer({ settings, block }: FooterProps) {
   const year = new Date().getFullYear();
   const socials = settings.socialLinks ?? {};
+  const promiseText = block?.tagline ?? site.footerCopy;
+  const defaultCopyright = `© ${year} ${settings.siteName}`;
+  const copyrightText = block?.copyrightText ?? defaultCopyright;
+  const legalSnippet = block?.legalSnippet ?? "Proveedor institucional · Chile";
 
   return (
     <footer className="bg-ink text-paper">
@@ -48,7 +60,7 @@ export function Footer({ settings }: FooterProps) {
       <div className="border-t border-paper-line-on-ink">
         <div className="mx-auto w-full max-w-[1440px] px-6 py-10 sm:px-10 lg:px-16 lg:py-12">
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
-            {site.footerCopy}
+            {promiseText}
           </p>
         </div>
       </div>
@@ -65,7 +77,7 @@ export function Footer({ settings }: FooterProps) {
             </p>
           ) : null}
           <p className="t-mono mt-8 text-[11px] uppercase tracking-[0.22em] text-taupe">
-            RUT 76.XXX.XXX-X
+            {settings.rut?.trim() ? `RUT ${settings.rut.trim()}` : "RUT 76.XXX.XXX-X"}
           </p>
         </div>
 
@@ -174,8 +186,8 @@ export function Footer({ settings }: FooterProps) {
                 Política de privacidad
               </Link>
             </li>
-            <li>© {year} {settings.siteName}</li>
-            <li>Proveedor institucional · Chile</li>
+            <li>{copyrightText || defaultCopyright}</li>
+            <li>{legalSnippet}</li>
             {settings.businessHours ? (
               <li className="text-xs">{settings.businessHours}</li>
             ) : null}

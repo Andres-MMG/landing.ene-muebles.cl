@@ -4,9 +4,12 @@ import { CategoryGrid } from "@/components/CategoryGrid";
 import { FeaturedProducts } from "@/components/FeaturedProducts";
 import { ContactCTA } from "@/components/ContactCTA";
 import {
-  getSiteSettings,
+  getAboutSection,
   getCategories,
+  getContactCTASection,
+  getHeroSection,
   getProducts,
+  getSiteSettings,
   type Category,
   type Product,
 } from "@/lib/strapi";
@@ -19,6 +22,15 @@ export default async function MarketingPage() {
   // children rendering, but we still need it here for the hero/footer
   // content. The cache (revalidate: 60) keeps the cost low.
   const settings = await getSiteSettings();
+  // Batch 2: the marketing-section singletons own the per-section
+  // copy. Each helper is non-throwing and returns a typed fallback
+  // so we can `Promise.all` them with the other Strapi reads without
+  // a try/catch wrapper.
+  const [aboutSection, heroSection, contactCtaSection] = await Promise.all([
+    getAboutSection(),
+    getHeroSection(),
+    getContactCTASection(),
+  ]);
 
   let categories: Category[] = [];
   let featured: Product[] = [];
@@ -76,19 +88,25 @@ export default async function MarketingPage() {
           }),
         }}
       />
-      <Hero settings={settings} />
+      {/* Home page only: the hero's secondary "Solicitar cotización" CTA
+          is opt-out because the page already has a near-the-end
+          WhatsApp CTA in the dark `ContactCTA` block. Stacking both
+          within ~1900 px of scroll duplicates the same intent. Other
+          marketing pages keep both CTAs. */}
+      <Hero settings={settings} section={heroSection} omitSecondaryCta />
       <CategoryGrid categories={categories} />
       <AboutSection
         aboutText={settings.aboutText}
         siteName={settings.siteName}
         productCount={productCount}
         categoryCount={categoryCount}
+        section={aboutSection}
       />
       <FeaturedProducts
         products={featured}
         whatsappNumber={settings.whatsappNumber}
       />
-      <ContactCTA settings={settings} />
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

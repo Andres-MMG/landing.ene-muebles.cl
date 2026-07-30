@@ -1,5 +1,8 @@
 import Link from 'next/link';
 import { ProductList } from './ProductList';
+import { buildImportBatchFilter } from './_lib/productsQuery';
+import { listAdminImportBatches } from '@/lib/admin/strapi-admin';
+import type { ImportBatch } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -25,6 +28,15 @@ type Product = {
     formats?: { thumbnail?: { url: string } };
     name: string;
   }[];
+  /** Catalog-import (S4) — provenance metadata for the Origen / Última
+   *  importación columns in the list. Optional — Strapi returns null
+   *  for products created before the importer shipped. */
+  importSource?: 'manual' | 'imported';
+  importBatch?: {
+    documentId?: string;
+    fileName?: string;
+    uploadedAt?: string;
+  } | null;
 };
 
 type CategoryRow = {
@@ -36,14 +48,20 @@ type CategoryRow = {
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
 const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
 
-async function listProducts(): Promise<Product[]> {
+async function listProducts(importBatch?: string): Promise<Product[]> {
   const qs = new URLSearchParams();
   qs.set('pagination[pageSize]', '50');
   qs.set('sort', 'updatedAt:desc');
   qs.set('populate[category]', 'true');
   qs.set('populate[images]', 'true');
+  qs.set('populate[importBatch]', 'true');
   qs.set('publicationState', 'preview');
   qs.set('locale', 'es');
+  // Catalog-import (E follow-up) — optional `?importBatch=…` filter,
+  // appended to the legacy query when present so the dashboard can
+  // show only the products that came in via a single Excel upload.
+  const batchFilter = buildImportBatchFilter(importBatch);
+  if (batchFilter) qs.set(batchFilter.key, batchFilter.value);
   const res = await fetch(`${STRAPI}/api/products?${qs.toString()}`, {
     headers: { Authorization: `Bearer ${TOKEN}` },
     cache: 'no-store',
@@ -68,12 +86,38 @@ async function listCategories(): Promise<CategoryRow[]> {
   return json?.data ?? [];
 }
 
-export default async function AdminDashboardPage() {
+type SearchParams = Promise<{ importBatch?: string | string[] }>;
+
+export default async function AdminDashboardPage({
+  searchParams,
+}: {
+  searchParams: SearchParams;
+}) {
+  // Catalog-import (E follow-up) — `?importBatch=<documentId>` from
+  // `/admin/importaciones` narrows the list to a single upload.
+  const sp = await searchParams;
+  const rawImportBatch = sp.importBatch;
+  const importBatchDocId = Array.isArray(rawImportBatch)
+    ? rawImportBatch[0]
+    : rawImportBatch;
+
   // Auth + user lookup are owned by the shared admin layout.
-  const [products, categories] = await Promise.all([
-    listProducts(),
+  const [products, categories, batches] = await Promise.all([
+    listProducts(importBatchDocId || undefined),
     listCategories(),
+    // Only spend a Strapi roundtrip when a filter is requested.
+    importBatchDocId ? listAdminImportBatches() : Promise.resolve([] as ImportBatch[]),
   ]);
+  const activeBatch = importBatchDocId
+    ? batches.find((b) => b.documentId === importBatchDocId) ?? null
+    : null;
+  const importBatchBanner = activeBatch
+    ? {
+        documentId: importBatchDocId,
+        fileName: activeBatch.fileName,
+        uploadedAt: activeBatch.uploadedAt,
+      }
+    : null;
   const liveCount = products.filter((p) => p.publishedAt).length;
   const draftCount = products.length - liveCount;
   const activeCategories = categories.filter((c) => c.active).length;
@@ -119,6 +163,7 @@ export default async function AdminDashboardPage() {
           name: c.name,
           active: c.active,
         }))}
+        importBatch={importBatchBanner}
       />
     </div>
   );

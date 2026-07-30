@@ -179,6 +179,184 @@ describe("formatPrice", () => {
   });
 });
 
+// Catalog-import (S4) — `normalizeProduct` must propagate every
+// catalog-import attribute from the Strapi response. These tests pin
+// the wire shape so a future refactor cannot silently drop a field
+// and break the admin form / public SEO payload.
+describe("normalizeProduct — catalog-import fields", () => {
+  it("propagates the 10 S1 catalog-import fields and the 2 S2b traceability fields", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          id: 1,
+          name: "Silla escolar sala cuna",
+          slug: "silla-escolar-sala-cuna",
+          description: "Silla apilable de melamina.",
+          price: 89900,
+          currency: "CLP",
+          externalId: "CAT-2025-001",
+          productType: "Silla",
+          subcategory: "Sillas y asientos",
+          usageEnvironment: "Sala cuna / educación inicial",
+          observableColor: "Madera natural y blanco",
+          observableMaterial: "Melamina 18 mm",
+          catalogPage: 2,
+          confidence: "alta",
+          source: "CATOLOGO PRODUCTOS- 2025.pdf, página 2",
+          observation: "Color revisado visualmente.",
+          importSource: "imported",
+          importBatch: {
+            id: 10,
+            documentId: "batch-doc-1",
+            fileName: "catalogo_productos_202.xlsx",
+            uploadedAt: "2026-07-28T10:00:00.000Z",
+          },
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("silla-escolar-sala-cuna");
+    expect(product).not.toBeNull();
+    expect(product!.externalId).toBe("CAT-2025-001");
+    expect(product!.productType).toBe("Silla");
+    expect(product!.subcategory).toBe("Sillas y asientos");
+    expect(product!.usageEnvironment).toBe("Sala cuna / educación inicial");
+    expect(product!.observableColor).toBe("Madera natural y blanco");
+    expect(product!.observableMaterial).toBe("Melamina 18 mm");
+    expect(product!.catalogPage).toBe(2);
+    expect(product!.confidence).toBe("alta");
+    expect(product!.source).toBe("CATOLOGO PRODUCTOS- 2025.pdf, página 2");
+    expect(product!.observation).toBe("Color revisado visualmente.");
+    expect(product!.importSource).toBe("imported");
+    expect(product!.importBatch).toEqual({
+      id: 10,
+      documentId: "batch-doc-1",
+      fileName: "catalogo_productos_202.xlsx",
+      uploadedAt: "2026-07-28T10:00:00.000Z",
+    });
+  });
+
+  it("coerces catalogPage from string to number", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          id: 2,
+          name: "Mesa escolar",
+          slug: "mesa-escolar",
+          description: "Mesa",
+          price: 150000,
+          currency: "CLP",
+          catalogPage: "5",
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("mesa-escolar");
+    expect(product!.catalogPage).toBe(5);
+    expect(typeof product!.catalogPage).toBe("number");
+  });
+
+  it("drops importSource when Strapi returns an unknown enum value", async () => {
+    // Strapi v5 ships the enum server-side. If someone bypasses the
+    // route and writes an unknown value into the DB, normalizeProduct
+    // should silently drop the field rather than carry the typo into
+    // the public surface.
+    mockFetch(200, {
+      data: [
+        {
+          id: 3,
+          name: "Escritorio",
+          slug: "escritorio",
+          description: "d",
+          price: 0,
+          currency: "CLP",
+          importSource: "magically-migrated",
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("escritorio");
+    expect(product!.importSource).toBeUndefined();
+  });
+
+  it("keeps importBatch null (vs undefined) when Strapi explicitly returns null", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          id: 4,
+          name: "Cuna",
+          slug: "cuna",
+          description: "d",
+          price: 0,
+          currency: "CLP",
+          importSource: "manual",
+          importBatch: null,
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("cuna");
+    expect(product!.importSource).toBe("manual");
+    expect(product!.importBatch).toBeNull();
+  });
+
+  it("keeps all catalog-import fields undefined when Strapi returns nothing", async () => {
+    // Legacy products created before S1 land in Strapi without any
+    // catalog-import columns. The public read helper must NOT crash
+    // and must surface them as undefined so callers can branch on
+    // their presence.
+    mockFetch(200, {
+      data: [
+        {
+          id: 5,
+          name: "Silla Oslo",
+          slug: "silla-oslo",
+          description: "Silla de madera.",
+          price: 199000,
+          currency: "CLP",
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("silla-oslo");
+    expect(product!.externalId).toBeUndefined();
+    expect(product!.productType).toBeUndefined();
+    expect(product!.subcategory).toBeUndefined();
+    expect(product!.usageEnvironment).toBeUndefined();
+    expect(product!.observableColor).toBeUndefined();
+    expect(product!.observableMaterial).toBeUndefined();
+    expect(product!.catalogPage).toBeUndefined();
+    expect(product!.confidence).toBeUndefined();
+    expect(product!.source).toBeUndefined();
+    expect(product!.observation).toBeUndefined();
+    expect(product!.importSource).toBeUndefined();
+    expect(product!.importBatch).toBeUndefined();
+  });
+
+  it("drops confidence when Strapi returns an unknown enum value", async () => {
+    // Future-proofs the same enum-validation that importSource
+    // already has. Strapi v5 stores `confidence` as string; if the
+    // schema enum is widened server-side, normalizeProduct should
+    // still surface a clean `ProductConfidence | undefined`.
+    mockFetch(200, {
+      data: [
+        {
+          id: 6,
+          name: "Banca",
+          slug: "banca",
+          description: "d",
+          price: 0,
+          currency: "CLP",
+          confidence: "experimental-confidence",
+        },
+      ],
+    });
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("banca");
+    expect(product!.confidence).toBeUndefined();
+  });
+});
+
 describe("buildWhatsAppLink", () => {
   it("strips + and encodes the message", async () => {
     const { buildWhatsAppLink } = await import("./strapi");

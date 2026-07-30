@@ -1,0 +1,30 @@
+{
+  "kind": "singleType",
+  "collectionName": "footer_blocks",
+  "info": {
+    "singularName": "footer-block",
+    "pluralName": "footer-blocks",
+    "displayName": "Footer Block",
+    "description": "Singleton content for the public site footer (copyright line, tagline overlay, secondary legal snippet). The /terminos and /privacidad routes stay static pages."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "copyrightText": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 200
+    },
+    "tagline": {
+      "type": "string",
+      "maxLength": 300
+    },
+    "legalSnippet": {
+      "type": "string",
+      "maxLength": 300
+    }
+  }
+}

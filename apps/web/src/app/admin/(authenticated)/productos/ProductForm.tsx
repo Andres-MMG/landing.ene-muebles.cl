@@ -4,20 +4,14 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { assertAdminAuth } from '@/lib/admin/client';
 import { ImageGallery, type ImageRecord } from './ImageGallery';
+import {
+  CONFIDENCE_OPTIONS,
+  PRODUCT_TYPE_OPTIONS,
+  buildProductSubmitPayload,
+  type ProductFormValues,
+} from './_lib/productFormData';
 
 type Category = { documentId: string; name: string };
-type Initial = {
-  documentId: string | null;
-  name: string;
-  slug: string;
-  shortDescription: string;
-  description: string;
-  price: string;
-  currency: string;
-  category: string;
-  active: boolean;
-  featured: boolean;
-};
 
 /**
  * Form for both create and edit. The server component that
@@ -25,6 +19,11 @@ type Initial = {
  * dispatches to /api/admin/products (POST) for new, or
  * /api/admin/products/[id] (PUT) for edit, then redirects to the
  * dashboard on success.
+ *
+ * Catalog-import (S4) — adds the "Atributos del catálogo" section
+ * with the 10 catalog-import fields, plus a read-only badge
+ * surfacing the `importSource` / `importBatch` metadata that the
+ * Excel importer stamps on every imported product.
  */
 export function ProductForm({
   initial,
@@ -33,18 +32,21 @@ export function ProductForm({
   images,
   productDocumentId,
 }: {
-  initial: Initial;
+  initial: ProductFormValues;
   categories: Category[];
   mode: 'create' | 'edit';
   images: ImageRecord[];
   productDocumentId: string | null;
 }) {
   const router = useRouter();
-  const [form, setForm] = useState<Initial>(initial);
+  const [form, setForm] = useState<ProductFormValues>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function update<K extends keyof Initial>(key: K, value: Initial[K]) {
+  function update<K extends keyof ProductFormValues>(
+    key: K,
+    value: ProductFormValues[K]
+  ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
@@ -64,16 +66,7 @@ export function ProductForm({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const body = {
-        name: form.name.trim(),
-        description: form.description.trim(),
-        shortDescription: form.shortDescription.trim() || undefined,
-        price: Number(form.price),
-        currency: form.currency.trim() || 'CLP',
-        category: form.category || undefined,
-        active: form.active,
-        featured: form.featured,
-      };
+      const body = buildProductSubmitPayload(form);
       const url =
         mode === 'create'
           ? '/api/admin/products'
@@ -111,6 +104,10 @@ export function ProductForm({
 
   const inputClass =
     'w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none';
+
+  const showImportBadge =
+    form.importSource === 'imported' &&
+    (Boolean(form.importBatchFileName) || Boolean(form.importBatchUploadedAt));
 
   return (
     <form onSubmit={onSubmit} className="space-y-10">
@@ -252,6 +249,163 @@ export function ProductForm({
             <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink">
               Destacado
             </span>
+          </label>
+        </div>
+      </fieldset>
+
+      {/* Catalog-import (S4) — "Atributos del catálogo" section. */}
+      <fieldset className="space-y-6">
+        <legend className="t-mono mb-4 text-[10px] uppercase tracking-[0.22em] text-taupe-deep">
+          Atributos del catálogo
+        </legend>
+        {showImportBadge ? (
+          <p
+            data-testid="import-badge"
+            className="inline-flex items-center gap-2 border border-taupe px-3 py-1 t-mono text-[10px] uppercase tracking-[0.22em] text-taupe-deep"
+          >
+            <span aria-hidden>•</span>
+            Importado desde Excel
+            {form.importBatchFileName ? (
+              <span className="text-ink-mute">· {form.importBatchFileName}</span>
+            ) : null}
+            {form.importBatchUploadedAt ? (
+              <span className="text-ink-soft">· {form.importBatchUploadedAt}</span>
+            ) : null}
+          </p>
+        ) : null}
+        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              ID externo
+            </span>
+            <input
+              value={form.externalId}
+              onChange={(e) => update('externalId', e.target.value)}
+              maxLength={32}
+              className={`${inputClass} font-mono`}
+              placeholder="CAT-2025-001"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Qué es
+            </span>
+            <select
+              value={form.productType}
+              onChange={(e) => update('productType', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— Sin definir —</option>
+              {PRODUCT_TYPE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Subcategoría
+            </span>
+            <input
+              value={form.subcategory}
+              onChange={(e) => update('subcategory', e.target.value)}
+              maxLength={80}
+              className={inputClass}
+              placeholder="Sillas y asientos"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Uso / ambiente
+            </span>
+            <input
+              value={form.usageEnvironment}
+              onChange={(e) => update('usageEnvironment', e.target.value)}
+              maxLength={200}
+              className={inputClass}
+              placeholder="Sala de clases / educación inicial"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Color observable
+            </span>
+            <input
+              value={form.observableColor}
+              onChange={(e) => update('observableColor', e.target.value)}
+              maxLength={120}
+              className={inputClass}
+              placeholder="Madera natural y blanco"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Material / acabado observable
+            </span>
+            <input
+              value={form.observableMaterial}
+              onChange={(e) => update('observableMaterial', e.target.value)}
+              maxLength={200}
+              className={inputClass}
+              placeholder="Melamina 18 mm"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Página PDF
+            </span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min="1"
+              value={form.catalogPage}
+              onChange={(e) => update('catalogPage', e.target.value)}
+              className={`${inputClass} font-mono`}
+              placeholder="2"
+            />
+          </label>
+          <label className="block">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Certeza
+            </span>
+            <select
+              value={form.confidence}
+              onChange={(e) => update('confidence', e.target.value)}
+              className={inputClass}
+            >
+              <option value="">— Sin definir —</option>
+              {CONFIDENCE_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>
+                  {opt}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Fuente
+            </span>
+            <input
+              value={form.source}
+              onChange={(e) => update('source', e.target.value)}
+              maxLength={200}
+              className={inputClass}
+              placeholder="CATOLOGO PRODUCTOS- 2025.pdf, página 2"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
+              Observación
+            </span>
+            <textarea
+              value={form.observation}
+              onChange={(e) => update('observation', e.target.value)}
+              rows={3}
+              maxLength={1000}
+              className={inputClass}
+              placeholder="Notas sobre la extracción, observaciones visuales, etc."
+            />
           </label>
         </div>
       </fieldset>

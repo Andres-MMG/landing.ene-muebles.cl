@@ -32,17 +32,17 @@ const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\
  * by every `/api/admin/*` Next.js route handler. Precedence:
  *
  *   1. `STRAPI_ADMIN_TOKEN` (full-access, admin scope)
- *   2. `STRAPI_API_TOKEN` (read-only, public scope — legacy fallback)
- *   3. empty string (never undefined, never throws; route handlers
- *      receive the empty Authorization header and Strapi rejects)
+ *   2. `STRAPI_API_TOKEN` (legacy fallback; it must permit admin writes)
+ *   3. empty string (never undefined; adminFetch rejects writes and direct
+ *      proxy routes receive an empty Authorization header that Strapi rejects)
  *
  * Route handlers MUST import this function instead of reading
  * `process.env.STRAPI_*` directly. Reading the env var directly
  * bypasses the fallback and causes 401s on `POST` / `PUT` / `DELETE`
- * because the public token is read-only.
+ * when only `STRAPI_API_TOKEN` is configured.
  */
 export function getStrapiAdminToken(): string {
-  return process.env.STRAPI_ADMIN_TOKEN ?? process.env.STRAPI_API_TOKEN ?? '';
+  return process.env.STRAPI_ADMIN_TOKEN || process.env.STRAPI_API_TOKEN || '';
 }
 
 // Internal alias kept so existing call sites inside this file do
@@ -126,7 +126,7 @@ async function adminFetch<T>(
 ): Promise<{ status: number; data: T | null }> {
   const token = init.token ?? TOKEN;
   if (!token) {
-    throw new Error('adminFetch: STRAPI_API_TOKEN is not set');
+    throw new Error('adminFetch: STRAPI_ADMIN_TOKEN or STRAPI_API_TOKEN is not set');
   }
   const url = `${STRAPI}${path}`;
   const res = await fetch(url, {

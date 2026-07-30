@@ -1,6 +1,6 @@
 # Coolify Compose Stack
 #
-# Topology: Coolify proxy -> web (port 3000) -> cms (internal) -> db (internal)
+# Topology: Coolify proxy -> web (port 3000) -> cms (public paths + internal) -> db (internal)
 # Coolify owns host ports 80/443, TLS certificates, and its Traefik instance.
 # The web service is public on port 3000. The CMS exposes only `/api` and
 # `/uploads` at CMS_PUBLIC_HOSTNAME through Coolify's standard proxy; its admin
@@ -73,8 +73,13 @@ services:
         condition: service_healthy
     networks:
       - landing_internal
+      # Coolify's managed Traefik reaches this service through its shared,
+      # externally managed proxy network. `landing_internal` remains the
+      # private path for web-to-CMS and CMS-to-db communication.
+      - coolify
     labels:
       - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
       - "traefik.http.routers.cms-public.rule=Host(`${CMS_PUBLIC_HOSTNAME:?CMS_PUBLIC_HOSTNAME is required}`) && (PathPrefix(`/api`) || PathPrefix(`/uploads`))"
       - "traefik.http.routers.cms-public.entrypoints=https"
       - "traefik.http.routers.cms-public.tls=true"
@@ -132,6 +137,9 @@ networks:
   landing_internal:
     driver: bridge
     name: landing_internal
+  coolify:
+    external: true
+    name: coolify
 
 volumes:
   cms_uploads:

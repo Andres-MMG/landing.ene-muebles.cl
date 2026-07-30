@@ -13,7 +13,10 @@ network. Coolify owns the host proxy, TLS certificates, and ports 80/443.
 | `db` | `mysql:8.0` | **internal only** | Persistent storage |
 
 The Compose stack does not publish host ports or run Traefik. Coolify routes the
-web service to container port `3000`. Its managed proxy also routes only
+web service to container port `3000`. The `cms` service joins Coolify's existing
+external Docker network named `coolify` so the managed proxy can reach it; the
+`traefik.docker.network=coolify` label makes that proxy path explicit when the
+service also has a private network. Its managed proxy routes only
 `https://${CMS_PUBLIC_HOSTNAME}/api/**` and
 `https://${CMS_PUBLIC_HOSTNAME}/uploads/**` to the CMS on port `1337`.
 The CMS admin UI and every other CMS path have no public router; operators reach
@@ -23,10 +26,11 @@ them over the private network. `db` has no public route or port mapping.
 
 ```
 Internet -> Coolify proxy (80/443, TLS)
-            -> web (3000)
-               -> landing_internal -> cms (1337, internal)
-                                    -> db  (3306, internal)
-            -> cms (1337): CMS_PUBLIC_HOSTNAME /api + /uploads only
+             -> web (3000)
+                -> landing_internal -> cms (1337, internal)
+                                     -> db  (3306, internal)
+             -> coolify (external proxy network) -> cms (1337):
+                CMS_PUBLIC_HOSTNAME /api + /uploads only
 ```
 
 `web` reaches Strapi over Docker DNS via `STRAPI_INTERNAL_URL`
@@ -61,7 +65,9 @@ and the volumes are untouched.
 variables. Copy it to `.env`, generate strong values for application and
 database secrets, and load them via Coolify's Environment UI. Compose uses
 required-variable expansion for secrets needed before startup. The `.env`
-filename is ignored by `.gitignore`.
+filename is ignored by `.gitignore`. Coolify must have its managed proxy enabled
+so its externally managed Docker network named `coolify` exists; do not create
+that network in the project or publish a CMS host port.
 
 Required variables:
 

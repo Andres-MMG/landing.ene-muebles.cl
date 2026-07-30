@@ -16,7 +16,8 @@ The Compose stack does not publish host ports or run Traefik. Both `web` and
 `cms` join Coolify's existing external Docker network named `coolify` so the
 managed proxy can reach them; `traefik.docker.network=coolify` makes that proxy
 path explicit when a service also has a private network. Its managed proxy routes
-`https://${WEB_PUBLIC_HOSTNAME}` to web on port `3000`, and routes only
+both `https://${WEB_PUBLIC_HOSTNAME}` and
+`https://${WEB_PUBLIC_WWW_HOSTNAME}` to web on port `3000`, and routes only
 `https://${CMS_PUBLIC_HOSTNAME}/api/**` and
 `https://${CMS_PUBLIC_HOSTNAME}/uploads/**` to the CMS on port `1337`.
 The CMS admin UI and every other CMS path have no public router; operators reach
@@ -26,8 +27,9 @@ them over the private network. `db` has no public route or port mapping.
 
 ```
 Internet -> Coolify proxy (80/443, TLS)
-             -> coolify (external proxy network) -> web (3000):
-                WEB_PUBLIC_HOSTNAME
+              -> coolify (external proxy network) -> web (3000):
+                 WEB_PUBLIC_HOSTNAME
+                 WEB_PUBLIC_WWW_HOSTNAME
              -> web -> landing_internal -> cms (1337, internal)
              -> coolify (external proxy network) -> cms (1337):
                 CMS_PUBLIC_HOSTNAME /api + /uploads only
@@ -73,7 +75,7 @@ that network in the project or publish a CMS host port.
 Required variables:
 
 - Public origins: `NEXT_PUBLIC_SITE_URL`, `WEB_PUBLIC_HOSTNAME`,
-  `CMS_PUBLIC_HOSTNAME`, `CORS_ORIGINS`,
+  `WEB_PUBLIC_WWW_HOSTNAME`, `CMS_PUBLIC_HOSTNAME`, `CORS_ORIGINS`,
   `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
 - Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
@@ -93,19 +95,22 @@ the Coolify server. For the production domain contract, configure:
 
 ```dotenv
 WEB_PUBLIC_HOSTNAME=ene-muebles.cl
+WEB_PUBLIC_WWW_HOSTNAME=www.ene-muebles.cl
 CMS_PUBLIC_HOSTNAME=cms.ene-muebles.cl
 CORS_ORIGINS=https://ene-muebles.cl,https://www.ene-muebles.cl
 ```
 
-`ene-muebles.cl` is the apex landing site and Coolify routes it to `web` on port
-`3000`; configure `www.ene-muebles.cl` to serve the same web origin. Strapi reads
-the comma-separated `CORS_ORIGINS` allowlist, which MUST include both HTTPS web
-origins and MUST NOT use the retired `landing.ene-muebles.cl` hostname as its
-production origin. `cms.ene-muebles.cl` is the CMS hostname and Coolify routes
-only its `/api` and `/uploads` paths to `cms` on port `1337`. Configure the
-corresponding apex, `www`, and `cms` DNS records at the DNS provider to the
-Coolify server IP. Do not create application-owned Traefik services or host-port
-mappings; Coolify manages the proxy, TLS, and public ports.
+`WEB_PUBLIC_HOSTNAME` and `WEB_PUBLIC_WWW_HOSTNAME` are both required: set them
+to `ene-muebles.cl` and `www.ene-muebles.cl`, respectively. The single web
+router accepts both hosts and sends them to `web` on port `3000`; neither host
+is a redirect-only DNS alias. Strapi reads the comma-separated `CORS_ORIGINS`
+allowlist, which MUST include both HTTPS web origins and MUST NOT use the
+retired `landing.ene-muebles.cl` hostname as its production origin.
+`cms.ene-muebles.cl` is the CMS hostname and Coolify routes only its `/api` and
+`/uploads` paths to `cms` on port `1337`. Configure the corresponding apex,
+`www`, and `cms` DNS records at the DNS provider to the Coolify server IP. Do
+not create application-owned Traefik services or host-port mappings; Coolify
+manages the proxy, TLS, and public ports.
 
 ### Strapi-issued tokens
 
@@ -149,5 +154,6 @@ docker compose -f infrastructure/docker-compose.yml config
 
 The command must exit `0`. The rendered output must show exactly three
 services (`web`, `cms`, `db`), no host `ports:` bindings, a `web` build argument
-for `NEXT_PUBLIC_STRAPI_URL`, a web router for `WEB_PUBLIC_HOSTNAME` to port
-`3000`, and CMS router labels limited to `/api` and `/uploads`,
+for `NEXT_PUBLIC_STRAPI_URL`, and one web router that includes both
+`WEB_PUBLIC_HOSTNAME` and `WEB_PUBLIC_WWW_HOSTNAME` to port `3000`. CMS router
+labels must remain limited to `/api` and `/uploads`.

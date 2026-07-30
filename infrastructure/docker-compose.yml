@@ -2,7 +2,8 @@
 #
 # Topology: Coolify proxy -> web (port 3000) -> cms (public paths + internal) -> db (internal)
 # Coolify owns host ports 80/443, TLS certificates, and its Traefik instance.
-# The web service is public at WEB_PUBLIC_HOSTNAME through Coolify's managed
+# The web service is public at both required hostnames,
+# WEB_PUBLIC_HOSTNAME and WEB_PUBLIC_WWW_HOSTNAME, through Coolify's managed
 # proxy. The CMS exposes only `/api` and `/uploads` at CMS_PUBLIC_HOSTNAME;
 # its admin UI and the database remain private on the internal Docker network.
 #
@@ -44,7 +45,7 @@ services:
     labels:
       - "traefik.enable=true"
       - "traefik.docker.network=coolify"
-      - "traefik.http.routers.web-public.rule=Host(`${WEB_PUBLIC_HOSTNAME:?WEB_PUBLIC_HOSTNAME is required}`)"
+      - "traefik.http.routers.web-public.rule=Host(`${WEB_PUBLIC_HOSTNAME:?WEB_PUBLIC_HOSTNAME is required}`, `${WEB_PUBLIC_WWW_HOSTNAME:?WEB_PUBLIC_WWW_HOSTNAME is required}`)"
       - "traefik.http.routers.web-public.entrypoints=https"
       - "traefik.http.routers.web-public.tls=true"
       - "traefik.http.routers.web-public.service=web-public"

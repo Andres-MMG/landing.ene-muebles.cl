@@ -23,8 +23,11 @@ services:
       NEXT_PUBLIC_SITE_URL: ${NEXT_PUBLIC_SITE_URL:?NEXT_PUBLIC_SITE_URL is required}
       STRAPI_INTERNAL_URL: ${STRAPI_INTERNAL_URL:?STRAPI_INTERNAL_URL is required}
       NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:?NEXT_PUBLIC_STRAPI_URL is required}
-      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:?STRAPI_API_TOKEN is required}
-      STRAPI_ADMIN_TOKEN: ${STRAPI_ADMIN_TOKEN:?STRAPI_ADMIN_TOKEN is required}
+      # Strapi issues these only after its first bootstrap. Public catalog reads
+      # work without STRAPI_API_TOKEN when the Public role has read permission;
+      # admin routes reject requests when neither token is configured.
+      STRAPI_API_TOKEN: ${STRAPI_API_TOKEN:-}
+      STRAPI_ADMIN_TOKEN: ${STRAPI_ADMIN_TOKEN:-}
       REVALIDATE_SECRET: ${REVALIDATE_SECRET:?REVALIDATE_SECRET is required}
       ADMIN_SESSION_SECRET: ${ADMIN_SESSION_SECRET:?ADMIN_SESSION_SECRET is required}
       NEXT_PUBLIC_FEATURE_LEAD_FORM: ${NEXT_PUBLIC_FEATURE_LEAD_FORM:-off}
@@ -78,8 +81,8 @@ services:
       - "traefik.http.routers.cms-public.service=cms-public"
       - "traefik.http.services.cms-public.loadbalancer.server.port=1337"
     volumes:
-      - cms_uploads:/srv/app/apps/cms/public/uploads
-      - cms_tmp:/srv/app/apps/cms/.tmp
+      - cms_uploads:/repo/apps/cms/public/uploads
+      - cms_tmp:/repo/apps/cms/.tmp
     healthcheck:
       test:
         - "CMD"

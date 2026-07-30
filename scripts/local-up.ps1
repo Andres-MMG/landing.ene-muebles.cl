@@ -58,8 +58,6 @@ function Initialize-LocalEnvironment {
         "JWT_SECRET",
         "MYSQL_PASSWORD",
         "MYSQL_ROOT_PASSWORD",
-        "STRAPI_API_TOKEN",
-        "STRAPI_ADMIN_TOKEN",
         "REVALIDATE_SECRET",
         "ADMIN_SESSION_SECRET",
         "CLIENT_ADMIN_PASSWORD"

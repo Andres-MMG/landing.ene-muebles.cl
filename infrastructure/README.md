@@ -48,8 +48,8 @@ secret is passed as a build argument or embedded in the image.
 
 | Volume | Mounted in | Purpose |
 | --- | --- | --- |
-| `cms_uploads` | `apps/cms/public/uploads` in `cms` | Media library persistence |
-| `cms_tmp` | `apps/cms/.tmp` in `cms` | Strapi runtime cache |
+| `cms_uploads` | `/repo/apps/cms/public/uploads` in `cms` | Media library persistence |
+| `cms_tmp` | `/repo/apps/cms/.tmp` in `cms` | Strapi runtime cache |
 | `db_data` | `/var/lib/mysql` in `db` | MySQL data files |
 
 `cms` and `db` roll back independently: revert the image SHA in Coolify
@@ -58,18 +58,17 @@ and the volumes are untouched.
 ## Environment contract
 
 `infrastructure/.env.example` is the source of truth for required deployment
-variables. Copy it to `.env`, generate strong values for every secret, and load
-them via Coolify's Environment UI. Compose uses required-variable expansion so
-production startup fails before serving traffic when a value is missing. The
-`.env` filename is ignored by `.gitignore`.
+variables. Copy it to `.env`, generate strong values for application and
+database secrets, and load them via Coolify's Environment UI. Compose uses
+required-variable expansion for secrets needed before startup. The `.env`
+filename is ignored by `.gitignore`.
 
 Required variables:
 
 - Public origins: `NEXT_PUBLIC_SITE_URL`, `CMS_PUBLIC_HOSTNAME`,
   `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
-- Web secrets: `STRAPI_API_TOKEN` (read-only), `STRAPI_ADMIN_TOKEN`
-  (least-privileged admin), `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
+- Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
   `NEXT_PUBLIC_FEATURE_LEAD_FORM`
 - Strapi secrets: `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
   `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `CLIENT_ADMIN_PASSWORD`
@@ -78,6 +77,18 @@ Required variables:
 
 Optional business facts (set later, once verified): WhatsApp number,
 contact email, physical address, social profile URLs.
+
+### Strapi-issued tokens
+
+`STRAPI_API_TOKEN` and `STRAPI_ADMIN_TOKEN` are not application secrets and
+must never be generated locally. Start the CMS once with the required Strapi
+application and database secrets, create the tokens in Strapi Admin, inject
+them through Coolify, then redeploy the web service. `STRAPI_API_TOKEN` is an
+optional read-only token: the public catalog makes unauthenticated requests
+when it is absent, so it operates as soon as the Strapi Public role grants
+catalog read permissions. `STRAPI_ADMIN_TOKEN` (or a valid API-token fallback)
+is still required by protected Next.js admin operations; requests without one
+are rejected.
 
 ## Local development
 
@@ -90,7 +101,14 @@ pnpm --filter web dev      # http://localhost:3000
 pnpm --filter cms develop  # http://localhost:1337
 ```
 
-The dev compose path is introduced in a later slice.
+For the local Docker Desktop stack, copy `.env.local.example` through either
+`scripts/local-up.ps1` or `scripts/local-up.sh`. Those scripts generate only
+cryptographic application/database secrets. After the first CMS bootstrap,
+create Strapi API tokens in the admin panel and add them to `.env.local` if the
+public role is not sufficient for catalog reads or if protected admin actions
+are needed. The local web image receives `NEXT_PUBLIC_STRAPI_URL` as a build
+argument; leave it unset to derive `http://localhost:${CMS_PORT}` or set a
+custom browser-visible origin explicitly.
 
 ## Validation
 

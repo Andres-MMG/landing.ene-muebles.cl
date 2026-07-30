@@ -13,9 +13,10 @@ docker compose down
 ```
 
 The script copies `infrastructure/.env.local.example` to
-`infrastructure/.env.local`, generates cryptographically random secrets
-on the first run, and starts the four services. The stack is healthy
-when every container reports `healthy` in `docker compose ps`.
+`infrastructure/.env.local`, generates cryptographically random application
+and database secrets on the first run, and starts the four services. Strapi API
+tokens are not generated: Strapi issues them after its first bootstrap. The
+stack is healthy when every container reports `healthy` in `docker compose ps`.
 
 | Service | Local URL | Notes |
 | --- | --- | --- |
@@ -88,8 +89,9 @@ authenticated admin user.
 
 ## API token
 
-The Next.js server uses `STRAPI_API_TOKEN` to read the catalog. To
-create a fresh token:
+The public catalog reads without `STRAPI_API_TOKEN` when the Strapi Public role
+has its documented read permissions. To use a read token instead, create one
+after the CMS has bootstrapped:
 
 1. Open `http://localhost:4781/admin` and log in as the Super Admin.
 2. Settings → API Tokens → Create new API Token.
@@ -97,6 +99,11 @@ create a fresh token:
 4. Token type: **Read-only** is enough; the site never writes.
 5. Copy the token into `infrastructure/.env.local` as `STRAPI_API_TOKEN=...`
    and restart the web container.
+
+For protected Next.js admin operations, create a separately scoped
+`STRAPI_ADMIN_TOKEN` after bootstrap and inject it into `.env.local` (or
+Coolify in production). Neither token is a cryptographic secret that can be
+locally generated.
 
 ## Seed data
 

@@ -57,6 +57,11 @@ services:
     build:
       context: ..
       dockerfile: apps/web/Dockerfile
+      args:
+        # NEXT_PUBLIC_* values are compiled into the browser bundle. Default to
+        # the published CMS port so a local port override cannot leave a stale
+        # browser origin in the built web image.
+        NEXT_PUBLIC_STRAPI_URL: ${NEXT_PUBLIC_STRAPI_URL:-http://localhost:${CMS_PORT:-4781}}
     env_file:
       - .env.local
     environment:

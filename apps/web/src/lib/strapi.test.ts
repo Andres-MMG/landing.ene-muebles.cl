@@ -65,6 +65,16 @@ describe("getSiteSettings", () => {
   });
 });
 
+describe("public Strapi requests", () => {
+  it("omits Authorization when no read token is configured", async () => {
+    delete process.env.STRAPI_API_TOKEN;
+
+    const { __internal } = await import("./strapi");
+
+    expect(__internal.buildHeaders()).toEqual({ Accept: "application/json" });
+  });
+});
+
 describe("getCategories", () => {
   it("returns a normalized array", async () => {
     mockFetch(200, {

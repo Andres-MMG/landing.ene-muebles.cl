@@ -12,11 +12,11 @@ network. Coolify owns the host proxy, TLS certificates, and ports 80/443.
 | `cms` | built from `apps/cms/Dockerfile` | Coolify public host: `/api` + `/uploads` only | Strapi v5 REST API and media; admin remains internal |
 | `db` | `mysql:8.0` | **internal only** | Persistent storage |
 
-The Compose stack does not publish host ports or run Traefik. Coolify routes the
-web service to container port `3000`. The `cms` service joins Coolify's existing
-external Docker network named `coolify` so the managed proxy can reach it; the
-`traefik.docker.network=coolify` label makes that proxy path explicit when the
-service also has a private network. Its managed proxy routes only
+The Compose stack does not publish host ports or run Traefik. Both `web` and
+`cms` join Coolify's existing external Docker network named `coolify` so the
+managed proxy can reach them; `traefik.docker.network=coolify` makes that proxy
+path explicit when a service also has a private network. Its managed proxy routes
+`https://${WEB_PUBLIC_HOSTNAME}` to web on port `3000`, and routes only
 `https://${CMS_PUBLIC_HOSTNAME}/api/**` and
 `https://${CMS_PUBLIC_HOSTNAME}/uploads/**` to the CMS on port `1337`.
 The CMS admin UI and every other CMS path have no public router; operators reach
@@ -26,11 +26,12 @@ them over the private network. `db` has no public route or port mapping.
 
 ```
 Internet -> Coolify proxy (80/443, TLS)
-             -> web (3000)
-                -> landing_internal -> cms (1337, internal)
-                                     -> db  (3306, internal)
+             -> coolify (external proxy network) -> web (3000):
+                WEB_PUBLIC_HOSTNAME
+             -> web -> landing_internal -> cms (1337, internal)
              -> coolify (external proxy network) -> cms (1337):
                 CMS_PUBLIC_HOSTNAME /api + /uploads only
+             -> landing_internal -> db (3306, internal)
 ```
 
 `web` reaches Strapi over Docker DNS via `STRAPI_INTERNAL_URL`
@@ -71,7 +72,8 @@ that network in the project or publish a CMS host port.
 
 Required variables:
 
-- Public origins: `NEXT_PUBLIC_SITE_URL`, `CMS_PUBLIC_HOSTNAME`,
+- Public origins: `NEXT_PUBLIC_SITE_URL`, `WEB_PUBLIC_HOSTNAME`,
+  `CMS_PUBLIC_HOSTNAME`,
   `NEXT_PUBLIC_STRAPI_URL` (must be `https://${CMS_PUBLIC_HOSTNAME}`)
 - Internal service URL: `STRAPI_INTERNAL_URL`
 - Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
@@ -83,6 +85,23 @@ Required variables:
 
 Optional business facts (set later, once verified): WhatsApp number,
 contact email, physical address, social profile URLs.
+
+### DNS and domains
+
+Create DNS records for both public hostnames before deployment and point them to
+the Coolify server. For the production domain contract, configure:
+
+```dotenv
+WEB_PUBLIC_HOSTNAME=ene-muebles.cl
+CMS_PUBLIC_HOSTNAME=cms.ene-muebles.cl
+```
+
+`ene-muebles.cl` is the apex landing site and Coolify routes it to `web` on port
+`3000`. `cms.ene-muebles.cl` is the CMS hostname and Coolify routes only its
+`/api` and `/uploads` paths to `cms` on port `1337`. Configure the corresponding
+apex and `cms` DNS records at the DNS provider to the Coolify server IP. Do not
+create application-owned Traefik services or host-port mappings; Coolify manages
+the proxy, TLS, and public ports.
 
 ### Strapi-issued tokens
 
@@ -124,4 +143,5 @@ docker compose -f infrastructure/docker-compose.yml config
 
 The command must exit `0`. The rendered output must show exactly three
 services (`web`, `cms`, `db`), no host `ports:` bindings, a `web` build argument
-for `NEXT_PUBLIC_STRAPI_URL`, CMS router labels limited to `/api` and `/uploads`,
+for `NEXT_PUBLIC_STRAPI_URL`, a web router for `WEB_PUBLIC_HOSTNAME` to port
+`3000`, and CMS router labels limited to `/api` and `/uploads`,

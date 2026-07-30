@@ -40,25 +40,66 @@ random_hex() {
   fail "Neither openssl nor /dev/urandom with od is available for secure random generation."
 }
 
+random_bootstrap_password() {
+  # Literal class representatives make the CMS 16-character/four-class policy
+  # deterministic while the remaining 60 characters come from the OS CSPRNG.
+  printf 'Aa1_%s' "$(random_hex 30)"
+}
+
+require_super_admin_email() {
+  candidate=${STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL-}
+  printf '%s' "$candidate" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || \
+    fail "Set a valid STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL before the first local run."
+  printf '%s' "$candidate"
+}
+
+is_high_entropy_password() {
+  candidate=$1
+  [ "${#candidate}" -ge 16 ] &&
+    printf '%s' "$candidate" | grep -q '[a-z]' &&
+    printf '%s' "$candidate" | grep -q '[A-Z]' &&
+    printf '%s' "$candidate" | grep -q '[0-9]' &&
+    printf '%s' "$candidate" | grep -q '[^A-Za-z0-9[:space:]]'
+}
+
+assert_local_bootstrap_environment() {
+  super_admin_email=$(sed -n 's/^STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL=//p' "$ENV_FILE" | tail -n 1)
+  printf '%s' "$super_admin_email" | grep -Eq '^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$' || \
+    fail "Set a valid STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL in infrastructure/.env.local."
+
+  for key in STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD CLIENT_ADMIN_PASSWORD; do
+    value=$(sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1)
+    is_high_entropy_password "$value" || \
+      fail "$key in infrastructure/.env.local must have 16+ characters with lowercase, uppercase, numeric, and symbol characters."
+  done
+}
+
 initialize_local_environment() {
   if [ -f "$ENV_FILE" ]; then
     return
   fi
 
   [ -f "$ENV_EXAMPLE_FILE" ] || fail "Missing environment template: $ENV_EXAMPLE_FILE"
+  super_admin_email=$(require_super_admin_email)
   tmp_file=$(mktemp "${ENV_FILE}.tmp.XXXXXX") || fail "Could not create a temporary environment file."
 
   while IFS= read -r line || [ -n "$line" ]; do
     line=$(printf '%s' "$line" | tr -d '\r')
 
     case "$line" in
+      STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL=)
+        printf '%s=%s\n' "STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL" "$super_admin_email" >> "$tmp_file"
+        ;;
       *=\<generate-random\>)
         key=${line%%=*}
         case "$key" in
           APP_KEYS)
             value="$(random_hex 16),$(random_hex 16),$(random_hex 16),$(random_hex 16)"
             ;;
-          API_TOKEN_SALT|ADMIN_JWT_SECRET|TRANSFER_TOKEN_SALT|JWT_SECRET|CLIENT_ADMIN_PASSWORD|MYSQL_PASSWORD|MYSQL_ROOT_PASSWORD|REVALIDATE_SECRET|ADMIN_SESSION_SECRET)
+          STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD|CLIENT_ADMIN_PASSWORD)
+            value=$(random_bootstrap_password)
+            ;;
+          API_TOKEN_SALT|ADMIN_JWT_SECRET|TRANSFER_TOKEN_SALT|JWT_SECRET|MYSQL_PASSWORD|MYSQL_ROOT_PASSWORD|REVALIDATE_SECRET|ADMIN_SESSION_SECRET)
             value=$(random_hex 32)
             ;;
           *)
@@ -128,6 +169,7 @@ if ! docker info >/dev/null 2>&1; then
 fi
 
 initialize_local_environment
+assert_local_bootstrap_environment
 
 web_port_override=${WEB_PORT-}
 web_port_is_set=${WEB_PORT+x}
@@ -165,6 +207,6 @@ wait_for_healthchecks
 
 printf '\n%s\n' "Local stack is healthy:"
 printf '  Sitio web:          http://localhost:%s\n' "${WEB_PORT:-4780}"
-printf '  Strapi admin:        http://localhost:%s/admin (first-time setup required)\n' "${CMS_PORT:-4781}"
+printf '  Strapi admin:        http://localhost:%s/admin (bootstrap Super Admin is in infrastructure/.env.local)\n' "${CMS_PORT:-4781}"
 printf '  Traefik dashboard:   http://localhost:%s/dashboard/\n' "${PROXY_DASHBOARD_PORT:-4785}"
 printf '  MySQL:               localhost:%s (use any MySQL client; credentials are in infrastructure/.env.local)\n' "${DB_PORT:-4782}"

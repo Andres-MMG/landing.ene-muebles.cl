@@ -21,7 +21,7 @@ stack is healthy when every container reports `healthy` in `docker compose ps`.
 | Service | Local URL | Notes |
 | --- | --- | --- |
 | Next.js site | http://localhost:4780 | Public marketing + catalog |
-| Strapi admin | http://localhost:4781/admin | First-run installer for the Super Admin |
+| Strapi admin | http://localhost:4781/admin | Bootstrap-managed Super Admin login |
 | MySQL | localhost:4782 | Credentials live in `infrastructure/.env.local` |
 | Traefik dashboard | http://localhost:4785/dashboard/ | Local diagnostics only |
 
@@ -29,13 +29,17 @@ stack is healthy when every container reports `healthy` in `docker compose ps`.
 
 There are two roles in the local CMS:
 
-- **Owner / Super Admin.** Created on first run at
-  `http://localhost:4781/admin`. This is the only account Strapi can
-  create unattended; the bootstrap intentionally does not touch it.
+- **Owner / Super Admin.** Created by the bootstrap from the dedicated
+  `STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL` and
+  `STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD` environment variables before any
+  Editor account is seeded. The configured email must not already belong to a
+  different Strapi admin user. Its generated password must contain at least 16
+  characters with lowercase, uppercase, numeric, and symbol characters.
 - **Editor (cliente@ene-muebles.cl).** Created by the Strapi
   `bootstrap()` hook in `apps/cms/src/index.ts` on every container
-  start when `CLIENT_ADMIN_PASSWORD` is set. The bootstrap never provides a
-  fallback password. The role is scoped to the Content Manager for `product`
+  start when `CLIENT_ADMIN_PASSWORD` is configured with a generated password
+  meeting the same 16-character, four-class policy. The bootstrap never
+  provides a fallback password. The role is scoped to the Content Manager for `product`
   and `category` only — no access to
   `site-setting`, Settings, Plugins, Marketplace, or any other admin
   panel.

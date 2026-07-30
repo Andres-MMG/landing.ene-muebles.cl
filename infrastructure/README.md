@@ -85,12 +85,20 @@ Required variables:
 - Web secrets: `REVALIDATE_SECRET`, `ADMIN_SESSION_SECRET`,
   `NEXT_PUBLIC_FEATURE_LEAD_FORM`
 - Strapi secrets: `APP_KEYS`, `API_TOKEN_SALT`, `ADMIN_JWT_SECRET`,
-  `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `CLIENT_ADMIN_PASSWORD`
+  `TRANSFER_TOKEN_SALT`, `JWT_SECRET`, `STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL`,
+  `STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD`, `CLIENT_ADMIN_PASSWORD`
 - MySQL: `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`,
   `MYSQL_ROOT_PASSWORD`
 
 Optional business facts (set later, once verified): WhatsApp number,
 contact email, physical address, social profile URLs.
+
+Before the next CMS deployment, set `STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL`,
+`STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD`, and `CLIENT_ADMIN_PASSWORD` in
+Coolify's Environment UI. Each password must be a generated secret of at least
+16 characters containing lowercase, uppercase, numeric, and symbol characters.
+The Super Admin email must be unique among Strapi admin users. Never place
+these values in Compose files or version control.
 
 ### DNS and domains
 
@@ -115,12 +123,23 @@ them through Coolify, then redeploy the web service.
 
 ## Local development
 
-For the local Docker Desktop stack, copy `.env.local.example` through either
-`scripts/local-up.ps1` or `scripts/local-up.sh`. Those scripts generate only
-cryptographic application/database secrets. After the first CMS bootstrap,
-create Strapi API tokens in the admin panel and add them to `.env.local` if the
-public role is not sufficient for catalog reads or if protected admin actions
-are needed.
+For the local Docker Desktop stack, provide the intended Super Admin email on
+the first run, then use either `scripts/local-up.ps1` or `scripts/local-up.sh`:
+
+```powershell
+.\scripts\local-up.ps1 -SuperAdminEmail owner@example.test
+```
+
+```sh
+STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL=owner@example.test ./scripts/local-up.sh
+```
+
+The scripts write that operator-supplied email into ignored `.env.local` and
+generate both bootstrap passwords with the required 16-character, four-class
+policy. Existing `.env.local` files are validated before Docker is invoked.
+After the first CMS bootstrap, create Strapi API tokens in the admin panel and
+add them to `.env.local` if the public role is not sufficient for catalog reads
+or if protected admin actions are needed.
 
 ## Validation
 

@@ -1,5 +1,5 @@
 [CmdletBinding()]
-param()
+param([string]$SuperAdminEmail)
 
 Set-StrictMode -Version 2.0
 $ErrorActionPreference = "Stop"
@@ -20,9 +20,11 @@ function Stop-LocalStack {
 }
 
 function New-SecureRandomString {
-    param([int]$Length = 64)
+    param(
+        [int]$Length = 64,
+        [string]$Alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+    )
 
-    $alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     $bytes = New-Object byte[] $Length
     $generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
 
@@ -35,10 +37,61 @@ function New-SecureRandomString {
 
     $builder = New-Object System.Text.StringBuilder $Length
     foreach ($byte in $bytes) {
-        [void]$builder.Append($alphabet[$byte -band 63])
+        [void]$builder.Append($Alphabet[$byte % $Alphabet.Length])
     }
 
     return $builder.ToString()
+}
+
+function New-BootstrapPassword {
+    # Literal class representatives make the CMS 16-character/four-class policy
+    # deterministic while the remaining 60 characters come from the OS CSPRNG.
+    return "Aa1_$(New-SecureRandomString -Length 60)"
+}
+
+function Get-RequestedSuperAdminEmail {
+    $email = if ($SuperAdminEmail) {
+        $SuperAdminEmail
+    }
+    else {
+        [System.Environment]::GetEnvironmentVariable("STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL", "Process")
+    }
+
+    if ([string]::IsNullOrWhiteSpace($email) -or $email -notmatch "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$") {
+        Stop-LocalStack "Provide a valid Super Admin email with -SuperAdminEmail or STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL before the first local run."
+    }
+
+    return $email
+}
+
+function Test-HighEntropyPassword {
+    param([string]$Password)
+
+    return $Password.Length -ge 16 -and
+        $Password -match "[a-z]" -and
+        $Password -match "[A-Z]" -and
+        $Password -match "\d" -and
+        $Password -match "[^A-Za-z0-9\s]"
+}
+
+function Assert-LocalBootstrapEnvironment {
+    $values = @{}
+    foreach ($line in [System.IO.File]::ReadAllLines($EnvFile)) {
+        if ($line -match "^([^#][^=]*)=(.*)$") {
+            $values[$Matches[1].Trim()] = $Matches[2].Trim()
+        }
+    }
+
+    $email = $values["STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL"]
+    if ([string]::IsNullOrWhiteSpace($email) -or $email -notmatch "^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$") {
+        Stop-LocalStack "Set a valid STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL in infrastructure/.env.local."
+    }
+
+    foreach ($key in @("STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD", "CLIENT_ADMIN_PASSWORD")) {
+        if (-not (Test-HighEntropyPassword -Password $values[$key])) {
+            Stop-LocalStack "$key in infrastructure/.env.local must have 16+ characters with lowercase, uppercase, numeric, and symbol characters."
+        }
+    }
 }
 
 function Initialize-LocalEnvironment {
@@ -50,6 +103,7 @@ function Initialize-LocalEnvironment {
         Stop-LocalStack "Missing environment template: $EnvExampleFile"
     }
 
+    $superAdminEmail = Get-RequestedSuperAdminEmail
     Copy-Item -LiteralPath $EnvExampleFile -Destination $EnvFile
     $secretKeys = @(
         "API_TOKEN_SALT",
@@ -64,6 +118,11 @@ function Initialize-LocalEnvironment {
     )
 
     $generatedLines = foreach ($line in [System.IO.File]::ReadAllLines($EnvFile)) {
+        if ($line -eq "STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL=") {
+            "STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL=$superAdminEmail"
+            continue
+        }
+
         if ($line -notmatch "^([^#][^=]*)=<generate-random>$") {
             $line
             continue
@@ -73,6 +132,11 @@ function Initialize-LocalEnvironment {
         if ($key -eq "APP_KEYS") {
             $keys = 1..4 | ForEach-Object { New-SecureRandomString -Length 32 }
             "$key=$($keys -join ',')"
+            continue
+        }
+
+        if ($key -in @("STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD", "CLIENT_ADMIN_PASSWORD")) {
+            "$key=$(New-BootstrapPassword)"
             continue
         }
 
@@ -158,6 +222,7 @@ if ((Invoke-Docker -Arguments @("info")) -ne 0) {
 }
 
 Initialize-LocalEnvironment
+Assert-LocalBootstrapEnvironment
 Import-LocalEnvironment
 
 Push-Location $RepoRoot
@@ -221,7 +286,7 @@ try {
     Write-Host ""
     Write-Host "Local stack is healthy:"
     Write-Host "  Sitio web:          http://localhost:$webPort"
-    Write-Host "  Strapi admin:        http://localhost:$cmsPort/admin (first-time setup required)"
+    Write-Host "  Strapi admin:        http://localhost:$cmsPort/admin (bootstrap Super Admin configured in infrastructure/.env.local)"
     Write-Host "  Traefik dashboard:   http://localhost:$dashboardPort/dashboard/"
     Write-Host "  MySQL:               localhost:$dbPort (use any MySQL client; credentials are in infrastructure/.env.local)"
 }

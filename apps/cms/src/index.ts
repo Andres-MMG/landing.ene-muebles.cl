@@ -1,7 +1,7 @@
 /**
  * Strapi v5 bootstrap entry.
  *
- * Idempotent on every container start. Four responsibilities, each
+ * Idempotent on every container start. Five responsibilities, each
  * wrapped in its own try/catch so a single failure does not abort the
  * rest of the bootstrap or block the container from coming up healthy.
  *
@@ -15,7 +15,10 @@
  *  2. Public singletons: create missing marketing singleton documents as
  *     published, but never change an existing draft or published document.
  *
- *  3. Editor admin role: a scoped admin role for the client with
+ *  3. Bootstrap Super Admin: establish a dedicated, environment-configured
+ *     Super Admin before any lower-privilege admin account exists.
+ *
+ *  4. Editor admin role: a scoped admin role for the client with
  *     `read / create / update` (no delete, no publish) on product
  *     and category only. Admin role permissions live in the action
  *     provider; hand-rolling the action name throws
@@ -27,8 +30,8 @@
  *     expand them with the nested field rules, and finally
  *     `roleService.assignPermissions(roleId, expanded)`.
  *
- *  4. Client admin user: `cliente@ene-muebles.cl` with the Editor
- *     role. Must be created via `strapi.service('admin::user').add`
+ *  5. Client admin user: `cliente@ene-muebles.cl` with the Editor
+ *     role. Must be created via `strapi.service('admin::user').create`
  *     so the password-hash lifecycle runs. Direct
  *     `strapi.db.query('admin::user').create()` BYPASSES the lifecycle
  *     and stores the password in plaintext, which is the bug that
@@ -136,6 +139,105 @@ const isActionAllowed = (action: string, allowed: string[]): boolean =>
   allowed.some((prefix) => action.startsWith(prefix));
 
 const actionId = (uid: string, op: string): string => `${uid}.${op}`;
+
+const isValidBootstrapEmail = (email: string): boolean => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+
+const isHighEntropyBootstrapPassword = (password: string): boolean =>
+  password.length >= 16 &&
+  /[a-z]/.test(password) &&
+  /[A-Z]/.test(password) &&
+  /\d/.test(password) &&
+  /[^A-Za-z0-9\s]/.test(password);
+
+const requireHighEntropyBootstrapPassword = (variableName: string, context: string): string => {
+  const password = process.env[variableName];
+  if (!password || !isHighEntropyBootstrapPassword(password)) {
+    throw new Error(
+      `${context}: ${variableName} must be at least 16 characters and include lowercase, uppercase, numeric, and symbol characters.`,
+    );
+  }
+  return password;
+};
+
+type AdminRole = { id: number };
+type AdminUser = { id: number };
+
+export async function ensureBootstrapSuperAdmin(strapi: Core.Strapi): Promise<void> {
+  const roleService = strapi.service("admin::role") as {
+    getSuperAdmin: () => Promise<AdminRole | null>;
+  };
+  const userService = strapi.service("admin::user") as {
+    findOneByEmail: (email: string) => Promise<AdminUser | null>;
+    create: (attributes: Record<string, unknown>) => Promise<AdminUser>;
+  };
+  const adminUsers = strapi.db.query("admin::user") as {
+    findOne: (options: {
+      where: { roles: { id: number }; isActive: true; blocked: false };
+    }) => Promise<AdminUser | null>;
+  };
+
+  const superAdminRole = await roleService.getSuperAdmin();
+  if (!superAdminRole) {
+    throw new Error(
+      "Bootstrap Super Admin cannot be established: Super Admin role is unavailable.",
+    );
+  }
+
+  const findExistingUsableSuperAdmin = (): Promise<AdminUser | null> =>
+    adminUsers.findOne({
+      where: { roles: { id: superAdminRole.id }, isActive: true, blocked: false },
+    });
+
+  if (await findExistingUsableSuperAdmin()) {
+    log("Usable Super Admin already exists; bootstrap Super Admin creation skipped.");
+    return;
+  }
+
+  const email = process.env.STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL?.trim();
+  const password = process.env.STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD;
+
+  if (!email || !password) {
+    throw new Error(
+      "Bootstrap Super Admin cannot be established: STRAPI_BOOTSTRAP_SUPER_ADMIN_EMAIL and STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD are required.",
+    );
+  }
+  if (!isValidBootstrapEmail(email)) {
+    throw new Error("Bootstrap Super Admin cannot be established: configured email is invalid.");
+  }
+  const validatedPassword = requireHighEntropyBootstrapPassword(
+    "STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD",
+    "Bootstrap Super Admin cannot be established",
+  );
+
+  const existingUser = await userService.findOneByEmail(email);
+  if (existingUser) {
+    throw new Error(
+      "Bootstrap Super Admin cannot be established: configured email belongs to an existing non-Super-Admin user.",
+    );
+  }
+
+  try {
+    await userService.create({
+      email,
+      firstname: "Bootstrap",
+      lastname: "Super Admin",
+      username: email,
+      password: validatedPassword,
+      blocked: false,
+      isActive: true,
+      roles: [superAdminRole.id],
+    });
+    log(`Bootstrap Super Admin created (${email}).`);
+  } catch (err) {
+    // Another instance may have created a usable user after our initial role check.
+    // Recheck the role relation rather than assuming a duplicate-email error.
+    if (await findExistingUsableSuperAdmin()) {
+      log("Usable Super Admin was created concurrently; bootstrap Super Admin creation skipped.");
+      return;
+    }
+    throw new Error("Bootstrap Super Admin cannot be established.", { cause: err });
+  }
+}
 
 async function ensurePublicRolePermissions(strapi: Core.Strapi): Promise<void> {
   const role = await strapi.db
@@ -308,9 +410,8 @@ async function ensureEditorPermissions(strapi: Core.Strapi, roleId: number): Pro
   }
 }
 
-async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Promise<void> {
+export async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Promise<void> {
   const email = "cliente@ene-muebles.cl";
-  const password = process.env.CLIENT_ADMIN_PASSWORD ?? "Cliente2026!";
 
   // The user service is the only way to create an admin user that
   // runs the password-hash lifecycle. Direct
@@ -328,21 +429,22 @@ async function ensureClientUser(strapi: Core.Strapi, editorRoleId: number): Prom
     return;
   }
 
-  try {
-    await userService.create({
-      email,
-      firstname: "Cliente",
-      lastname: "Ene Muebles",
-      username: "cliente",
-      password,
-      blocked: false,
-      isActive: true,
-      roles: [editorRoleId],
-    });
-    log(`Client user created (${email}).`);
-  } catch (err) {
-    logError("Failed to create client user", err);
-  }
+  const password = requireHighEntropyBootstrapPassword(
+    "CLIENT_ADMIN_PASSWORD",
+    "Client Editor cannot be established",
+  );
+
+  await userService.create({
+    email,
+    firstname: "Cliente",
+    lastname: "Ene Muebles",
+    username: "cliente",
+    password,
+    blocked: false,
+    isActive: true,
+    roles: [editorRoleId],
+  });
+  log(`Client user created (${email}).`);
 }
 
 export default {
@@ -357,6 +459,10 @@ export default {
    * on every container start.
    */
   async bootstrap({ strapi }: { strapi: Core.Strapi }) {
+    // This is intentionally not isolated in a try/catch: continuing to seed
+    // lower-privilege admin users without a Super Admin would lock out /admin.
+    await ensureBootstrapSuperAdmin(strapi);
+
     try {
       await ensurePublicRolePermissions(strapi);
     } catch (err) {
@@ -374,11 +480,7 @@ export default {
         logError("Editor permissions failed", err);
       }
 
-      try {
-        await ensureClientUser(strapi, editorRoleId);
-      } catch (err) {
-        logError("Client user creation failed", err);
-      }
+      await ensureClientUser(strapi, editorRoleId);
     } else {
       logWarn("Skipping Editor permissions and client user: role not found.");
     }
@@ -398,14 +500,7 @@ export default {
 };
 
 async function ensureAdminUser(strapi: Core.Strapi): Promise<void> {
-  // The default password can be overridden via env var. The hash is
-  // bcrypt (cost 10) so the plaintext never lands in the DB.
   const email = "cliente@ene-muebles.cl";
-  const defaultPassword = "Cliente2026!";
-  const password =
-    process.env.CLIENT_ADMIN_PASSWORD && process.env.CLIENT_ADMIN_PASSWORD.length >= 8
-      ? process.env.CLIENT_ADMIN_PASSWORD
-      : defaultPassword;
 
   const existing = await strapi.db.query("api::admin-user.admin-user").findOne({
     where: { email },
@@ -414,6 +509,11 @@ async function ensureAdminUser(strapi: Core.Strapi): Promise<void> {
     log(`Admin user already exists (${email}).`);
     return;
   }
+
+  const password = requireHighEntropyBootstrapPassword(
+    "CLIENT_ADMIN_PASSWORD",
+    "Frontend admin user cannot be established",
+  );
 
   const passwordHash = await bcrypt.hash(password, 10);
 

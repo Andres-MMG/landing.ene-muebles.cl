@@ -85,15 +85,14 @@ const isActionAllowed = (action: string, allowed: string[]): boolean =>
 const actionId = (uid: string, op: string): string => `${uid}.${op}`;
 
 async function ensurePublicRolePermissions(strapi: Core.Strapi): Promise<void> {
-  const publicRoleService = strapi.service('plugin::users-permissions.role');
-  const publicRole = await publicRoleService.find({ where: { type: 'public' } });
+  const role = await strapi.db
+    .query('plugin::users-permissions.role')
+    .findOne({ where: { type: 'public' } });
 
-  if (!Array.isArray(publicRole) || publicRole.length === 0) {
+  if (!role) {
     logWarn('Public role not found; skipping public-role permission seeding.');
     return;
   }
-
-  const role = publicRole[0];
 
   // Snapshot the existing permissions so we don't churn the DB on every boot.
   const current = await strapi.db

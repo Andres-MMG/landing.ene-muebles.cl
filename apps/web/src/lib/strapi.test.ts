@@ -45,6 +45,53 @@ describe("getSiteSettings", () => {
     expect(fetch).toHaveBeenCalledTimes(1);
   });
 
+  it("omits cleared social links while preserving populated handles", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        socialLinks: {
+          instagram: "enemuebles",
+          linkedin: null,
+          tiktok: null,
+        },
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+    const settings = await getSiteSettings();
+
+    expect(settings.socialLinks).toEqual({ instagram: "enemuebles" });
+  });
+
+  it("rejects social links with non-string, non-null values", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        socialLinks: { instagram: 42 },
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed socialLinks/);
+  });
+
+  it("rejects social links with an invalid object shape", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        socialLinks: ["enemuebles"],
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed socialLinks/);
+  });
+
   it("returns the minimal fallback on a 404", async () => {
     mockFetch(404, {
       data: null,

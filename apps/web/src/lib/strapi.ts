@@ -387,16 +387,7 @@ function normalizeSiteSettings(raw: unknown): SiteSetting {
     throw new Error("[strapi] getSiteSettings: malformed id");
   }
 
-  const socialLinksValue = raw.socialLinks;
-  const socialLinks =
-    socialLinksValue === undefined || socialLinksValue === null
-      ? undefined
-      : isRecord(socialLinksValue) &&
-          Object.values(socialLinksValue).every((value) => typeof value === "string")
-        ? socialLinksValue
-        : (() => {
-            throw new Error("[strapi] getSiteSettings: malformed socialLinks");
-          })();
+  const socialLinks = normalizeSocialLinks(raw.socialLinks);
 
   const heroImage = raw.heroImage;
   if (heroImage !== undefined && heroImage !== null && normalizeMedia(heroImage) === null) {
@@ -419,6 +410,24 @@ function normalizeSiteSettings(raw: unknown): SiteSetting {
     rut: optionalString(raw.rut, "rut"),
     heroImage: normalizeMedia(heroImage),
   };
+}
+
+function normalizeSocialLinks(value: unknown): SocialLinks | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (!isRecord(value)) {
+    throw new Error("[strapi] getSiteSettings: malformed socialLinks");
+  }
+
+  const socialLinks: Record<string, string> = {};
+  for (const [network, handle] of Object.entries(value)) {
+    if (handle === null) continue;
+    if (typeof handle !== "string") {
+      throw new Error("[strapi] getSiteSettings: malformed socialLinks");
+    }
+    socialLinks[network] = handle;
+  }
+
+  return socialLinks;
 }
 
 /**

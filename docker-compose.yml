@@ -56,6 +56,8 @@ services:
     build:
       context: .
       dockerfile: apps/cms/Dockerfile
+      args:
+        PUBLIC_URL: ${NEXT_PUBLIC_STRAPI_URL:?NEXT_PUBLIC_STRAPI_URL is required}
     environment:
       NODE_ENV: production
       HOST: 0.0.0.0

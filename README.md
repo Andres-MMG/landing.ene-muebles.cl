@@ -44,9 +44,11 @@ Use Node.js 20 LTS and pnpm 9.
 
 The Coolify Compose stack in `infrastructure/` is the single source of truth
 for the production layout: Coolify's managed proxy fronts the public web
-service and the CMS public `/api` and `/uploads` paths only; Strapi admin and
-MySQL remain on the private Docker network. See `infrastructure/README.md` for
-the full topology, health checks, volumes, and environment contract.
+service and routes the full `cms.ene-muebles.cl` host to the CMS on port 1337,
+including Strapi `/admin`, `/api/admin`, `/api`, uploads, and static admin
+assets. MySQL remains on the private Docker network. See
+`infrastructure/README.md` for the full topology, health checks, volumes, and
+environment contract.
 
 Required deployment variables live in `infrastructure/.env.example`. Copy to
 `.env`, generate real secret values, and load them via Coolify's Environment

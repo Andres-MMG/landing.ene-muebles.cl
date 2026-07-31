@@ -41,7 +41,9 @@ Coolify's UI.
 Configure each public service in Coolify **Resource → Routing**:
 
 - **web**: `ene-muebles.cl`, `www.ene-muebles.cl` → port `3000`
-- **cms**: `cms.ene-muebles.cl` → port `1337` (limit paths to `/api`, `/uploads`)
+- **cms**: route the full `cms.ene-muebles.cl` host → port `1337`. Do not
+  restrict it to `/api` and `/uploads`: Strapi Admin requires `/admin`,
+  `/api/admin`, and static admin assets on the same host.
 
 SSL and LetsEncrypt are handled automatically by Coolify once the domains are
 configured and their DNS records point to the VPS IP.
@@ -89,6 +91,11 @@ Required variables:
   `STRAPI_BOOTSTRAP_SUPER_ADMIN_PASSWORD`, `CLIENT_ADMIN_PASSWORD`
 - MySQL: `MYSQL_DATABASE`, `MYSQL_USER`, `MYSQL_PASSWORD`,
   `MYSQL_ROOT_PASSWORD`
+
+`NEXT_PUBLIC_STRAPI_URL` supplies the CMS `PUBLIC_URL` both as a Docker build
+argument and as a runtime environment setting. Strapi embeds this value in its
+Vite admin bundle during `pnpm --filter cms build`; after changing it, rebuild
+the CMS image before redeploying it.
 
 Optional business facts (set later, once verified): WhatsApp number,
 contact email, physical address, social profile URLs.

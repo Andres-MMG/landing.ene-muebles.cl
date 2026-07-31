@@ -8,7 +8,7 @@ Define independently deployable web and CMS surfaces with private persistence on
 
 ### Requirement: Three-Service Topology
 
-The Compose stack MUST define web, cms, and MySQL db services. Coolify's managed proxy MUST terminate TLS and route `landing.ene-muebles.cl` to web port 3000. It MAY route only `/api` and `/uploads` at the configured CMS public hostname to cms port 1337; CMS admin and db MUST use internal networking without public host ports or public routes.
+The Compose stack MUST define web, cms, and MySQL db services. Coolify's managed proxy MUST terminate TLS and route `landing.ene-muebles.cl` to web port 3000. It MUST route the full configured CMS public hostname to cms port 1337 so Strapi Admin can serve `/admin`, `/api/admin`, and static admin assets as well as `/api` and `/uploads`. The database MUST use internal networking without public host ports or public routes.
 
 #### Scenario: Healthy deployment
 
@@ -16,14 +16,14 @@ The Compose stack MUST define web, cms, and MySQL db services. Coolify's managed
 - WHEN the stack deploys
 - THEN the HTTPS landing origin serves the web service
 - AND cms and db communicate through the private network
-- AND only CMS `/api` and `/uploads` are publicly reachable at the configured CMS hostname
+- AND the full CMS host reaches Strapi, including `/admin`, `/api/admin`, `/api`, `/uploads`, and static admin assets
 
 #### Scenario: Public internal-service probe
 
 - GIVEN an external client probes the CMS hostname or database port
 - WHEN routing is evaluated
-- THEN the database and CMS admin are unreachable or return 404
-- AND only `/api` and `/uploads` may resolve at the CMS hostname
+- THEN the database is unreachable or returns 404
+- AND the CMS hostname routes all Strapi-admin and public CMS paths to port 1337
 
 ### Requirement: Environment Contract
 
@@ -78,11 +78,11 @@ MySQL data and CMS media MUST use persistent storage. A recoverable backup MUST 
 
 ### Requirement: Production Transport
 
-Public traffic MUST use HTTPS, and no production service MUST rely on development origins except the explicit localhost CORS allowance. Deployment verification MUST confirm HTTP 200 on the landing origin, public availability of CMS `/api` and `/uploads`, and public denial of CMS admin access.
+Public traffic MUST use HTTPS, and no production service MUST rely on development origins except the explicit localhost CORS allowance. Deployment verification MUST confirm HTTP 200 on the landing origin and public availability of the CMS host paths required by Strapi Admin (`/admin`, `/api/admin`, and static admin assets) as well as `/api` and `/uploads`.
 
 #### Scenario: Transport verification
 
 - GIVEN the production stack is deployed
 - WHEN external smoke checks run
 - THEN the landing HTTPS route returns 200
-- AND CMS admin access is denied while only `/api` and `/uploads` are public
+- AND the CMS host serves Strapi Admin and public CMS paths over HTTPS

@@ -24,6 +24,8 @@ RUN pnpm install --filter cms... --frozen-lockfile
 
 # ---- build ----
 FROM deps AS build
+ARG PUBLIC_URL
+ENV PUBLIC_URL=${PUBLIC_URL}
 COPY packages/ui-tokens packages/ui-tokens
 COPY apps/cms apps/cms
 RUN pnpm --filter cms build

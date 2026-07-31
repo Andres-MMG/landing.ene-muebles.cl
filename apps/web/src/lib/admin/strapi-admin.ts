@@ -25,10 +25,10 @@
  *   - updateAdminSiteSetting
  */
 
-import type { SocialLinks, StrapiMedia } from '@/lib/strapi';
-import type { ImportBatch, ProductImportSource } from '@/lib/strapi';
+import type { SocialLinks, StrapiMedia } from "@/lib/strapi";
+import type { ImportBatch, ProductImportSource } from "@/lib/strapi";
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
 
 /**
  * Single source of truth for the Strapi admin-scoped API token used
@@ -45,7 +45,7 @@ const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\
  * because the public token is read-only.
  */
 export function getStrapiAdminToken(): string {
-  return process.env.STRAPI_ADMIN_TOKEN ?? process.env.STRAPI_API_TOKEN ?? '';
+  return process.env.STRAPI_ADMIN_TOKEN || process.env.STRAPI_API_TOKEN || "";
 }
 
 // Internal alias kept so existing call sites inside this file do
@@ -58,7 +58,7 @@ export type AdminUserRecord = {
   documentId: string;
   email: string;
   name: string;
-  role: 'owner' | 'client';
+  role: "owner" | "client";
   active: boolean;
   passwordHash: string;
   lastLoginAt?: string;
@@ -98,7 +98,7 @@ export type AdminProduct = {
   productType?: string;
   confidence?: string;
   importSource?: ProductImportSource;
-  importBatch?: Pick<ImportBatch, 'id' | 'documentId' | 'fileName' | 'uploadedAt'> | null;
+  importBatch?: Pick<ImportBatch, "id" | "documentId" | "fileName" | "uploadedAt"> | null;
 };
 
 export type AdminSiteSetting = {
@@ -119,7 +119,7 @@ export type AdminSiteSetting = {
 type StrapiFetchBody = string | FormData;
 
 type StrapiFetchOptions = {
-  method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   body?: StrapiFetchBody;
   headers?: Record<string, string>;
   next?: { revalidate?: number; tags?: string[] };
@@ -137,18 +137,18 @@ type StrapiFetchOptions = {
  * JSON `Content-Type` here would break the upload.
  */
 function getStrapiHeaders(body?: StrapiFetchBody): Record<string, string> {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (typeof body === 'string') headers['Content-Type'] = 'application/json';
+  const headers: Record<string, string> = { Accept: "application/json" };
+  if (typeof body === "string") headers["Content-Type"] = "application/json";
   return headers;
 }
 
 async function adminFetch<T>(
   path: string,
-  init: StrapiFetchOptions & { token?: string } = {}
+  init: StrapiFetchOptions & { token?: string } = {},
 ): Promise<{ status: number; data: T | null }> {
   const token = init.token ?? TOKEN;
   if (!token) {
-    throw new Error('adminFetch: STRAPI_API_TOKEN is not set');
+    throw new Error("STRAPI_ADMIN_TOKEN or STRAPI_API_TOKEN is not set");
   }
   const url = `${STRAPI}${path}`;
   const res = await fetch(url, {
@@ -158,7 +158,7 @@ async function adminFetch<T>(
       Authorization: `Bearer ${token}`,
       ...(init.headers || {}),
     },
-    cache: 'no-store',
+    cache: "no-store",
   });
   const data = res.status === 204 ? null : await res.json().catch(() => null);
   return { status: res.status, data: data as T | null };
@@ -170,40 +170,32 @@ async function adminFetch<T>(
  * expected to look at `data.data[0]`.
  */
 export async function listAdminImportBatches(): Promise<ImportBatch[]> {
-  const qs = '?pagination[pageSize]=100&sort=uploadedAt:desc';
-  const { status, data } = await adminFetch<{ data: ImportBatch[] }>(
-    `/api/import-batches${qs}`
-  );
+  const qs = "?pagination[pageSize]=100&sort=uploadedAt:desc";
+  const { status, data } = await adminFetch<{ data: ImportBatch[] }>(`/api/import-batches${qs}`);
   if (status !== 200 || !data?.data) return [];
   return data.data;
 }
 
-export async function findAdminUserByEmail(
-  email: string
-): Promise<AdminUserRecord | null> {
+export async function findAdminUserByEmail(email: string): Promise<AdminUserRecord | null> {
   const qs = `?filters[email][$eqi]=${encodeURIComponent(email)}&pagination[limit]=1`;
-  const { status, data } = await adminFetch<{ data: AdminUserRecord[] }>(
-    `/api/admin-users${qs}`
-  );
+  const { status, data } = await adminFetch<{ data: AdminUserRecord[] }>(`/api/admin-users${qs}`);
   if (status !== 200 || !data?.data?.length) return null;
   return data.data[0];
 }
 
 export async function findAdminUserByDocumentId(
-  documentId: string
+  documentId: string,
 ): Promise<AdminUserRecord | null> {
   const { status, data } = await adminFetch<{ data: AdminUserRecord }>(
-    `/api/admin-users/${documentId}`
+    `/api/admin-users/${documentId}`,
   );
   if (status !== 200 || !data?.data) return null;
   return data.data;
 }
 
-export async function updateAdminUserLastLogin(
-  documentId: string
-): Promise<void> {
+export async function updateAdminUserLastLogin(documentId: string): Promise<void> {
   await adminFetch(`/api/admin-users/${documentId}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify({ data: { lastLoginAt: new Date().toISOString() } }),
   });
 }
@@ -219,14 +211,14 @@ export async function updateAdminUserLastLogin(
  */
 export async function uploadProductImages(
   productDocumentId: string,
-  files: File[]
+  files: File[],
 ): Promise<{ status: number; data: unknown }> {
   const form = new FormData();
-  for (const f of files) form.append('files', f);
-  form.append('ref', 'api::product.product');
-  form.append('refId', productDocumentId);
-  form.append('field', 'images');
-  return adminFetch('/api/upload', { method: 'POST', body: form });
+  for (const f of files) form.append("files", f);
+  form.append("ref", "api::product.product");
+  form.append("refId", productDocumentId);
+  form.append("field", "images");
+  return adminFetch("/api/upload", { method: "POST", body: form });
 }
 
 /**
@@ -236,10 +228,10 @@ export async function uploadProductImages(
  */
 export async function reorderProductImages(
   productDocumentId: string,
-  imageIds: number[]
+  imageIds: number[],
 ): Promise<{ status: number; data: unknown }> {
   return adminFetch(`/api/products/${productDocumentId}`, {
-    method: 'PUT',
+    method: "PUT",
     body: JSON.stringify({ data: { images: { set: imageIds } } }),
   });
 }
@@ -250,7 +242,7 @@ export async function reorderProductImages(
  */
 export async function deleteMedia(mediaId: number): Promise<{ status: number }> {
   const { status } = await adminFetch(`/api/upload/files/${mediaId}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
   return { status };
 }
@@ -261,17 +253,15 @@ export async function deleteMedia(mediaId: number): Promise<{ status: number }> 
  */
 export async function listAdminCategories(): Promise<AdminCategory[]> {
   const { status, data } = await adminFetch<{ data: AdminCategory[] }>(
-    '/api/categories?pagination[pageSize]=100&sort=order:asc&populate=image'
+    "/api/categories?pagination[pageSize]=100&sort=order:asc&populate=image",
   );
   if (status !== 200) return [];
   return data?.data ?? [];
 }
 
-export async function getAdminCategory(
-  documentId: string
-): Promise<AdminCategory | null> {
+export async function getAdminCategory(documentId: string): Promise<AdminCategory | null> {
   const { status, data } = await adminFetch<{ data: AdminCategory }>(
-    `/api/categories/${documentId}?populate=image`
+    `/api/categories/${documentId}?populate=image`,
   );
   if (status !== 200) return null;
   return data?.data ?? null;
@@ -284,37 +274,30 @@ export async function createAdminCategory(payload: {
   order: number;
   active: boolean;
 }): Promise<{ status: number; data: AdminCategory | null }> {
-  const { status, data } = await adminFetch<{ data: AdminCategory }>(
-    '/api/categories',
-    {
-      method: 'POST',
-      body: JSON.stringify({ data: payload }),
-    }
-  );
+  const { status, data } = await adminFetch<{ data: AdminCategory }>("/api/categories", {
+    method: "POST",
+    body: JSON.stringify({ data: payload }),
+  });
   return { status, data: data?.data ?? null };
 }
 
 export async function updateAdminCategory(
   documentId: string,
-  payload: Partial<
-    Pick<AdminCategory, 'name' | 'slug' | 'description' | 'order' | 'active'>
-  >
+  payload: Partial<Pick<AdminCategory, "name" | "slug" | "description" | "order" | "active">>,
 ): Promise<{ status: number; data: AdminCategory | null }> {
   const { status, data } = await adminFetch<{ data: AdminCategory }>(
     `/api/categories/${documentId}`,
     {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ data: payload }),
-    }
+    },
   );
   return { status, data: data?.data ?? null };
 }
 
-export async function deleteAdminCategory(
-  documentId: string
-): Promise<{ status: number }> {
+export async function deleteAdminCategory(documentId: string): Promise<{ status: number }> {
   const { status } = await adminFetch(`/api/categories/${documentId}`, {
-    method: 'DELETE',
+    method: "DELETE",
   });
   return { status };
 }
@@ -326,21 +309,18 @@ export async function deleteAdminCategory(
 export async function getAdminSiteSetting(): Promise<AdminSiteSetting | null> {
   const { status, data } = await adminFetch<{
     data: AdminSiteSetting | null;
-  }>('/api/site-setting?populate=*');
+  }>("/api/site-setting?populate=*");
   if (status !== 200) return null;
   return (data?.data as AdminSiteSetting | null) ?? null;
 }
 
 export async function updateAdminSiteSetting(
-  payload: AdminSiteSetting
+  payload: AdminSiteSetting,
 ): Promise<{ status: number; data: AdminSiteSetting | null }> {
-  const { status, data } = await adminFetch<{ data: AdminSiteSetting }>(
-    '/api/site-setting',
-    {
-      method: 'PUT',
-      body: JSON.stringify({ data: payload }),
-    }
-  );
+  const { status, data } = await adminFetch<{ data: AdminSiteSetting }>("/api/site-setting", {
+    method: "PUT",
+    body: JSON.stringify({ data: payload }),
+  });
   return { status, data: data?.data ?? null };
 }
 
@@ -372,11 +352,7 @@ export type ImportRow = {
     observableColor?: string;
     observableMaterial?: string;
     catalogPage?: number;
-    confidence?:
-      | 'alta'
-      | 'media-variante-visual'
-      | 'media-nombre-generico-pdf'
-      | 'revision-manual';
+    confidence?: "alta" | "media-variante-visual" | "media-nombre-generico-pdf" | "revision-manual";
     source?: string;
     observation?: string;
   };
@@ -395,7 +371,7 @@ export type RowResult = {
   documentId?: string;
   error?: string;
   warnings?: string[];
-  importSource?: 'imported';
+  importSource?: "imported";
 };
 
 /** Batch summary returned to the client. `batch` is added in S2b and
@@ -438,10 +414,7 @@ export type ImportScope = {
    *  category. Cache key is `${name}|${categoryName}` so two
    *  subcategories with the same name under different parents stay
    *  distinct (matches the spec's `subcategory + categoryName` key). */
-  resolveOrCreateSubcategory(args: {
-    name: string;
-    categoryName: string;
-  }): Promise<CategoryLookup>;
+  resolveOrCreateSubcategory(args: { name: string; categoryName: string }): Promise<CategoryLookup>;
   /** Look up a single product by externalId. Returns `null` when the
    *  product doesn't exist (Strapi returns 200 with empty data). */
   findProductByExternalId(externalId: string): Promise<string | null>;
@@ -463,11 +436,11 @@ export type ImportScope = {
 /** Lowercase / strip accents / collapse non-alphanumerics to `-`. */
 function importSlugify(input: string): string {
   return input
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/[^a-z0-9]+/g, '-')
-    .replace(/^-+|-+$/g, '');
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 /**
@@ -493,10 +466,9 @@ export function createImportScope(getToken: () => string): ImportScope {
     if (cached) return cached;
     const { status, data } = await adminFetch<{
       data?: Array<{ documentId?: string }>;
-    }>(
-      `/api/categories?filters[name][$eqi]=${encodeURIComponent(name)}&pagination[limit]=1`,
-      { token: getToken() }
-    );
+    }>(`/api/categories?filters[name][$eqi]=${encodeURIComponent(name)}&pagination[limit]=1`, {
+      token: getToken(),
+    });
     const existing = status === 200 ? data?.data?.[0]?.documentId : null;
     if (existing) {
       const result: CategoryLookup = { documentId: existing, created: false };
@@ -505,15 +477,15 @@ export function createImportScope(getToken: () => string): ImportScope {
     }
     const { status: cs, data: cd } = await adminFetch<{
       data?: { documentId?: string };
-    }>('/api/categories', {
-      method: 'POST',
+    }>("/api/categories", {
+      method: "POST",
       token: getToken(),
       body: JSON.stringify({
         data: { name, slug: importSlugify(name), order: 0, active: true },
       }),
     });
-    const docId = cs < 400 ? cd?.data?.documentId ?? null : null;
-    const result: CategoryLookup = { documentId: docId ?? '', created: Boolean(docId) };
+    const docId = cs < 400 ? (cd?.data?.documentId ?? null) : null;
+    const result: CategoryLookup = { documentId: docId ?? "", created: Boolean(docId) };
     categoryCache.set(name, result);
     return result;
   }
@@ -529,7 +501,7 @@ export function createImportScope(getToken: () => string): ImportScope {
       data?: Array<{ documentId?: string }>;
     }>(
       `/api/subcategories?filters[name][$eqi]=${encodeURIComponent(args.name)}&pagination[limit]=1`,
-      { token: getToken() }
+      { token: getToken() },
     );
     const existing = status === 200 ? data?.data?.[0]?.documentId : null;
     if (existing) {
@@ -545,8 +517,8 @@ export function createImportScope(getToken: () => string): ImportScope {
     }
     const { status: ss, data: sd } = await adminFetch<{
       data?: { documentId?: string };
-    }>('/api/subcategories', {
-      method: 'POST',
+    }>("/api/subcategories", {
+      method: "POST",
       token: getToken(),
       body: JSON.stringify({
         data: {
@@ -556,20 +528,18 @@ export function createImportScope(getToken: () => string): ImportScope {
         },
       }),
     });
-    const docId = ss < 400 ? sd?.data?.documentId ?? null : null;
-    const result: CategoryLookup = { documentId: docId ?? '', created: Boolean(docId) };
+    const docId = ss < 400 ? (sd?.data?.documentId ?? null) : null;
+    const result: CategoryLookup = { documentId: docId ?? "", created: Boolean(docId) };
     subcategoryCache.set(key, result);
     return result;
   }
 
-  async function findProductByExternalId(
-    externalId: string
-  ): Promise<string | null> {
+  async function findProductByExternalId(externalId: string): Promise<string | null> {
     const { status, data } = await adminFetch<{
       data?: Array<{ documentId?: string }>;
     }>(
       `/api/products?filters[externalId][$eq]=${encodeURIComponent(externalId)}&pagination[limit]=1`,
-      { token: getToken() }
+      { token: getToken() },
     );
     if (status !== 200) return null;
     return data?.data?.[0]?.documentId ?? null;
@@ -584,49 +554,43 @@ export function createImportScope(getToken: () => string): ImportScope {
     const payload: Record<string, unknown> = {
       fileName: input.fileName,
       uploadedAt: new Date().toISOString(),
-      importSource: 'imported',
+      importSource: "imported",
       totalRows: input.totalRows,
     };
     if (input.uploadedByEmail) payload.uploadedByEmail = input.uploadedByEmail;
     const { status, data } = await adminFetch<{
       data?: { documentId?: string };
-    }>('/api/import-batches', {
-      method: 'POST',
+    }>("/api/import-batches", {
+      method: "POST",
       token: getToken(),
       body: JSON.stringify({ data: payload }),
     });
     if (status >= 400 || !data?.data?.documentId) {
       throw new Error(
-        `createImportBatch failed: Strapi returned ${status} ${JSON.stringify(data)}`
+        `createImportBatch failed: Strapi returned ${status} ${JSON.stringify(data)}`,
       );
     }
     return data.data.documentId;
   }
 
   /** S2b — PUT /api/import-batches/:documentId with the row-loop counters. */
-  async function recordBatchCounters(
-    documentId: string,
-    counters: BatchCounters
-  ): Promise<void> {
-    const { status, data } = await adminFetch<unknown>(
-      `/api/import-batches/${documentId}`,
-      {
-        method: 'PUT',
-        token: getToken(),
-        body: JSON.stringify({
-          data: {
-            totalRows: counters.totalRows,
-            createdCount: counters.createdCount,
-            updatedCount: counters.updatedCount,
-            failedCount: counters.failedCount,
-            importedProductIds: counters.importedProductIds,
-          },
-        }),
-      }
-    );
+  async function recordBatchCounters(documentId: string, counters: BatchCounters): Promise<void> {
+    const { status, data } = await adminFetch<unknown>(`/api/import-batches/${documentId}`, {
+      method: "PUT",
+      token: getToken(),
+      body: JSON.stringify({
+        data: {
+          totalRows: counters.totalRows,
+          createdCount: counters.createdCount,
+          updatedCount: counters.updatedCount,
+          failedCount: counters.failedCount,
+          importedProductIds: counters.importedProductIds,
+        },
+      }),
+    });
     if (status >= 400) {
       throw new Error(
-        `recordBatchCounters failed: Strapi returned ${status} ${JSON.stringify(data)}`
+        `recordBatchCounters failed: Strapi returned ${status} ${JSON.stringify(data)}`,
       );
     }
   }

@@ -14,7 +14,7 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/admin', label: 'Productos' },
+  { href: '/admin/productos', label: 'Productos' },
   { href: '/admin/productos/nuevo', label: '+ Nuevo producto' },
   { href: '/admin/productos/importar', label: 'Importar (Excel)' },
   { href: '/admin/categorias', label: 'Categorías' },

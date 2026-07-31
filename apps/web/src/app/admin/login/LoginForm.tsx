@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import { assertAdminAuth } from '@/lib/admin/client';
+import { useState, useTransition } from "react";
+import { assertAdminAuth } from "@/lib/admin/client";
 
 type LoginResponse = {
-  user?: { email: string; name: string; role: 'owner' | 'client' };
+  user?: { email: string; name: string; role: "owner" | "client" };
   error?: string;
 };
 
@@ -22,15 +22,9 @@ type LoginResponse = {
  * banner above the form so the user knows why they're being asked
  * to sign in again.
  */
-export function LoginForm({
-  from,
-  expired,
-}: {
-  from: string;
-  expired?: boolean;
-}) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+export function LoginForm({ from, expired }: { from: string; expired?: boolean }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
@@ -38,18 +32,18 @@ export function LoginForm({
     e.preventDefault();
     setError(null);
     startTransition(async () => {
-      const res = await fetch('/api/admin/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/admin/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email, password }),
       });
       const checked = assertAdminAuth(res);
       if (checked.ok) {
-        window.location.href = from || '/admin';
+        window.location.href = from || "/admin/productos";
         return;
       }
       const data = (await checked.json().catch(() => ({}))) as LoginResponse;
-      setError(data.error ?? 'No se pudo iniciar sesión.');
+      setError(data.error ?? "No se pudo iniciar sesión.");
     });
   }
 
@@ -119,7 +113,7 @@ export function LoginForm({
           disabled={pending || !email || !password}
           className="inline-flex w-full items-center justify-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep disabled:opacity-50"
         >
-          {pending ? 'Verificando…' : 'Entrar'}
+          {pending ? "Verificando…" : "Entrar"}
         </button>
       </form>
     </div>

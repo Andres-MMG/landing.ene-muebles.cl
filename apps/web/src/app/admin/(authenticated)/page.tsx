@@ -1,13 +1,18 @@
-import Link from 'next/link';
-import { ProductList } from './ProductList';
-import { buildImportBatchFilter } from './_lib/productsQuery';
-import { listAdminImportBatches } from '@/lib/admin/strapi-admin';
-import type { ImportBatch } from '@/lib/strapi';
+import { ProductList } from "./ProductList";
+import { NewProductLink } from "./NewProductLink";
+import { buildImportBatchFilter } from "./_lib/productsQuery";
+import {
+  aggregateProductIndex,
+  PRODUCT_INDEX_PAGE_SIZE,
+  readStrapiProductPage,
+} from "./_lib/productIndex";
+import { listAdminImportBatches } from "@/lib/admin/strapi-admin";
+import type { ImportBatch } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const metadata = {
-  title: 'Panel · Ene Muebles',
+  title: "Panel · Ene Muebles",
   robots: { index: false, follow: false },
 };
 
@@ -19,6 +24,8 @@ type Product = {
   price: number;
   currency: string;
   publishedAt: string | null;
+  externalId?: string;
+  subcategory?: string;
   updatedAt?: string;
   category?: { documentId?: string; name: string; slug: string } | null;
   images?: {
@@ -31,7 +38,7 @@ type Product = {
   /** Catalog-import (S4) — provenance metadata for the Origen / Última
    *  importación columns in the list. Optional — Strapi returns null
    *  for products created before the importer shipped. */
-  importSource?: 'manual' | 'imported';
+  importSource?: "manual" | "imported";
   importBatch?: {
     documentId?: string;
     fileName?: string;
@@ -45,71 +52,82 @@ type CategoryRow = {
   active: boolean;
 };
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
-const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
+const TOKEN = process.env.STRAPI_API_TOKEN ?? "";
 
 async function listProducts(importBatch?: string): Promise<Product[]> {
-  const qs = new URLSearchParams();
-  qs.set('pagination[pageSize]', '50');
-  qs.set('sort', 'updatedAt:desc');
-  qs.set('populate[category]', 'true');
-  qs.set('populate[images]', 'true');
-  qs.set('populate[importBatch]', 'true');
-  qs.set('publicationState', 'preview');
-  qs.set('locale', 'es');
-  // Catalog-import (E follow-up) — optional `?importBatch=…` filter,
-  // appended to the legacy query when present so the dashboard can
-  // show only the products that came in via a single Excel upload.
-  const batchFilter = buildImportBatchFilter(importBatch);
-  if (batchFilter) qs.set(batchFilter.key, batchFilter.value);
-  const res = await fetch(`${STRAPI}/api/products?${qs.toString()}`, {
-    headers: { Authorization: `Bearer ${TOKEN}` },
-    cache: 'no-store',
+  return aggregateProductIndex(async (page) => {
+    const qs = new URLSearchParams();
+    // Strapi caps REST results at 100. Fetch its bounded pages so the client
+    // receives the complete lightweight index, never image binaries.
+    qs.set("pagination[page]", String(page));
+    qs.set("pagination[pageSize]", String(PRODUCT_INDEX_PAGE_SIZE));
+    qs.set("fields[0]", "documentId");
+    qs.set("fields[1]", "name");
+    qs.set("fields[2]", "slug");
+    qs.set("fields[3]", "price");
+    qs.set("fields[4]", "currency");
+    qs.set("fields[5]", "publishedAt");
+    qs.set("fields[6]", "externalId");
+    qs.set("fields[7]", "subcategory");
+    qs.set("fields[8]", "importSource");
+    qs.set("sort", "externalId:asc");
+    qs.set("populate[category]", "true");
+    qs.set("populate[images][fields][0]", "url");
+    qs.set("populate[images][fields][1]", "formats");
+    qs.set("populate[importBatch]", "true");
+    qs.set("publicationState", "preview");
+    qs.set("locale", "es");
+    const batchFilter = buildImportBatchFilter(importBatch);
+    if (batchFilter) qs.set(batchFilter.key, batchFilter.value);
+    const res = await fetch(`${STRAPI}/api/products?${qs.toString()}`, {
+      headers: { Authorization: `Bearer ${TOKEN}` },
+      cache: "no-store",
+    });
+    return readStrapiProductPage<Product>(res);
   });
-  const json = (await res.json().catch(() => null)) as { data: Product[] } | null;
-  return json?.data ?? [];
 }
 
 async function listCategories(): Promise<CategoryRow[]> {
   const qs = new URLSearchParams();
-  qs.set('pagination[pageSize]', '100');
-  qs.set('fields[0]', 'documentId');
-  qs.set('fields[1]', 'name');
-  qs.set('fields[2]', 'active');
-  qs.set('publicationState', 'preview');
-  qs.set('locale', 'es');
+  qs.set("pagination[pageSize]", "100");
+  qs.set("fields[0]", "documentId");
+  qs.set("fields[1]", "name");
+  qs.set("fields[2]", "active");
+  qs.set("publicationState", "preview");
+  qs.set("locale", "es");
   const res = await fetch(`${STRAPI}/api/categories?${qs.toString()}`, {
     headers: { Authorization: `Bearer ${TOKEN}` },
-    cache: 'no-store',
+    cache: "no-store",
   });
   const json = (await res.json().catch(() => null)) as { data: CategoryRow[] } | null;
   return json?.data ?? [];
 }
 
-type SearchParams = Promise<{ importBatch?: string | string[] }>;
+type SearchParams = Promise<Record<string, string | string[] | undefined>>;
 
-export default async function AdminDashboardPage({
-  searchParams,
-}: {
-  searchParams: SearchParams;
-}) {
+export default async function AdminDashboardPage({ searchParams }: { searchParams: SearchParams }) {
   // Catalog-import (E follow-up) — `?importBatch=<documentId>` from
   // `/admin/importaciones` narrows the list to a single upload.
   const sp = await searchParams;
   const rawImportBatch = sp.importBatch;
-  const importBatchDocId = Array.isArray(rawImportBatch)
-    ? rawImportBatch[0]
-    : rawImportBatch;
+  const importBatchDocId = Array.isArray(rawImportBatch) ? rawImportBatch[0] : rawImportBatch;
+  const listQuery = new URLSearchParams();
+  for (const [key, value] of Object.entries(sp)) {
+    const item = Array.isArray(value) ? value[0] : value;
+    if (item) listQuery.set(key, item);
+  }
+  const initialListUrl = listQuery.size ? `/admin/productos?${listQuery}` : "/admin/productos";
 
   // Auth + user lookup are owned by the shared admin layout.
   const [products, categories, batches] = await Promise.all([
-    listProducts(importBatchDocId || undefined),
+    listProducts(),
     listCategories(),
     // Only spend a Strapi roundtrip when a filter is requested.
     importBatchDocId ? listAdminImportBatches() : Promise.resolve([] as ImportBatch[]),
   ]);
   const activeBatch = importBatchDocId
-    ? batches.find((b) => b.documentId === importBatchDocId) ?? null
+    ? (batches.find((b) => b.documentId === importBatchDocId) ?? null)
     : null;
   const importBatchBanner = activeBatch
     ? {
@@ -132,18 +150,10 @@ export default async function AdminDashboardPage({
         className="flex flex-wrap items-end justify-between gap-6 border-b border-ink-line pb-8"
       >
         <div>
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
-            Catálogo
-          </p>
+          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-deep">Catálogo</p>
           <h1 className="t-display mt-3 text-4xl text-ink">Productos</h1>
         </div>
-        <Link
-          href={'/admin/productos/nuevo' as never}
-          className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
-        >
-          + Nuevo producto
-          <span aria-hidden>→</span>
-        </Link>
+        <NewProductLink initialFrom={initialListUrl} />
       </div>
 
       <dl
@@ -172,9 +182,7 @@ export default async function AdminDashboardPage({
 function StatTile({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex flex-col gap-2 bg-paper-pure px-5 py-6">
-      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-mute">
-        {label}
-      </dt>
+      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-mute">{label}</dt>
       <dd className="t-display text-3xl text-ink">{value}</dd>
     </div>
   );

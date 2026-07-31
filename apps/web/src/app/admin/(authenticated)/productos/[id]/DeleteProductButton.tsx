@@ -1,11 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { assertAdminAuth } from '@/lib/admin/client';
+import { useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { assertAdminAuth } from "@/lib/admin/client";
+import { productListReturnTarget } from "../../_lib/productListState";
 
 type DeleteError = { error?: string };
 
 export function DeleteProductButton({ id }: { id: string }) {
+  const searchParams = useSearchParams();
+  const returnTo = productListReturnTarget(searchParams.get("from"));
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -13,28 +17,22 @@ export function DeleteProductButton({ id }: { id: string }) {
     <form
       onSubmit={async (e) => {
         e.preventDefault();
-        if (
-          !confirm(
-            '¿Eliminar este producto? Esta acción no se puede deshacer.'
-          )
-        ) {
+        if (!confirm("¿Eliminar este producto? Esta acción no se puede deshacer.")) {
           return;
         }
         setPending(true);
         setError(null);
         const res = assertAdminAuth(
           await fetch(`/api/admin/products/${id}`, {
-            method: 'DELETE',
-          })
+            method: "DELETE",
+          }),
         );
         if (res.ok) {
-          window.location.href = '/admin';
+          window.location.href = returnTo;
           return;
         }
         const data = (await res.json().catch(() => ({}))) as DeleteError;
-        setError(
-          data.error ?? 'No se pudo eliminar el producto.'
-        );
+        setError(data.error ?? "No se pudo eliminar el producto.");
         setPending(false);
       }}
       className="flex flex-col items-end gap-2"
@@ -44,7 +42,7 @@ export function DeleteProductButton({ id }: { id: string }) {
         disabled={pending}
         className="t-label text-paper underline-offset-[6px] hover:text-taupe hover:underline disabled:opacity-50"
       >
-        {pending ? 'Eliminando…' : 'Eliminar producto'}
+        {pending ? "Eliminando…" : "Eliminar producto"}
       </button>
       {error ? (
         <p

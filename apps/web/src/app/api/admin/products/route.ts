@@ -1,12 +1,12 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
-import { getServerSession } from '@/lib/admin/session';
-import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { getServerSession } from "@/lib/admin/session";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
 
 /**
  * GET /api/admin/products
@@ -20,93 +20,103 @@ const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\
  *   after the owner publishes via the Strapi admin or the API.
  */
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   const session = await getServerSession();
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   const qs = new URLSearchParams();
-  qs.set('pagination[pageSize]', '100');
-  qs.set('sort', 'updatedAt:desc');
-  qs.set('populate[category]', 'true');
-  qs.set('populate[images]', 'true');
-  qs.set('publicationState', 'preview'); // include drafts
-  qs.set('locale', 'es');
+  qs.set("pagination[pageSize]", "100");
+  qs.set("sort", "updatedAt:desc");
+  qs.set("populate[category]", "true");
+  qs.set("populate[images]", "true");
+  qs.set("publicationState", "preview"); // include drafts
+  qs.set("locale", "es");
 
   const res = await fetch(`${STRAPI}/api/products?${qs.toString()}`, {
     headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
-    cache: 'no-store',
+    cache: "no-store",
   });
   const data = await res.json().catch(() => null);
   return NextResponse.json(data ?? { data: [] }, { status: res.status });
 }
 
-const CreateBody = z.object({
-  name: z.string().min(1).max(120),
-  description: z.string().min(1),
-  shortDescription: z.string().max(280).optional(),
-  price: z.number().nonnegative(),
-  currency: z.string().length(3).default('CLP'),
-  category: z.union([z.number(), z.string()]).optional(),
-  active: z.boolean().default(true),
-  featured: z.boolean().default(false),
-});
+const CreateBody = z
+  .object({
+    name: z.string().min(1).max(120),
+    slug: z.string().min(1).max(180),
+    description: z.string().min(1),
+    shortDescription: z.string().max(280).optional(),
+    price: z.number().nonnegative(),
+    currency: z.string().length(3).default("CLP"),
+    category: z.union([z.number(), z.string()]).optional(),
+    active: z.boolean().default(true),
+    featured: z.boolean().default(false),
+    externalId: z.string().max(32).optional(),
+    productType: z.enum(["Silla", "Mesa", "Escritorio", "Banca", "Piso", "Cuna"]).optional(),
+    subcategory: z.string().max(80).optional(),
+    usageEnvironment: z.string().max(120).optional(),
+    observableColor: z.string().max(120).optional(),
+    observableMaterial: z.string().max(160).optional(),
+    catalogPage: z.number().int().min(1).optional(),
+    confidence: z
+      .enum([
+        "alta",
+        "media-variante-visual",
+        "media-nombre-generico-pdf",
+        "baja",
+        "revision-manual",
+      ])
+      .optional(),
+    source: z.string().max(200).optional(),
+    observation: z.string().max(10000).optional(),
+  })
+  .strict();
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession();
   if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: z.infer<typeof CreateBody>;
   try {
     body = CreateBody.parse(await req.json());
   } catch (err) {
-    return NextResponse.json(
-      { error: 'Datos inválidos', details: String(err) },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Datos inválidos", details: String(err) }, { status: 400 });
   }
 
   // Strapi v5 expects the category as a relation id. The admin
   // sends either a numeric id or a documentId; we coerce both to
   // the numeric id that the REST API accepts.
   let categoryId: number | undefined;
-  if (typeof body.category === 'number') categoryId = body.category;
-  else if (typeof body.category === 'string') {
+  if (typeof body.category === "number") categoryId = body.category;
+  else if (typeof body.category === "string") {
     const lookup = await fetch(
       `${STRAPI}/api/categories?filters[documentId][$eq]=${body.category}&pagination[limit]=1`,
-      { headers: { Authorization: `Bearer ${getStrapiAdminToken()}` } }
+      { headers: { Authorization: `Bearer ${getStrapiAdminToken()}` } },
     );
-    const json = (await lookup.json().catch(() => null)) as
-      | { data: { id: number }[] }
-      | null;
+    const json = (await lookup.json().catch(() => null)) as { data: { id: number }[] } | null;
     categoryId = json?.data?.[0]?.id;
   }
 
+  const data: Record<string, unknown> = { ...body };
+  if (categoryId === undefined) delete data.category;
+  else data.category = categoryId;
+
   const res = await fetch(`${STRAPI}/api/products`, {
-    method: 'POST',
+    method: "POST",
     headers: {
       Authorization: `Bearer ${getStrapiAdminToken()}`,
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      data: {
-        name: body.name,
-        description: body.description,
-        shortDescription: body.shortDescription,
-        price: body.price,
-        currency: body.currency,
-        active: body.active,
-        featured: body.featured,
-        category: categoryId,
-        // publishedAt is intentionally omitted. The product starts
-        // as a draft; the owner publishes via the Strapi admin.
-      },
+      // publishedAt is intentionally omitted. The product starts as a draft.
+      data,
     }),
-    cache: 'no-store',
+    cache: "no-store",
   });
-  const data = await res.json().catch(() => null);
-  return NextResponse.json(data, { status: res.status });
+  const jsonResponse = await res.json().catch(() => null);
+  return NextResponse.json(jsonResponse, { status: res.status });
 }

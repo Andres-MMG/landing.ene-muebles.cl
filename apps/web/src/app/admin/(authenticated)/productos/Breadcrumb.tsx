@@ -1,7 +1,8 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import Link from "next/link";
+import { usePathname, useSearchParams } from "next/navigation";
+import { productListReturnTarget } from "../_lib/productListState";
 
 /**
  * Admin-section breadcrumb. Driven by `usePathname()` so it stays in
@@ -23,120 +24,84 @@ type Crumb = {
   href?: string;
 };
 
-function buildCrumbs(pathname: string): Crumb[] {
-  const segments = pathname.split('/').filter(Boolean);
+function buildCrumbs(pathname: string, productListHref = "/admin/productos"): Crumb[] {
+  const segments = pathname.split("/").filter(Boolean);
 
   // Not under /admin or on the login page: render nothing.
-  if (segments[0] !== 'admin' || segments[1] === 'login') {
+  if (segments[0] !== "admin" || segments[1] === "login") {
     return [];
   }
 
   // /admin (dashboard)
   if (segments.length === 1) {
-    return [{ label: 'Productos', href: '/admin' }];
+    return [{ label: "Productos", href: "/admin/productos" }];
   }
 
   // /admin/productos (deep-link to index; same as dashboard)
-  if (segments.length === 2 && segments[1] === 'productos') {
-    return [{ label: 'Productos', href: '/admin' }];
+  if (segments.length === 2 && segments[1] === "productos") {
+    return [{ label: "Productos", href: "/admin/productos" }];
   }
 
   // /admin/productos/nuevo
-  if (
-    segments.length === 3 &&
-    segments[1] === 'productos' &&
-    segments[2] === 'nuevo'
-  ) {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Nuevo' },
-    ];
+  if (segments.length === 3 && segments[1] === "productos" && segments[2] === "nuevo") {
+    return [{ label: "Productos", href: productListHref }, { label: "Nuevo" }];
   }
 
   // /admin/productos/importar
-  if (
-    segments.length === 3 &&
-    segments[1] === 'productos' &&
-    segments[2] === 'importar'
-  ) {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Importar (Excel)' },
-    ];
+  if (segments.length === 3 && segments[1] === "productos" && segments[2] === "importar") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Importar (Excel)" }];
   }
 
   // /admin/productos/:id (and any other deeper path under productos)
-  if (segments.length >= 3 && segments[1] === 'productos') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Editar' },
-    ];
+  if (segments.length >= 3 && segments[1] === "productos") {
+    return [{ label: "Productos", href: productListHref }, { label: "Editar" }];
   }
 
   // /admin/categorias (index)
-  if (segments.length === 2 && segments[1] === 'categorias') {
+  if (segments.length === 2 && segments[1] === "categorias") {
     return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Categorías', href: '/admin/categorias' },
+      { label: "Productos", href: "/admin/productos" },
+      { label: "Categorías", href: "/admin/categorias" },
     ];
   }
 
   // /admin/categorias/nuevo
-  if (
-    segments.length === 3 &&
-    segments[1] === 'categorias' &&
-    segments[2] === 'nuevo'
-  ) {
+  if (segments.length === 3 && segments[1] === "categorias" && segments[2] === "nuevo") {
     return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Categorías', href: '/admin/categorias' },
-      { label: 'Nueva' },
+      { label: "Productos", href: "/admin/productos" },
+      { label: "Categorías", href: "/admin/categorias" },
+      { label: "Nueva" },
     ];
   }
 
   // /admin/categorias/:id
-  if (segments.length >= 3 && segments[1] === 'categorias') {
+  if (segments.length >= 3 && segments[1] === "categorias") {
     return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Categorías', href: '/admin/categorias' },
-      { label: 'Editar' },
+      { label: "Productos", href: "/admin/productos" },
+      { label: "Categorías", href: "/admin/categorias" },
+      { label: "Editar" },
     ];
   }
 
   // /admin/ajustes
-  if (segments.length === 2 && segments[1] === 'ajustes') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Ajustes' },
-    ];
+  if (segments.length === 2 && segments[1] === "ajustes") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Ajustes" }];
   }
 
   // Batch 2: marketing-section breadcrumb branches. Same shape as
   // the existing single-segment leaves (one deep link to the parent
   // dashboard plus the current page label).
-  if (segments.length === 2 && segments[1] === 'hero') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Hero' },
-    ];
+  if (segments.length === 2 && segments[1] === "hero") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Hero" }];
   }
-  if (segments.length === 2 && segments[1] === 'about') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Nosotros (about)' },
-    ];
+  if (segments.length === 2 && segments[1] === "about") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Nosotros (about)" }];
   }
-  if (segments.length === 2 && segments[1] === 'contacto-cta') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Contacto CTA' },
-    ];
+  if (segments.length === 2 && segments[1] === "contacto-cta") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Contacto CTA" }];
   }
-  if (segments.length === 2 && segments[1] === 'footer') {
-    return [
-      { label: 'Productos', href: '/admin' },
-      { label: 'Footer' },
-    ];
+  if (segments.length === 2 && segments[1] === "footer") {
+    return [{ label: "Productos", href: "/admin/productos" }, { label: "Footer" }];
   }
 
   return [];
@@ -144,17 +109,15 @@ function buildCrumbs(pathname: string): Crumb[] {
 
 export function Breadcrumb() {
   const pathname = usePathname();
-  const crumbs = buildCrumbs(pathname);
+  const searchParams = useSearchParams();
+  const crumbs = buildCrumbs(pathname, productListReturnTarget(searchParams.get("from")));
 
   if (crumbs.length === 0) {
     return null;
   }
 
   return (
-    <nav
-      aria-label="Ruta"
-      className="border-b border-ink-line bg-paper-soft/40"
-    >
+    <nav aria-label="Ruta" className="border-b border-ink-line bg-paper-soft/40">
       <ol className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-2 px-6 py-3 sm:px-10 lg:px-16">
         {crumbs.map((crumb, index) => {
           const isLast = index === crumbs.length - 1;
@@ -173,8 +136,8 @@ export function Breadcrumb() {
                 </Link>
               ) : (
                 <span
-                  className={isLast ? 'text-taupe-deep' : 'text-ink-mute'}
-                  aria-current={isLast ? 'page' : undefined}
+                  className={isLast ? "text-taupe-deep" : "text-ink-mute"}
+                  aria-current={isLast ? "page" : undefined}
                 >
                   {crumb.label}
                 </span>

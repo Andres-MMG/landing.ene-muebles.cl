@@ -29,7 +29,7 @@ export function AdminHeader({ user, navItems }: AdminHeaderProps) {
       <header className="sticky top-0 z-30 border-b border-ink-line bg-paper lg:static">
         <div className="mx-auto flex min-h-16 w-full max-w-[1440px] items-center gap-4 px-4 py-3 sm:px-10 lg:min-h-20 lg:px-16">
           <Link
-            href={'/admin' as never}
+            href={"/admin/productos" as never}
             className="t-display text-xl font-semibold tracking-tight text-ink"
           >
             Ene Muebles
@@ -65,7 +65,15 @@ export function AdminHeader({ user, navItems }: AdminHeaderProps) {
             aria-controls="admin-mobile-menu"
             className="ml-auto inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink lg:hidden"
           >
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden>
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden
+            >
               <line x1="0" y1="3" x2="14" y2="3" />
               <line x1="0" y1="7" x2="14" y2="7" />
               <line x1="0" y1="11" x2="14" y2="11" />

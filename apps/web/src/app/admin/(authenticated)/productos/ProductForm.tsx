@@ -1,15 +1,16 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import { useRouter } from 'next/navigation';
-import { assertAdminAuth } from '@/lib/admin/client';
-import { ImageGallery, type ImageRecord } from './ImageGallery';
+import { useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { assertAdminAuth } from "@/lib/admin/client";
+import { ImageGallery, type ImageRecord } from "./ImageGallery";
 import {
   CONFIDENCE_OPTIONS,
   PRODUCT_TYPE_OPTIONS,
   buildProductSubmitPayload,
   type ProductFormValues,
-} from './_lib/productFormData';
+} from "./_lib/productFormData";
+import { productListReturnTarget } from "../_lib/productListState";
 
 type Category = { documentId: string; name: string };
 
@@ -34,31 +35,30 @@ export function ProductForm({
 }: {
   initial: ProductFormValues;
   categories: Category[];
-  mode: 'create' | 'edit';
+  mode: "create" | "edit";
   images: ImageRecord[];
   productDocumentId: string | null;
 }) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const returnTo = productListReturnTarget(searchParams.get("from"));
   const [form, setForm] = useState<ProductFormValues>(initial);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
 
-  function update<K extends keyof ProductFormValues>(
-    key: K,
-    value: ProductFormValues[K]
-  ) {
+  function update<K extends keyof ProductFormValues>(key: K, value: ProductFormValues[K]) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
   function autoSlugFromName(name: string): string {
     return name
       .toLowerCase()
-      .normalize('NFD')
-      .replace(/[\u0300-\u036f]/g, '')
-      .replace(/[^a-z0-9\s-]/g, '')
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-z0-9\s-]/g, "")
       .trim()
-      .replace(/\s+/g, '-')
-      .replace(/-+/g, '-')
+      .replace(/\s+/g, "-")
+      .replace(/-+/g, "-")
       .slice(0, 80);
   }
 
@@ -68,45 +68,41 @@ export function ProductForm({
     startTransition(async () => {
       const body = buildProductSubmitPayload(form);
       const url =
-        mode === 'create'
-          ? '/api/admin/products'
-          : `/api/admin/products/${initial.documentId}`;
-      const method = mode === 'create' ? 'POST' : 'PUT';
+        mode === "create" ? "/api/admin/products" : `/api/admin/products/${initial.documentId}`;
+      const method = mode === "create" ? "POST" : "PATCH";
       const res = assertAdminAuth(
         await fetch(url, {
           method,
-          headers: { 'Content-Type': 'application/json' },
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
-        })
+        }),
       );
       if (!res.ok) {
         const data = await res.json().catch(() => ({}));
-        setError(
-          (data as { error?: string }).error ?? 'No se pudo guardar el producto.'
-        );
+        setError((data as { error?: string }).error ?? "No se pudo guardar el producto.");
         return;
       }
-      if (mode === 'create') {
+      if (mode === "create") {
         const data = (await res.json().catch(() => null)) as {
           data?: { documentId?: string };
         } | null;
         const documentId = data?.data?.documentId;
         if (!documentId) {
-          setError('El producto se creó, pero no se pudo abrir el editor.');
+          setError("El producto se creó, pero no se pudo abrir el editor.");
           return;
         }
-        router.push(`/admin/productos/${documentId}` as never);
+        router.push(`/admin/productos/${documentId}?from=${encodeURIComponent(returnTo)}` as never);
         return;
       }
-      router.push('/admin' as never);
+      router.push(returnTo as never);
     });
   }
 
   const inputClass =
-    'w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none';
+    "w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none";
 
   const showImportBadge =
-    form.importSource === 'imported' &&
+    form.importSource === "imported" &&
     (Boolean(form.importBatchFileName) || Boolean(form.importBatchUploadedAt));
 
   return (
@@ -125,9 +121,9 @@ export function ProductForm({
               value={form.name}
               onChange={(e) => {
                 const next = e.target.value;
-                update('name', next);
-                if (mode === 'create') {
-                  update('slug', autoSlugFromName(next));
+                update("name", next);
+                if (mode === "create") {
+                  update("slug", autoSlugFromName(next));
                 }
               }}
               className={inputClass}
@@ -141,7 +137,7 @@ export function ProductForm({
             <input
               required
               value={form.slug}
-              onChange={(e) => update('slug', e.target.value)}
+              onChange={(e) => update("slug", e.target.value)}
               className={`${inputClass} font-mono`}
               placeholder="escritorio-ejecutivo-150-m"
             />
@@ -153,7 +149,7 @@ export function ProductForm({
           </span>
           <textarea
             value={form.shortDescription}
-            onChange={(e) => update('shortDescription', e.target.value)}
+            onChange={(e) => update("shortDescription", e.target.value)}
             rows={2}
             maxLength={280}
             className={inputClass}
@@ -167,7 +163,7 @@ export function ProductForm({
           <textarea
             required
             value={form.description}
-            onChange={(e) => update('description', e.target.value)}
+            onChange={(e) => update("description", e.target.value)}
             rows={5}
             className={inputClass}
             placeholder="Descripción técnica del producto, materiales, terminaciones, etc."
@@ -190,7 +186,7 @@ export function ProductForm({
               inputMode="numeric"
               min="0"
               value={form.price}
-              onChange={(e) => update('price', e.target.value)}
+              onChange={(e) => update("price", e.target.value)}
               className={`${inputClass} font-mono`}
               placeholder="199000"
             />
@@ -201,7 +197,7 @@ export function ProductForm({
             </span>
             <select
               value={form.currency}
-              onChange={(e) => update('currency', e.target.value)}
+              onChange={(e) => update("currency", e.target.value)}
               className={inputClass}
             >
               <option value="CLP">CLP</option>
@@ -215,7 +211,7 @@ export function ProductForm({
             </span>
             <select
               value={form.category}
-              onChange={(e) => update('category', e.target.value)}
+              onChange={(e) => update("category", e.target.value)}
               className={inputClass}
             >
               <option value="">— Sin categoría —</option>
@@ -232,18 +228,16 @@ export function ProductForm({
             <input
               type="checkbox"
               checked={form.active}
-              onChange={(e) => update('active', e.target.checked)}
+              onChange={(e) => update("active", e.target.checked)}
               className="h-4 w-4 accent-ink"
             />
-            <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink">
-              Activo
-            </span>
+            <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink">Activo</span>
           </label>
           <label className="inline-flex items-center gap-3">
             <input
               type="checkbox"
               checked={form.featured}
-              onChange={(e) => update('featured', e.target.checked)}
+              onChange={(e) => update("featured", e.target.checked)}
               className="h-4 w-4 accent-ink"
             />
             <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink">
@@ -280,7 +274,7 @@ export function ProductForm({
             </span>
             <input
               value={form.externalId}
-              onChange={(e) => update('externalId', e.target.value)}
+              onChange={(e) => update("externalId", e.target.value)}
               maxLength={32}
               className={`${inputClass} font-mono`}
               placeholder="CAT-2025-001"
@@ -292,7 +286,7 @@ export function ProductForm({
             </span>
             <select
               value={form.productType}
-              onChange={(e) => update('productType', e.target.value)}
+              onChange={(e) => update("productType", e.target.value)}
               className={inputClass}
             >
               <option value="">— Sin definir —</option>
@@ -309,7 +303,10 @@ export function ProductForm({
             </span>
             <input
               value={form.subcategory}
-              onChange={(e) => update('subcategory', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('subcategory', e.target.value);
+              }}
               maxLength={80}
               className={inputClass}
               placeholder="Sillas y asientos"
@@ -321,7 +318,10 @@ export function ProductForm({
             </span>
             <input
               value={form.usageEnvironment}
-              onChange={(e) => update('usageEnvironment', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('usageEnvironment', e.target.value);
+              }}
               maxLength={200}
               className={inputClass}
               placeholder="Sala de clases / educación inicial"
@@ -333,7 +333,10 @@ export function ProductForm({
             </span>
             <input
               value={form.observableColor}
-              onChange={(e) => update('observableColor', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('observableColor', e.target.value);
+              }}
               maxLength={120}
               className={inputClass}
               placeholder="Madera natural y blanco"
@@ -345,7 +348,10 @@ export function ProductForm({
             </span>
             <input
               value={form.observableMaterial}
-              onChange={(e) => update('observableMaterial', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('observableMaterial', e.target.value);
+              }}
               maxLength={200}
               className={inputClass}
               placeholder="Melamina 18 mm"
@@ -360,7 +366,7 @@ export function ProductForm({
               inputMode="numeric"
               min="1"
               value={form.catalogPage}
-              onChange={(e) => update('catalogPage', e.target.value)}
+              onChange={(e) => update("catalogPage", e.target.value)}
               className={`${inputClass} font-mono`}
               placeholder="2"
             />
@@ -371,7 +377,7 @@ export function ProductForm({
             </span>
             <select
               value={form.confidence}
-              onChange={(e) => update('confidence', e.target.value)}
+              onChange={(e) => update("confidence", e.target.value)}
               className={inputClass}
             >
               <option value="">— Sin definir —</option>
@@ -388,7 +394,10 @@ export function ProductForm({
             </span>
             <input
               value={form.source}
-              onChange={(e) => update('source', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('source', e.target.value);
+              }}
               maxLength={200}
               className={inputClass}
               placeholder="CATOLOGO PRODUCTOS- 2025.pdf, página 2"
@@ -400,7 +409,10 @@ export function ProductForm({
             </span>
             <textarea
               value={form.observation}
-              onChange={(e) => update('observation', e.target.value)}
+              onChange={(e) => {
+                // prettier-ignore
+                update('observation', e.target.value);
+              }}
               rows={3}
               maxLength={1000}
               className={inputClass}
@@ -411,10 +423,7 @@ export function ProductForm({
       </fieldset>
 
       {productDocumentId ? (
-        <ImageGallery
-          productDocumentId={productDocumentId}
-          initialImages={images}
-        />
+        <ImageGallery productDocumentId={productDocumentId} initialImages={images} />
       ) : (
         <p className="border-l-2 border-ink-line px-4 py-2 text-sm text-ink-mute">
           Las imágenes se podrán cargar una vez creado el producto.
@@ -422,10 +431,7 @@ export function ProductForm({
       )}
 
       {error ? (
-        <p
-          role="alert"
-          className="border-l-2 border-ink bg-cream-soft px-4 py-3 text-sm text-ink"
-        >
+        <p role="alert" className="border-l-2 border-ink bg-cream-soft px-4 py-3 text-sm text-ink">
           {error}
         </p>
       ) : null}
@@ -436,14 +442,10 @@ export function ProductForm({
           disabled={pending}
           className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep disabled:opacity-50"
         >
-          {pending
-            ? 'Guardando…'
-            : mode === 'create'
-            ? 'Crear producto'
-            : 'Guardar cambios'}
+          {pending ? "Guardando…" : mode === "create" ? "Crear producto" : "Guardar cambios"}
         </button>
         <a
-          href={'/admin' as never}
+          href={returnTo as never}
           className="t-label text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline"
         >
           Cancelar

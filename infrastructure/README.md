@@ -18,8 +18,7 @@ Internet -> Coolify-managed Traefik (ports 80/443, TLS, LetsEncrypt)
 
 **No self-hosted proxy.** Coolify already runs a managed Traefik instance on the
 VPS that handles SSL termination, LetsEncrypt, and port publishing. The compose
-stack only defines application services. Routing configuration is done through
-Coolify's UI.
+stack defines the application services and their explicit routing labels.
 
 ## Services
 
@@ -36,17 +35,22 @@ Coolify's UI.
 | `coolify` | `external` (created by Coolify) | Public Traefik routing — Coolify's proxy reaches services here |
 | `landing_internal` | `bridge` | Inter-service communication (web ↔ cms ↔ db) |
 
-### Routing (Coolify UI)
+### Routing (Compose labels)
 
-Configure each public service in Coolify **Resource → Routing**:
+`docker-compose.yml` owns the Coolify-managed Traefik configuration. Both
+public services attach to the external `coolify` network and declare unique
+routers, middleware, and backend service names:
 
-- **web**: `ene-muebles.cl`, `www.ene-muebles.cl` → port `3000`
-- **cms**: route the full `cms.ene-muebles.cl` host → port `1337`. Do not
-  restrict it to `/api` and `/uploads`: Strapi Admin requires `/admin`,
-  `/api/admin`, and static admin assets on the same host.
+- **web**: `${WEB_PUBLIC_HOSTNAME}` and `${WEB_PUBLIC_WWW_HOSTNAME}` route at
+  `PathPrefix(`/`)` to port `3000`.
+- **cms**: `${CMS_PUBLIC_HOSTNAME}` routes at `PathPrefix(`/`)` to port `1337`.
+  This includes Strapi `/admin`, `/api/admin`, `/api`, uploads, and static admin
+  assets.
 
-SSL and LetsEncrypt are handled automatically by Coolify once the domains are
-configured and their DNS records point to the VPS IP.
+Each service has an `http` router that permanently redirects to HTTPS and an
+`https` router with `tls.certresolver=letsencrypt`. Do not add a proxy service,
+host port bindings, or a Coolify UI path allowlist for this stack. TLS is issued
+by the managed proxy after DNS records point to the VPS IP.
 
 ## Health checks
 
@@ -81,6 +85,8 @@ startup. The `.env` filename is ignored by `.gitignore`.
 
 Required variables:
 
+- Public hostnames: `WEB_PUBLIC_HOSTNAME`, `WEB_PUBLIC_WWW_HOSTNAME`,
+  `CMS_PUBLIC_HOSTNAME`
 - Public origins: `NEXT_PUBLIC_SITE_URL`, `NEXT_PUBLIC_STRAPI_URL`
   (must be `https://cms.ene-muebles.cl`)
 - Internal service URL: `STRAPI_INTERNAL_URL` (must be `http://cms:1337`)

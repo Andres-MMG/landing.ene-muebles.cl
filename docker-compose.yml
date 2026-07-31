@@ -4,16 +4,11 @@
 #                                       + cms (Strapi, port 1337)
 #                                       -> db (MySQL, port 3306)
 #
-# Public routing is handled by Coolify's managed Traefik proxy.
+# Public routing is handled by Coolify's managed Traefik proxy. This Compose file
+# owns the explicit Traefik labels required to create the public routers.
 # The `coolify` external network is created by Coolify on the VPS
 # and already has a running Traefik instance that handles SSL,
 # Let's Encrypt, and port publishing.
-#
-# Configure routing in Coolify UI for each service:
-#   web: ene-muebles.cl, www.ene-muebles.cl -> port 3000
-#   cms: cms.ene-muebles.cl -> port 1337
-#
-# No Traefik labels needed — Coolify generates them from the UI config.
 #
 # Why root-level? Coolify's BuildKit resolves `context: .` from the compose
 # file location. With the file at the repo root, `context: .` correctly
@@ -44,6 +39,21 @@ services:
     networks:
       - landing_internal
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.middlewares.ene-muebles-web-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.ene-muebles-web-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.ene-muebles-web-http.rule=(Host(`${WEB_PUBLIC_HOSTNAME:?WEB_PUBLIC_HOSTNAME is required}`) || Host(`${WEB_PUBLIC_WWW_HOSTNAME:?WEB_PUBLIC_WWW_HOSTNAME is required}`)) && PathPrefix(`/`)"
+      - "traefik.http.routers.ene-muebles-web-http.entrypoints=http"
+      - "traefik.http.routers.ene-muebles-web-http.middlewares=ene-muebles-web-https-redirect"
+      - "traefik.http.routers.ene-muebles-web-http.service=ene-muebles-web"
+      - "traefik.http.routers.ene-muebles-web-https.rule=(Host(`${WEB_PUBLIC_HOSTNAME:?WEB_PUBLIC_HOSTNAME is required}`) || Host(`${WEB_PUBLIC_WWW_HOSTNAME:?WEB_PUBLIC_WWW_HOSTNAME is required}`)) && PathPrefix(`/`)"
+      - "traefik.http.routers.ene-muebles-web-https.entrypoints=https"
+      - "traefik.http.routers.ene-muebles-web-https.tls=true"
+      - "traefik.http.routers.ene-muebles-web-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ene-muebles-web-https.service=ene-muebles-web"
+      - "traefik.http.services.ene-muebles-web.loadbalancer.server.port=3000"
     healthcheck:
       test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
       interval: 30s
@@ -85,6 +95,21 @@ services:
     networks:
       - landing_internal
       - coolify
+    labels:
+      - "traefik.enable=true"
+      - "traefik.docker.network=coolify"
+      - "traefik.http.middlewares.ene-muebles-cms-https-redirect.redirectscheme.scheme=https"
+      - "traefik.http.middlewares.ene-muebles-cms-https-redirect.redirectscheme.permanent=true"
+      - "traefik.http.routers.ene-muebles-cms-http.rule=Host(`${CMS_PUBLIC_HOSTNAME:?CMS_PUBLIC_HOSTNAME is required}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.ene-muebles-cms-http.entrypoints=http"
+      - "traefik.http.routers.ene-muebles-cms-http.middlewares=ene-muebles-cms-https-redirect"
+      - "traefik.http.routers.ene-muebles-cms-http.service=ene-muebles-cms"
+      - "traefik.http.routers.ene-muebles-cms-https.rule=Host(`${CMS_PUBLIC_HOSTNAME:?CMS_PUBLIC_HOSTNAME is required}`) && PathPrefix(`/`)"
+      - "traefik.http.routers.ene-muebles-cms-https.entrypoints=https"
+      - "traefik.http.routers.ene-muebles-cms-https.tls=true"
+      - "traefik.http.routers.ene-muebles-cms-https.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.ene-muebles-cms-https.service=ene-muebles-cms"
+      - "traefik.http.services.ene-muebles-cms.loadbalancer.server.port=1337"
     volumes:
       - cms_uploads:/repo/apps/cms/public/uploads
       - cms_tmp:/repo/apps/cms/.tmp

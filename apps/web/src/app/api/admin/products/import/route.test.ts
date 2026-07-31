@@ -583,6 +583,13 @@ describe('POST /api/admin/products/import — ImportBatch audit-trail (S2b)', ()
       (c) => c.url.endsWith('/api/import-batches') && c.init?.method === 'POST'
     );
     expect(importBatchPosts).toHaveLength(1);
+    const batchBody = JSON.parse(String(importBatchPosts[0]?.init?.body)) as {
+      data: { uploadedAt?: unknown };
+    };
+    expect(batchBody.data.uploadedAt).toEqual(expect.any(String));
+    expect(batchBody.data.uploadedAt).toMatch(
+      /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/
+    );
     // Order matters: the batch POST must happen BEFORE the bulk dedup
     // GET (which is the first row-pipeline fetch).
     const batchPostIdx = calls.findIndex(

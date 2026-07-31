@@ -583,6 +583,7 @@ export function createImportScope(getToken: () => string): ImportScope {
   }): Promise<string> {
     const payload: Record<string, unknown> = {
       fileName: input.fileName,
+      uploadedAt: new Date().toISOString(),
       importSource: 'imported',
       totalRows: input.totalRows,
     };

@@ -1,5 +1,8 @@
+import Link from "next/link";
 import { CategoryFilter } from "@/components/CategoryFilter";
+import { CatalogSearch } from "@/components/CatalogSearch";
 import { ContactCTA } from "@/components/ContactCTA";
+import { Pagination } from "@/components/Pagination";
 import { ProductCard } from "@/components/ProductCard";
 import {
   getCategories,
@@ -18,19 +21,51 @@ export const metadata = {
     "Mobiliario escolar y de oficina para instituciones en Chile: escritorios, cajoneras, archivadores, lockers, pupitres, sillas y más.",
 };
 
-export default async function CatalogoPage() {
+const PAGE_SIZE = 12;
+
+type Props = {
+  searchParams: Promise<{ page?: string; q?: string }>;
+};
+
+const parsePage = (raw: string | undefined): number => {
+  const parsed = Number.parseInt(raw ?? "1", 10);
+  return Math.max(1, Number.isNaN(parsed) ? 1 : parsed);
+};
+
+export default async function CatalogoPage({ searchParams }: Props) {
+  const { page: pageParam, q: qParam } = await searchParams;
+  const q = qParam?.trim();
   const settings = await getSiteSettings();
 
   let categories: Category[] = [];
   let products: Product[] = [];
+  let total = 0;
+  let page = parsePage(pageParam);
   try {
-    [categories, products] = await Promise.all([
+    [categories, { products, total }] = await Promise.all([
       getCategories(),
-      getProducts(),
+      getProducts({ page, pageSize: PAGE_SIZE, q }),
     ]);
   } catch (err) {
     console.warn("[catalogo] catalog fetch failed:", err);
   }
+
+  // A `page` beyond the last one (stale URL, shrunken search results)
+  // comes back as an empty payload with the real total — refetch the
+  // last valid page instead of showing the empty state.
+  if (total > 0 && products.length === 0) {
+    page = Math.ceil(total / PAGE_SIZE);
+    try {
+      const result = await getProducts({ page, pageSize: PAGE_SIZE, q });
+      products = result.products;
+      total = result.total;
+    } catch (err) {
+      console.warn("[catalogo] catalog fetch failed:", err);
+    }
+  }
+
+  const from = total > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const to = Math.min(page * PAGE_SIZE, total);
 
   return (
     <>
@@ -57,8 +92,23 @@ export default async function CatalogoPage() {
                 30, 60 o 90 días para instituciones. Cada producto se
                 entrega con ficha técnica y declaración de materiales.
               </p>
-              <div className="mt-6">
-                <CategoryFilter categories={categories} />
+              <div className="mt-6 space-y-6">
+                <CatalogSearch defaultValue={q} />
+                <div>
+                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                    Filtrar por línea
+                  </p>
+                  <div className="mt-3">
+                    <CategoryFilter categories={categories} />
+                  </div>
+                </div>
+                <a
+                  href="/api/catalog/export"
+                  download
+                  className="inline-flex border border-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-ink transition-colors hover:bg-ink hover:text-paper"
+                >
+                  Descargar catálogo JSON
+                </a>
               </div>
             </div>
           </header>
@@ -71,16 +121,40 @@ export default async function CatalogoPage() {
             Próximamente publicaremos nuevos productos en este catálogo.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
-            {products.map((product) => (
-              <li key={product.id}>
-                <ProductCard
-                  product={product}
-                  whatsappNumber={settings.whatsappNumber}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
+              <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+                {q
+                  ? `${total} resultado${total === 1 ? "" : "s"} para «${q}»`
+                  : `${from}–${to} de ${total} productos`}
+              </p>
+              {q ? (
+                <Link
+                  href="/catalogo"
+                  className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-deep underline-offset-4 hover:underline"
+                >
+                  Limpiar
+                </Link>
+              ) : null}
+            </div>
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
+              {products.map((product) => (
+                <li key={product.id}>
+                  <ProductCard
+                    product={product}
+                    whatsappNumber={settings.whatsappNumber}
+                  />
+                </li>
+              ))}
+            </ul>
+            <Pagination
+              total={total}
+              page={page}
+              pageSize={PAGE_SIZE}
+              basePath="/catalogo"
+              q={q}
+            />
+          </>
         )}
       </section>
 

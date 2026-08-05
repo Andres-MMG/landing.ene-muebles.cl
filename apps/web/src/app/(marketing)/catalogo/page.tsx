@@ -83,7 +83,9 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 id="catalogo-heading"
                 className="t-h2 mt-6 max-w-[24ch] text-[clamp(2rem,1.2rem+3.2vw,3.75rem)] text-ink"
               >
-                20 productos certificados para instituciones.
+                {total > 0
+                  ? `${total} productos certificados para instituciones.`
+                  : "20 productos certificados para instituciones."}
               </h1>
             </div>
             <div className="lg:col-span-4 lg:col-start-9">

@@ -41,5 +41,6 @@ WORKDIR /repo
 COPY --from=deps  /repo /repo
 COPY --from=build /repo/apps/web/.next /repo/apps/web/.next
 COPY --from=build /repo/apps/web/next.config.ts /repo/apps/web/
+COPY --from=build /repo/apps/web/public /repo/apps/web/public
 EXPOSE 3000
 CMD ["pnpm", "--filter", "web", "start"]

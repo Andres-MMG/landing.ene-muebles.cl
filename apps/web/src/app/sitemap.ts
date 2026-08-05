@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { getProducts, getCategories } from "@/lib/strapi";
+import { getAllProducts, getCategories } from "@/lib/strapi";
 
 // Sitemap is rebuilt on every request that hits it (no prerender).
 // Strapi may be unreachable at build time; the route handler runs
@@ -24,7 +24,9 @@ const BASE_URL =
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const [products, categories] = await Promise.all([
-    getProducts(),
+    // Every active product belongs in the sitemap, so page through the
+    // full collection instead of the first page.
+    getAllProducts(),
     getCategories(),
   ]);
 

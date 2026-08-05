@@ -236,7 +236,12 @@ export const PRODUCT_TYPE_VALUES = [
 
 export type ProductType = (typeof PRODUCT_TYPE_VALUES)[number];
 
-type CollectionEnvelope<T> = { data: T[]; meta?: unknown };
+type CollectionEnvelope<T> = {
+  data: T[];
+  meta?: {
+    pagination?: { page?: number; pageSize?: number; pageCount?: number; total?: number };
+  };
+};
 type SingleEnvelope<T> = { data: T; meta?: unknown };
 
 const buildHeaders = (): HeadersInit => {
@@ -634,16 +639,93 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
   return (fallback.data ?? []).map(normalizeProduct);
 }
 
-export async function getProducts(categorySlug?: string): Promise<Product[]> {
+export type ProductListResult = {
+  products: Product[];
+  total: number;
+};
+
+export type ProductListOptions = {
+  categorySlug?: string;
+  page?: number;
+  pageSize?: number;
+  q?: string;
+};
+
+/**
+ * Paginated, searchable product list.
+ *
+ * `page` is clamped to >= 1; the Strapi default pageSize (25) used to
+ * silently cap the public catalog at ~25 entries, so callers must pass
+ * an explicit pageSize (the catalog pages use 12). `total` comes from
+ * `meta.pagination.total` so the UI can render "X–Y de N" and the
+ * pagination controls without a second request.
+ */
+export async function getProducts(options?: ProductListOptions): Promise<ProductListResult> {
+  const { categorySlug, q } = options ?? {};
+  const page = Math.max(1, Math.floor(options?.page ?? 1));
+  const pageSize = options?.pageSize ?? 12;
+
   const params = new URLSearchParams();
   params.set("filters[active][$eq]", "true");
   params.set("sort", "order");
   params.set("populate", "*");
+  params.set("pagination[page]", String(page));
+  params.set("pagination[pageSize]", String(pageSize));
   if (categorySlug) {
     params.set("filters[category][slug][$eq]", categorySlug);
   }
+  if (q) {
+    params.set("filters[name][$containsi]", q);
+  }
   const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
-  return (json.data ?? []).map(normalizeProduct);
+  return {
+    products: (json.data ?? []).map(normalizeProduct),
+    total: json.meta?.pagination?.total ?? json.data?.length ?? 0,
+  };
+}
+
+/**
+ * Fetch every active product, paginating internally with
+ * `pagination[pageSize]=100` until `meta.pagination.total` is reached.
+ * Used by the JSON catalog export route; not intended for page reads.
+ */
+export async function getAllProducts(): Promise<Product[]> {
+  const all: Product[] = [];
+  let page = 1;
+  while (true) {
+    const params = new URLSearchParams();
+    params.set("filters[active][$eq]", "true");
+    params.set("sort", "order");
+    params.set("populate", "*");
+    params.set("pagination[page]", String(page));
+    params.set("pagination[pageSize]", "100");
+    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
+    const batch = (json.data ?? []).map(normalizeProduct);
+    all.push(...batch);
+    const total = json.meta?.pagination?.total ?? all.length;
+    if (batch.length === 0 || all.length >= total) break;
+    page += 1;
+  }
+  return all;
+}
+
+/**
+ * Count of active products for the footer promise strip. Never throws:
+ * returns 0 when Strapi is unreachable so the caller can fall back to
+ * static copy. Uses `fields[0]=documentId&pagination[pageSize]=1` to
+ * keep the payload minimal.
+ */
+export async function getProductCount(): Promise<number> {
+  try {
+    const params = new URLSearchParams();
+    params.set("filters[active][$eq]", "true");
+    params.set("fields[0]", "documentId");
+    params.set("pagination[pageSize]", "1");
+    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
+    return json.meta?.pagination?.total ?? json.data?.length ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {

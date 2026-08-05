@@ -22,7 +22,7 @@ afterEach(() => {
 function mockStrapi(product: Record<string, unknown> | null, settings?: unknown) {
   vi.doMock('@/lib/strapi', () => ({
     getProductBySlug: vi.fn().mockResolvedValue(product),
-    getProducts: vi.fn().mockResolvedValue([]),
+    getProducts: vi.fn().mockResolvedValue({ products: [], total: 0 }),
     getSiteSettings: vi.fn().mockResolvedValue(
       settings ?? {
         siteName: 'Ene Muebles',

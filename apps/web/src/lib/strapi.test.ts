@@ -249,26 +249,150 @@ describe("getProducts", () => {
     });
 
     const { getProducts } = await import("./strapi");
-    await getProducts("living");
+    await getProducts({ categorySlug: "living" });
 
     const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
     const decoded = decodeURIComponent(url);
     expect(decoded).toMatch(/filters\[category\]\[slug\]\[\$eq\]=living/);
     expect(decoded).toMatch(/filters\[active\]\[\$eq\]=true/);
     expect(decoded).toMatch(/sort=order/);
+    expect(decoded).toMatch(/pagination\[page\]=1/);
+    expect(decoded).toMatch(/pagination\[pageSize\]=12/);
   });
 
-  it("returns an empty array when no products exist", async () => {
+  it("adds a case-insensitive name filter when q is provided", async () => {
+    mockFetch(200, { data: [], meta: { pagination: { total: 0 } } });
+
+    const { getProducts } = await import("./strapi");
+    await getProducts({ q: "mesa" });
+
+    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(decodeURIComponent(url)).toMatch(/filters\[name\]\[\$containsi\]=mesa/);
+  });
+
+  it("clamps page to >= 1", async () => {
+    mockFetch(200, { data: [], meta: { pagination: { total: 0 } } });
+
+    const { getProducts } = await import("./strapi");
+    await getProducts({ page: 0 });
+
+    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(decodeURIComponent(url)).toMatch(/pagination\[page\]=1/);
+  });
+
+  it("returns products and total from the envelope", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          id: 1,
+          name: "Sofá",
+          slug: "sofa",
+          description: "d",
+          price: 100000,
+          currency: "CLP",
+          active: true,
+        },
+      ],
+      meta: { pagination: { page: 1, pageSize: 12, pageCount: 4, total: 37 } },
+    });
+
+    const { getProducts } = await import("./strapi");
+    const result = await getProducts({ pageSize: 12 });
+
+    expect(result.products).toHaveLength(1);
+    expect(result.products[0].name).toBe("Sofá");
+    expect(result.total).toBe(37);
+  });
+
+  it("returns an empty array and total 0 when no products exist", async () => {
     mockFetch(200, { data: [] });
     const { getProducts } = await import("./strapi");
-    const products = await getProducts();
-    expect(products).toEqual([]);
+    const result = await getProducts();
+    expect(result.products).toEqual([]);
+    expect(result.total).toBe(0);
   });
 
   it("throws on network error", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const { getProducts } = await import("./strapi");
-    await expect(getProducts("test")).rejects.toThrow(/Network error/);
+    await expect(getProducts({ categorySlug: "test" })).rejects.toThrow(/Network error/);
+  });
+});
+
+describe("getAllProducts", () => {
+  it("collects every page of active products", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, i) => ({
+      id: i + 1,
+      name: `Producto ${i + 1}`,
+      slug: `producto-${i + 1}`,
+      description: "d",
+      price: 0,
+      currency: "CLP",
+    }));
+    mockFetch(200, { data: firstPage, meta: { pagination: { total: 150 } } });
+    const secondPage = Array.from({ length: 50 }, (_, i) => ({
+      id: 101 + i,
+      name: `Producto ${101 + i}`,
+      slug: `producto-${101 + i}`,
+      description: "d",
+      price: 0,
+      currency: "CLP",
+    }));
+    mockFetch(200, { data: secondPage, meta: { pagination: { total: 150 } } });
+
+    const { getAllProducts } = await import("./strapi");
+    const products = await getAllProducts();
+
+    expect(products).toHaveLength(150);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondUrl = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as string;
+    expect(decodeURIComponent(secondUrl)).toMatch(/pagination\[page\]=2/);
+    expect(decodeURIComponent(secondUrl)).toMatch(/pagination\[pageSize\]=100/);
+  });
+
+  it("stops after a single page when all entries fit", async () => {
+    mockFetch(200, {
+      data: [
+        { id: 1, name: "Único", slug: "unico", description: "d", price: 0, currency: "CLP" },
+      ],
+      meta: { pagination: { total: 1 } },
+    });
+
+    const { getAllProducts } = await import("./strapi");
+    const products = await getAllProducts();
+
+    expect(products).toHaveLength(1);
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("getProductCount", () => {
+  it("returns the total from the pagination meta with a minimal payload", async () => {
+    mockFetch(200, { data: [], meta: { pagination: { page: 1, pageSize: 1, pageCount: 204, total: 204 } } });
+
+    const { getProductCount } = await import("./strapi");
+    const count = await getProductCount();
+
+    expect(count).toBe(204);
+    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    const decoded = decodeURIComponent(url);
+    expect(decoded).toMatch(/filters\[active\]\[\$eq\]=true/);
+    expect(decoded).toMatch(/fields\[0\]=documentId/);
+    expect(decoded).toMatch(/pagination\[pageSize\]=1/);
+  });
+
+  it("falls back to the payload length when meta is missing", async () => {
+    mockFetch(200, { data: [{ id: 1, documentId: "a" }] });
+
+    const { getProductCount } = await import("./strapi");
+    await expect(getProductCount()).resolves.toBe(1);
+  });
+
+  it("returns 0 when Strapi is unreachable", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const { getProductCount } = await import("./strapi");
+    await expect(getProductCount()).resolves.toBe(0);
   });
 });
 

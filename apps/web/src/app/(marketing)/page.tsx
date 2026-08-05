@@ -39,16 +39,20 @@ export default async function MarketingPage() {
   try {
     const [allCats, allProducts] = await Promise.all([
       getCategories(),
-      getProducts(),
+      // Keep the same first-page volume the old unpaginated call
+      // returned (Strapi default pageSize 25) so the featured strip
+      // picks from the same candidate set; `total` now carries the
+      // real count for the About section.
+      getProducts({ pageSize: 25 }),
     ]);
     categories = allCats;
     categoryCount = allCats.length;
-    productCount = allProducts.length;
-    featured = allProducts
+    productCount = allProducts.total;
+    featured = allProducts.products
       .filter((p) => p.featured)
       .slice(0, 6);
     if (featured.length === 0) {
-      featured = allProducts.slice(0, 6);
+      featured = allProducts.products.slice(0, 6);
     }
   } catch (err) {
     console.warn("[home] catalog fetch failed:", err);

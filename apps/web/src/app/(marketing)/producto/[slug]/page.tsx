@@ -103,7 +103,7 @@ export default async function ProductDetailPage({ params }: Props) {
   if (!product) notFound();
 
   const related = product.category?.slug
-    ? (await getProducts(product.category.slug))
+    ? (await getProducts({ categorySlug: product.category.slug })).products
         .filter((p) => p.id !== product.id)
         .slice(0, 3)
     : [];

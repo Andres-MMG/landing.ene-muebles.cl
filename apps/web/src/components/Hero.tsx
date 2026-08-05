@@ -131,7 +131,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                   <Image
                     key={src}
                     src={src}
-                    alt={`${site.brand} galería ${idx + 1}`}
+                    alt={`${site.brand} instalaciones ${idx + 1}`}
                     fill
                     className={`object-cover transition-opacity duration-1000 ${
                       idx === currentImageIndex ? "opacity-100" : "opacity-0"
@@ -140,7 +140,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                   />
                 ))}
                 <div className="t-mono absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-paper">
-                  <span>Galería de Productos</span>
+                  <span>Nuestras instalaciones</span>
                   <span className="opacity-60">
                     {currentImageIndex + 1} / {HERO_GALLERY.length}
                   </span>

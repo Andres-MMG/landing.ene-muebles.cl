@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Hanken_Grotesk, Source_Serif_4 } from "next/font/google";
+import { APP_VERSION } from "@/lib/version";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({
@@ -36,6 +37,9 @@ export const metadata = {
   robots: {
     index: true,
     follow: true,
+  },
+  other: {
+    version: APP_VERSION,
   },
 };
 

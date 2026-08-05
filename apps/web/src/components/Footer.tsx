@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getPublicRut, type FooterBlock, type SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
+import { APP_VERSION } from "@/lib/version";
 
 type FooterProps = {
   settings: SiteSetting;
@@ -208,7 +209,7 @@ export function Footer({ settings, block }: FooterProps) {
       <div className="border-t border-paper-line-on-ink">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center sm:px-10 lg:px-16">
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
-            Catálogo institucional · 2026
+            Catálogo institucional · 2026 · v{APP_VERSION}
           </p>
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
             Respaldo escrito · Garantía 1 año

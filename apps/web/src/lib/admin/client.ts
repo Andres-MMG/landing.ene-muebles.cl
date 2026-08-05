@@ -57,6 +57,9 @@ export async function adminUpload<T>(path: string, formData: FormData): Promise<
     credentials: 'same-origin',
   });
   assertAdminAuth(res);
-  if (!res.ok) throw new Error('Upload failed');
+  if (!res.ok) {
+    const data = (await res.json().catch(() => null)) as { error?: string } | null;
+    throw new Error(data?.error ?? 'Upload failed');
+  }
   return (await res.json()) as T;
 }

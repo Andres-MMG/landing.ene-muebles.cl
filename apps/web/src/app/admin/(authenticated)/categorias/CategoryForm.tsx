@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { adminDelete, adminPost, adminPut } from '@/lib/admin/client';
+import { adminDelete, adminPost, adminPut, adminUpload } from '@/lib/admin/client';
 
 type Initial = {
   name: string;
@@ -132,14 +132,14 @@ export function CategoryForm({
     try {
       const fd = new FormData();
       fd.append('file', file);
-      await adminPost(`/api/admin/categories/${documentId}/image`, fd);
+      await adminUpload(`/api/admin/categories/${documentId}/image`, fd);
       const url = URL.createObjectURL(file);
       setPreviewUrl(url);
       setInfo('Imagen actualizada.');
       router.refresh();
     } catch (err) {
       const message =
-        (err as ErrorResponse).error ?? 'No se pudo subir la imagen.';
+        err instanceof Error ? err.message : 'No se pudo subir la imagen.';
       setError(message);
     } finally {
       setImagePending(false);

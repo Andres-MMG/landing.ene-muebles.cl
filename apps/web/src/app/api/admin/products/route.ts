@@ -47,19 +47,22 @@ const CreateBody = z
     name: z.string().min(1).max(120),
     slug: z.string().min(1).max(180),
     description: z.string().min(1),
-    shortDescription: z.string().max(280).optional(),
+    shortDescription: z.string().max(280).nullable().optional(),
     price: z.number().nonnegative(),
     currency: z.string().length(3).default("CLP"),
-    category: z.union([z.number(), z.string()]).optional(),
+    category: z.union([z.number(), z.string()]).nullable().optional(),
     active: z.boolean().default(true),
     featured: z.boolean().default(false),
-    externalId: z.string().max(32).optional(),
-    productType: z.enum(["Silla", "Mesa", "Escritorio", "Banca", "Piso", "Cuna"]).optional(),
-    subcategory: z.string().max(80).optional(),
-    usageEnvironment: z.string().max(120).optional(),
-    observableColor: z.string().max(120).optional(),
-    observableMaterial: z.string().max(160).optional(),
-    catalogPage: z.number().int().min(1).optional(),
+    externalId: z.string().max(32).nullable().optional(),
+    productType: z
+      .enum(["Silla", "Mesa", "Escritorio", "Banca", "Piso", "Cuna"])
+      .nullable()
+      .optional(),
+    subcategory: z.string().max(80).nullable().optional(),
+    usageEnvironment: z.string().max(120).nullable().optional(),
+    observableColor: z.string().max(120).nullable().optional(),
+    observableMaterial: z.string().max(160).nullable().optional(),
+    catalogPage: z.number().int().min(1).nullable().optional(),
     confidence: z
       .enum([
         "alta",
@@ -68,9 +71,10 @@ const CreateBody = z
         "baja",
         "revision-manual",
       ])
+      .nullable()
       .optional(),
-    source: z.string().max(200).optional(),
-    observation: z.string().max(10000).optional(),
+    source: z.string().max(200).nullable().optional(),
+    observation: z.string().max(10000).nullable().optional(),
   })
   .strict();
 
@@ -89,7 +93,8 @@ export async function POST(req: NextRequest) {
 
   // Strapi v5 expects the category as a relation id. The admin
   // sends either a numeric id or a documentId; we coerce both to
-  // the numeric id that the REST API accepts.
+  // the numeric id that the REST API accepts. A documentId that
+  // does not resolve is a hard client error — never silently drop it.
   let categoryId: number | undefined;
   if (typeof body.category === "number") categoryId = body.category;
   else if (typeof body.category === "string") {
@@ -99,6 +104,12 @@ export async function POST(req: NextRequest) {
     );
     const json = (await lookup.json().catch(() => null)) as { data: { id: number }[] } | null;
     categoryId = json?.data?.[0]?.id;
+    if (categoryId === undefined) {
+      return NextResponse.json(
+        { error: `Categoría no encontrada: ${body.category}` },
+        { status: 400 },
+      );
+    }
   }
 
   const data: Record<string, unknown> = { ...body };

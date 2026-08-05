@@ -24,19 +24,22 @@ const PatchBody = z
     name: z.string().min(1).max(120).optional(),
     slug: z.string().min(1).max(180).optional(),
     description: z.string().min(1).optional(),
-    shortDescription: z.string().max(280).optional(),
+    shortDescription: z.string().max(280).nullable().optional(),
     price: z.number().nonnegative().optional(),
     currency: z.string().length(3).optional(),
-    category: z.union([z.number(), z.string()]).optional(),
+    category: z.union([z.number(), z.string()]).nullable().optional(),
     active: z.boolean().optional(),
     featured: z.boolean().optional(),
-    externalId: z.string().max(32).optional(),
-    productType: z.enum(["Silla", "Mesa", "Escritorio", "Banca", "Piso", "Cuna"]).optional(),
-    subcategory: z.string().max(80).optional(),
-    usageEnvironment: z.string().max(120).optional(),
-    observableColor: z.string().max(120).optional(),
-    observableMaterial: z.string().max(160).optional(),
-    catalogPage: z.number().int().min(1).optional(),
+    externalId: z.string().max(32).nullable().optional(),
+    productType: z
+      .enum(["Silla", "Mesa", "Escritorio", "Banca", "Piso", "Cuna"])
+      .nullable()
+      .optional(),
+    subcategory: z.string().max(80).nullable().optional(),
+    usageEnvironment: z.string().max(120).nullable().optional(),
+    observableColor: z.string().max(120).nullable().optional(),
+    observableMaterial: z.string().max(160).nullable().optional(),
+    catalogPage: z.number().int().min(1).nullable().optional(),
     confidence: z
       .enum([
         "alta",
@@ -45,9 +48,10 @@ const PatchBody = z
         "baja",
         "revision-manual",
       ])
+      .nullable()
       .optional(),
-    source: z.string().max(200).optional(),
-    observation: z.string().max(10000).optional(),
+    source: z.string().max(200).nullable().optional(),
+    observation: z.string().max(10000).nullable().optional(),
   })
   .strict();
 
@@ -65,7 +69,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     return NextResponse.json({ error: "Datos inválidos", details: String(err) }, { status: 400 });
   }
 
-  // Resolve the category relation if provided as documentId.
+  // Resolve the category relation if provided as documentId. A
+  // documentId that does not resolve is a hard client error — never
+  // silently drop it and persist 200 with the old value.
   let categoryId: number | undefined;
   if (typeof body.category === "string" && body.category) {
     const lookup = await fetch(
@@ -74,18 +80,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
     const json = await lookup.json().catch(() => null);
     categoryId = json?.data?.[0]?.id;
+    if (categoryId === undefined) {
+      return NextResponse.json(
+        { error: `Categoría no encontrada: ${body.category}` },
+        { status: 400 },
+      );
+    }
   } else if (typeof body.category === "number") {
     categoryId = body.category;
   }
 
   // Build the patch payload. If the category was provided as a
   // documentId we resolved it above; if the caller passed a numeric
-  // id we use it directly. If neither, leave the field off the
-  // payload so Strapi does not touch it.
+  // id we use it directly. `null` disconnects the relation in Strapi.
   const data: Record<string, unknown> = { ...body };
   if ("category" in data) {
     if (categoryId === undefined) {
-      delete data.category;
+      data.category = null;
     } else {
       data.category = categoryId;
     }

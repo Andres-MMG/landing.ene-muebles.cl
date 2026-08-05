@@ -34,7 +34,7 @@ export type ProductFormValues = {
   source: string;
   observation: string;
   /** Catalog-import (S2b) — read-only metadata rendered as a badge. */
-  importSource: 'manual' | 'imported' | '';
+  importSource: "manual" | "imported" | "";
   importBatchFileName: string;
   importBatchUploadedAt: string;
 };
@@ -46,44 +46,50 @@ export type ProductFormValues = {
 export type ProductSubmitPayload = Record<string, unknown>;
 
 /** Build the JSON body sent to `POST /api/admin/products` or
- *  `PUT /api/admin/products/{id}`. Required fields are always sent
- *  (trimmed). Optional scalars are sent when non-empty; catalog-import
- *  fields use the same "trim then keep" rule so a blank input
- *  doesn't accidentally overwrite a saved value with empty string.
+ *  `PATCH /api/admin/products/{id}`. Required fields are always sent
+ *  (trimmed). Optional scalars are sent when non-empty; when a blank
+ *  input means the operator cleared the field, we send `null` so
+ *  Strapi v5 clears the stored value instead of keeping the old one.
+ *  `category` is sent as `null` when the operator picked
+ *  `— Sin categoría —` so the relation is disconnected.
  *  `confidence` is sent verbatim when set so the route's zod enum
  *  check (`'alta' | 'media-variante-visual' | ...`) does not reject
  *  an unknown value — Strapi will store whatever the operator typed
  *  as a free-form string until the schema promotes it to enum. */
-export function buildProductSubmitPayload(
-  v: ProductFormValues
-): ProductSubmitPayload {
+export function buildProductSubmitPayload(v: ProductFormValues): ProductSubmitPayload {
   const payload: ProductSubmitPayload = {
     name: v.name.trim(),
     description: v.description.trim(),
     price: Number(v.price),
-    currency: v.currency.trim() || 'CLP',
+    currency: v.currency.trim() || "CLP",
     active: v.active,
     featured: v.featured,
   };
   if (v.shortDescription.trim()) payload.shortDescription = v.shortDescription.trim();
+  else payload.shortDescription = null;
   if (v.category) payload.category = v.category;
+  else payload.category = null;
   if (v.slug.trim()) payload.slug = v.slug.trim();
 
-  // Catalog-import (S1) — append-only fields. Trim, then keep when non-empty.
-  if (v.externalId.trim()) payload.externalId = v.externalId.trim();
+  // Catalog-import (S1) — optional fields. Blank input clears the
+  // stored value with null; non-empty values are trimmed and kept.
+  payload.externalId = v.externalId.trim() || null;
   if (v.productType) payload.productType = v.productType;
-  if (v.subcategory.trim()) payload.subcategory = v.subcategory.trim();
-  if (v.usageEnvironment.trim()) payload.usageEnvironment = v.usageEnvironment.trim();
-  if (v.observableColor.trim()) payload.observableColor = v.observableColor.trim();
-  if (v.observableMaterial.trim())
-    payload.observableMaterial = v.observableMaterial.trim();
+  else payload.productType = null;
+  payload.subcategory = v.subcategory.trim() || null;
+  payload.usageEnvironment = v.usageEnvironment.trim() || null;
+  payload.observableColor = v.observableColor.trim() || null;
+  payload.observableMaterial = v.observableMaterial.trim() || null;
   if (v.catalogPage.trim()) {
     const page = Number(v.catalogPage);
     if (Number.isFinite(page) && page >= 1) payload.catalogPage = page;
+    else payload.catalogPage = null;
+  } else {
+    payload.catalogPage = null;
   }
-  if (v.confidence) payload.confidence = v.confidence;
-  if (v.source.trim()) payload.source = v.source.trim();
-  if (v.observation.trim()) payload.observation = v.observation.trim();
+  payload.confidence = v.confidence || null;
+  payload.source = v.source.trim() || null;
+  payload.observation = v.observation.trim() || null;
   // importSource / importBatch are READ-ONLY at the form level; never send them.
 
   return payload;
@@ -95,28 +101,28 @@ export function buildProductSubmitPayload(
 export function emptyProductFormValues(): ProductFormValues {
   return {
     documentId: null,
-    name: '',
-    slug: '',
-    shortDescription: '',
-    description: '',
-    price: '',
-    currency: 'CLP',
-    category: '',
+    name: "",
+    slug: "",
+    shortDescription: "",
+    description: "",
+    price: "",
+    currency: "CLP",
+    category: "",
     active: true,
     featured: false,
-    externalId: '',
-    productType: '',
-    subcategory: '',
-    usageEnvironment: '',
-    observableColor: '',
-    observableMaterial: '',
-    catalogPage: '',
-    confidence: '',
-    source: '',
-    observation: '',
-    importSource: '',
-    importBatchFileName: '',
-    importBatchUploadedAt: '',
+    externalId: "",
+    productType: "",
+    subcategory: "",
+    usageEnvironment: "",
+    observableColor: "",
+    observableMaterial: "",
+    catalogPage: "",
+    confidence: "",
+    source: "",
+    observation: "",
+    importSource: "",
+    importBatchFileName: "",
+    importBatchUploadedAt: "",
   };
 }
 
@@ -145,38 +151,36 @@ export function productToFormValues(
     confidence?: string;
     source?: string;
     observation?: string;
-    importSource?: 'manual' | 'imported';
+    importSource?: "manual" | "imported";
     importBatch?: { fileName?: string; uploadedAt?: string } | null;
-  }>
+  }>,
 ): ProductFormValues {
   return {
     ...emptyProductFormValues(),
     documentId: p.documentId ?? null,
-    name: p.name ?? '',
-    slug: p.slug ?? '',
-    description: p.description ?? '',
-    shortDescription: p.shortDescription ?? '',
-    price: typeof p.price === 'number' ? String(p.price) : '',
-    currency: p.currency || 'CLP',
-    category: p.category?.documentId ?? '',
+    name: p.name ?? "",
+    slug: p.slug ?? "",
+    description: p.description ?? "",
+    shortDescription: p.shortDescription ?? "",
+    price: typeof p.price === "number" ? String(p.price) : "",
+    currency: p.currency || "CLP",
+    category: p.category?.documentId ?? "",
     active: Boolean(p.active),
     featured: Boolean(p.featured),
-    externalId: p.externalId ?? '',
-    productType: p.productType ?? '',
-    subcategory: p.subcategory ?? '',
-    usageEnvironment: p.usageEnvironment ?? '',
-    observableColor: p.observableColor ?? '',
-    observableMaterial: p.observableMaterial ?? '',
+    externalId: p.externalId ?? "",
+    productType: p.productType ?? "",
+    subcategory: p.subcategory ?? "",
+    usageEnvironment: p.usageEnvironment ?? "",
+    observableColor: p.observableColor ?? "",
+    observableMaterial: p.observableMaterial ?? "",
     catalogPage:
-      typeof p.catalogPage === 'number' && p.catalogPage > 0
-        ? String(p.catalogPage)
-        : '',
-    confidence: p.confidence ?? '',
-    source: p.source ?? '',
-    observation: p.observation ?? '',
-    importSource: p.importSource ?? '',
-    importBatchFileName: p.importBatch?.fileName ?? '',
-    importBatchUploadedAt: p.importBatch?.uploadedAt ?? '',
+      typeof p.catalogPage === "number" && p.catalogPage > 0 ? String(p.catalogPage) : "",
+    confidence: p.confidence ?? "",
+    source: p.source ?? "",
+    observation: p.observation ?? "",
+    importSource: p.importSource ?? "",
+    importBatchFileName: p.importBatch?.fileName ?? "",
+    importBatchUploadedAt: p.importBatch?.uploadedAt ?? "",
   };
 }
 
@@ -188,18 +192,18 @@ export function productToFormValues(
  *  the client bundle; the form only needs the labels for the
  *  `<option>` list. */
 export const PRODUCT_TYPE_OPTIONS = [
-  'Silla',
-  'Mesa',
-  'Escritorio',
-  'Banca',
-  'Piso',
-  'Cuna',
+  "Silla",
+  "Mesa",
+  "Escritorio",
+  "Banca",
+  "Piso",
+  "Cuna",
 ] as const;
 
 export const CONFIDENCE_OPTIONS = [
-  'alta',
-  'media-variante-visual',
-  'media-nombre-generico-pdf',
-  'baja',
-  'revision-manual',
+  "alta",
+  "media-variante-visual",
+  "media-nombre-generico-pdf",
+  "baja",
+  "revision-manual",
 ] as const;

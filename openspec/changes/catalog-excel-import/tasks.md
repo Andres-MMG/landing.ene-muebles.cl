@@ -76,7 +76,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     forma de string, así que S2 lo promoverá a relación sin cambios
     al parser.
 
-- [ ] **1.1b** Tipos públicos `Product` extendidos en `apps/web`
+- [x] **1.1b** Tipos públicos `Product` extendidos en `apps/web`
   - Archivo: `apps/web/src/lib/strapi.ts`
   - Acceptance: 10 campos opcionales en `Product`; constantes
     `PRODUCT_CONFIDENCE_VALUES` y `PRODUCT_TYPE_VALUES` exportadas;
@@ -87,7 +87,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     en `strapi-admin.ts`, así que se respetó la cláusula condicional
     "si existe" del orchestrator y no se creó.
 
-- [ ] **1.1c** Helper puro `mapExcelRowToProduct` + tests
+- [x] **1.1c** Helper puro `mapExcelRowToProduct` + tests
   - Archivos nuevos:
     `apps/web/src/app/api/admin/products/_lib/parseExcelRow.ts`,
     `apps/web/src/app/api/admin/products/_lib/parseExcelRow.test.ts`.
@@ -97,7 +97,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
   - Evidencia: `pnpm test` cubre los 11 nuevos casos en
     `parseExcelRow.test.ts`.
 
-- [ ] **1.2** Crear el content-type `Subcategory` (schema + controllers + routes + services)
+- [x] **1.2** Crear el content-type `Subcategory` (schema + controllers + routes + services)
   - Archivos: `apps/cms/src/api/subcategory/{content-types,controllers,routes,services}/...`
   - Acceptance: `pnpm --filter cms build` exit 0; el tipo aparece en
     `getStrapiContentTypes()`.
@@ -107,7 +107,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     para mantener S1 dentro del budget y porque la columna `subcategory`
     del Excel funciona como string simple hasta que se cree la entidad.
 
-- [ ] **1.3** Agregar helpers de import en `strapi-admin.ts`
+- [x] **1.3** Agregar helpers de import en `strapi-admin.ts`
   - Archivo: `apps/web/src/lib/admin/strapi-admin.ts`
   - Acceptance: exportar `importCatalogBatch(rows)`, `resolveOrCreateCategory(name)`,
     `resolveOrCreateSubcategory(name, categoryDocumentId)`,
@@ -121,7 +121,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     subcategorías, upsert por `externalId`, `importCatalogBatch`) se
     difiere a S2 junto con la ruta `POST /api/admin/products/import`.
 
-- [ ] **1.4** Tipos TS para los nuevos atributos en `apps/web`
+- [x] **1.4** Tipos TS para los nuevos atributos en `apps/web`
   - Archivo: `apps/web/src/lib/types/product.ts` (nuevo, si no existe)
   - Acceptance: tipos `Product`, `ImportRow`, `ImportResult`,
     `ImportResponse` exportados.
@@ -135,7 +135,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
 
 ## Slice S2 — Endpoint batch + tests (~280 Δ)
 
-- [ ] **2.1** Crear `POST /api/admin/products/import` con validación zod
+- [x] **2.1** Crear `POST /api/admin/products/import` con validación zod
   - Archivo: `apps/web/src/app/api/admin/products/import/route.ts`
   - Acceptance: `export const dynamic = 'force-dynamic'`,
     `export const runtime = 'nodejs'`; valida con zod que
@@ -143,26 +143,26 @@ Chain strategy: pending (orchestrator will pause and ask user)
   - Evidencia: `grep -n "force-dynamic\|nodejs\|max(200)" route.ts`
     retorna ≥ 1 cada uno.
 
-- [ ] **2.2** Implementar el loop de import (cache categories/subcategories, upsert por externalId)
+- [x] **2.2** Implementar el loop de import (cache categories/subcategories, upsert por externalId)
   - Archivo: `apps/web/src/app/api/admin/products/import/route.ts`
   - Acceptance: procesa cada fila con `try/catch`; cache en memoria para
     categorías/subcategorías; upsert por `externalId`.
   - Evidencia: `grep -n "try {\|findProductByExternalId\|resolveOrCreateCategory" route.ts` retorna ≥ 1 cada uno.
 
-- [ ] **2.3** Implementar el reporte por fila (`results[]` + `summary`)
+- [x] **2.3** Implementar el reporte por fila (`results[]` + `summary`)
   - Archivo: `apps/web/src/app/api/admin/products/import/route.ts`
   - Acceptance: cada fila devuelve `{ externalId, status, documentId?, error?, warnings? }`;
     el `summary` cuenta `created/updated/failed/warnings`.
   - Evidencia: `grep -n "summary\|results" route.ts` retorna ≥ 3.
 
-- [ ] **2.4** Tests del endpoint (vitest + Strapi mock)
+- [x] **2.4** Tests del endpoint (vitest + Strapi mock)
   - Archivo: `apps/web/src/app/api/admin/products/import/route.test.ts` (nuevo)
   - Acceptance: tests para: 401 sin sesión, 413 sobre 200 filas,
     200 con lote válido, idempotencia en doble import, fila fallida no
     aborta lote.
   - Evidencia: `pnpm --filter web vitest run route.test.ts` exit 0.
 
-- [ ] **2.5** Documentar el contrato del endpoint en JSDoc
+- [x] **2.5** Documentar el contrato del endpoint en JSDoc
   - Archivo: `apps/web/src/app/api/admin/products/import/route.ts`
   - Acceptance: bloque JSDoc al inicio con request/response/errors.
   - Evidencia: `grep -n "@example\|@returns\|@throws" route.ts` retorna ≥ 1.
@@ -190,7 +190,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     de 20; resumen con `creados/actualizados/fallos/advertencias`.
   - Evidencia: `grep -n "AbortController\|progress\|results" ImportForm.tsx` retorna ≥ 1 cada uno.
 
-- [ ] **3.4** Cancelación mid-import con `AbortController`
+- [x] **3.4** Cancelación mid-import con `AbortController`
   - Archivo: `apps/web/src/app/admin/(authenticated)/productos/importar/ImportForm.tsx`
   - Acceptance: `useEffect` cleanup aborta el `fetch` en curso; un
     warning de cancelación visible si aplica.
@@ -208,7 +208,7 @@ Chain strategy: pending (orchestrator will pause and ask user)
     `dependencies`; `pnpm install` exit 0.
   - Evidencia: `grep -n '"xlsx"' apps/web/package.json` retorna 1.
 
-- [ ] **3.7** Verificación manual con `catalogo_productos_202.xlsx`
+- [x] **3.7** Verificación manual con `catalogo_productos_202.xlsx`
   - Operación: cargar el Excel real desde `/admin/productos/importar`,
     confirmar import, validar que `summary.created = 160`, `failed = 0`.
   - Acceptance: archivo real produce 160 productos en Strapi.
@@ -221,13 +221,13 @@ Chain strategy: pending (orchestrator will pause and ask user)
 > Diferible. El import funciona end-to-end sin esto. Sólo agrega
 > visibilidad de los nuevos campos en la UI existente.
 
-- [ ] **4.1** Mostrar `externalId` y `confidence` en `ProductForm.tsx`
+- [x] **4.1** Mostrar `externalId` y `confidence` en `ProductForm.tsx`
   - Archivo: `apps/web/src/app/admin/(authenticated)/productos/ProductForm.tsx`
   - Acceptance: dos campos read-only al final del formulario que
     muestran los valores de Strapi cuando el producto ya los tiene.
   - Evidencia: `grep -n "externalId\|confidence" ProductForm.tsx` retorna ≥ 1.
 
-- [ ] **4.2** Mostrar `externalId` en `ProductList.tsx`
+- [x] **4.2** Mostrar `externalId` en `ProductList.tsx`
   - Archivo: `apps/web/src/app/admin/(authenticated)/ProductList.tsx`
   - Acceptance: nueva columna `ID externo` con el valor en monoespaciado.
   - Evidencia: `grep -n "externalId\|external" ProductList.tsx` retorna ≥ 1.
@@ -301,30 +301,30 @@ cambio posterior sin bloquear la entrega principal.
 
 ### Entregables
 
-- [ ] **E.1** Strapi: nuevo content-type `ImportBatch`
+- [x] **E.1** Strapi: nuevo content-type `ImportBatch`
   - `apps/cms/src/api/import-batch/{content-types,controllers,routes,services}/...` (new)
   - Acceptance: `pnpm --filter cms build` exit 0.
 
-- [ ] **E.2** Strapi: extender `Product` con `importSource` + `importBatch`
+- [x] **E.2** Strapi: extender `Product` con `importSource` + `importBatch`
   - `apps/cms/src/api/product/content-types/product/schema.json` (modified)
   - Acceptance: 10 atributos de S1 intactos; +2 atributos nuevos.
 
-- [ ] **E.3** Web: tipos públicos `Product` + `ImportBatch` + `AdminProduct`
+- [x] **E.3** Web: tipos públicos `Product` + `ImportBatch` + `AdminProduct`
   - `apps/web/src/lib/strapi.ts` (modified): nuevos tipos + `normalizeProduct`
   - `apps/web/src/lib/admin/strapi-admin.ts` (modified): `AdminProduct`
   - Acceptance: `pnpm --filter web typecheck` exit 0.
 
-- [ ] **E.4** Web: helpers `createImportBatch` + `recordBatchCounters`
+- [x] **E.4** Web: helpers `createImportBatch` + `recordBatchCounters`
   - `apps/web/src/lib/admin/strapi-admin.ts` (modified): expuesto vía `createImportScope`.
   - Acceptance: `pnpm --filter web typecheck` exit 0.
 
-- [ ] **E.5** Web: endpoint `POST /api/admin/products/import` con traceability
+- [x] **E.5** Web: endpoint `POST /api/admin/products/import` con traceability
   - `apps/web/src/app/api/admin/products/import/route.ts` (modified)
   - Acceptance: 1 POST `/api/import-batches` antes del loop + 1 PUT al
     final con counters; cada POST/PUT `/api/products` lleva
     `importSource: 'imported'` + `importBatch.connect: [docId]`.
 
-- [ ] **E.6** Web: tests del endpoint (5 nuevos casos)
+- [x] **E.6** Web: tests del endpoint (5 nuevos casos)
   - `apps/web/src/app/api/admin/products/import/route.test.ts` (modified)
   - Acceptance: 10 tests existentes siguen pasando + 5 nuevos pasan.
 

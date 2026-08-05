@@ -1,7 +1,7 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import { adminPut } from '@/lib/admin/client';
+import { useState, useTransition } from "react";
+import { adminPut } from "@/lib/admin/client";
 
 type Values = {
   siteName: string;
@@ -25,12 +25,12 @@ type FieldKey = keyof Values;
 type FieldDef = {
   key: FieldKey;
   label: string;
-  type: 'text' | 'email' | 'tel' | 'url' | 'textarea';
+  type: "text" | "email" | "tel" | "url" | "textarea";
   placeholder?: string;
   maxLength?: number;
   rows?: number;
   required?: boolean;
-  span?: 'half' | 'full';
+  span?: "half" | "full";
   /**
    * Optional helper text rendered below the input in the same
    * monospace micro-label style as the field label. Reserved for
@@ -43,7 +43,7 @@ type FieldDef = {
  * Networks accepted by `normalizeSocialHandle`. The order of the keys
  * mirrors the order of the `socialLinks` object Strapi v5 expects.
  */
-type SocialNetwork = 'instagram' | 'facebook' | 'linkedin' | 'tiktok';
+type SocialNetwork = "instagram" | "facebook" | "linkedin" | "tiktok";
 
 /**
  * Canonical base URL for each social network. These are prepended
@@ -52,27 +52,129 @@ type SocialNetwork = 'instagram' | 'facebook' | 'linkedin' | 'tiktok';
  * with the helper text under each social input.
  */
 const SOCIAL_BASE_URL: Record<SocialNetwork, string> = {
-  instagram: 'https://www.instagram.com/',
-  facebook: 'https://www.facebook.com/',
-  linkedin: 'https://www.linkedin.com/in/',
-  tiktok: 'https://www.tiktok.com/@',
+  instagram: "https://www.instagram.com/",
+  facebook: "https://www.facebook.com/",
+  linkedin: "https://www.linkedin.com/in/",
+  tiktok: "https://www.tiktok.com/@",
 };
 
 const FIELDS: FieldDef[] = [
-  { key: 'siteName', label: 'Nombre del sitio', type: 'text', placeholder: 'Ene Muebles', maxLength: 120, required: true, span: 'half' },
-  { key: 'tagline', label: 'Tagline', type: 'text', placeholder: 'Muebles a medida para oficina y hogar', maxLength: 200, span: 'half' },
-  { key: 'rut', label: 'RUT', type: 'text', placeholder: '76.123.456-7', maxLength: 20, required: true, span: 'half' },
-  { key: 'contactEmail', label: 'Correo de contacto', type: 'email', placeholder: 'hola@ene-muebles.cl', span: 'half' },
-  { key: 'contactPhone', label: 'Teléfono de contacto', type: 'tel', placeholder: '+56 9 1234 5678', span: 'half' },
-  { key: 'whatsappNumber', label: 'WhatsApp (número)', type: 'tel', placeholder: '+56912345678', span: 'half' },
-  { key: 'whatsappDefaultMessage', label: 'Mensaje predeterminado WhatsApp', type: 'textarea', rows: 3, placeholder: 'Hola, me gustaría una cotización de su catálogo de mobiliario institucional.', maxLength: 1000, required: true, span: 'full' },
-  { key: 'address', label: 'Dirección', type: 'textarea', rows: 2, placeholder: 'Av. Apoquindo 4000, Las Condes, Santiago', span: 'half' },
-  { key: 'businessHours', label: 'Horario de atención', type: 'textarea', rows: 2, placeholder: 'Lun a Vie · 09:00–18:00', span: 'half' },
-  { key: 'aboutText', label: 'Texto "sobre nosotros"', type: 'textarea', rows: 4, placeholder: 'Una o dos frases sobre la empresa para el sitio público.', maxLength: 2000, span: 'full' },
-  { key: 'socialInstagram', label: 'Instagram', type: 'url', placeholder: 'https://instagram.com/enemuebles', span: 'half', help: 'Pega la URL completa o escribe solo el usuario (ej. enemuebles).' },
-  { key: 'socialFacebook', label: 'Facebook', type: 'url', placeholder: 'https://facebook.com/enemuebles', span: 'half', help: 'Pega la URL completa o escribe solo el usuario (ej. enemuebles).' },
-  { key: 'socialLinkedIn', label: 'LinkedIn', type: 'url', placeholder: 'https://linkedin.com/company/enemuebles', span: 'half', help: 'Pega la URL completa o escribe solo el usuario (ej. ene-muebles).' },
-  { key: 'socialTiktok', label: 'TikTok', type: 'url', placeholder: 'https://tiktok.com/@enemuebles', span: 'half', help: 'Pega la URL completa o escribe solo el usuario (ej. enemuebles).' },
+  {
+    key: "siteName",
+    label: "Nombre del sitio",
+    type: "text",
+    placeholder: "Ene Muebles",
+    maxLength: 120,
+    required: true,
+    span: "half",
+  },
+  {
+    key: "tagline",
+    label: "Tagline",
+    type: "text",
+    placeholder: "Muebles a medida para oficina y hogar",
+    maxLength: 200,
+    span: "half",
+  },
+  {
+    key: "rut",
+    label: "RUT",
+    type: "text",
+    placeholder: "76.123.456-7",
+    maxLength: 20,
+    required: true,
+    span: "half",
+  },
+  {
+    key: "contactEmail",
+    label: "Correo de contacto",
+    type: "email",
+    placeholder: "hola@ene-muebles.cl",
+    span: "half",
+  },
+  {
+    key: "contactPhone",
+    label: "Teléfono de contacto",
+    type: "tel",
+    placeholder: "+56 9 1234 5678",
+    maxLength: 40,
+    span: "half",
+  },
+  {
+    key: "whatsappNumber",
+    label: "WhatsApp (número)",
+    type: "tel",
+    placeholder: "+56912345678",
+    maxLength: 40,
+    span: "half",
+  },
+  {
+    key: "whatsappDefaultMessage",
+    label: "Mensaje predeterminado WhatsApp",
+    type: "textarea",
+    rows: 3,
+    placeholder: "Hola, me gustaría una cotización de su catálogo de mobiliario institucional.",
+    maxLength: 1000,
+    required: true,
+    span: "full",
+  },
+  {
+    key: "address",
+    label: "Dirección",
+    type: "textarea",
+    rows: 2,
+    placeholder: "Av. Apoquindo 4000, Las Condes, Santiago",
+    span: "half",
+  },
+  {
+    key: "businessHours",
+    label: "Horario de atención",
+    type: "textarea",
+    rows: 2,
+    placeholder: "Lun a Vie · 09:00–18:00",
+    span: "half",
+  },
+  {
+    key: "aboutText",
+    label: 'Texto "sobre nosotros"',
+    type: "textarea",
+    rows: 4,
+    placeholder: "Una o dos frases sobre la empresa para el sitio público.",
+    maxLength: 2000,
+    span: "full",
+  },
+  {
+    key: "socialInstagram",
+    label: "Instagram",
+    type: "url",
+    placeholder: "https://instagram.com/enemuebles",
+    span: "half",
+    help: "Pega la URL completa o escribe solo el usuario (ej. enemuebles).",
+  },
+  {
+    key: "socialFacebook",
+    label: "Facebook",
+    type: "url",
+    placeholder: "https://facebook.com/enemuebles",
+    span: "half",
+    help: "Pega la URL completa o escribe solo el usuario (ej. enemuebles).",
+  },
+  {
+    key: "socialLinkedIn",
+    label: "LinkedIn",
+    type: "url",
+    placeholder: "https://linkedin.com/company/enemuebles",
+    span: "half",
+    help: "Pega la URL completa o escribe solo el usuario (ej. ene-muebles).",
+  },
+  {
+    key: "socialTiktok",
+    label: "TikTok",
+    type: "url",
+    placeholder: "https://tiktok.com/@enemuebles",
+    span: "half",
+    help: "Pega la URL completa o escribe solo el usuario (ej. enemuebles).",
+  },
 ];
 
 /**
@@ -84,48 +186,49 @@ const FIELDS: FieldDef[] = [
  * Returns an empty string when the body has no `error` key (success).
  */
 function normalizeSaveError(body: unknown): string {
-  if (!body || typeof body !== 'object') return '';
+  if (!body || typeof body !== "object") return "";
   const b = body as {
     error?: unknown;
     details?: { issues?: Array<{ path?: Array<string | number>; message?: string }> };
   };
   const err = b.error;
-  if (!err && !b.details?.issues?.length) return '';
+  if (!err && !b.details?.issues?.length) return "";
 
   // Pull field-level issues out of either the Strapi-shaped `error.details`
   // (handled below) or the top-level `details.issues` produced by our
   // own Zod validation in the proxy.
   const proxyIssueLines = (b.details?.issues ?? [])
     .map((i) => {
-      const path = Array.isArray(i.path) ? i.path.join('.') : '';
-      return path && i.message ? `${path}: ${i.message}` : i.message ?? '';
+      const path = Array.isArray(i.path) ? i.path.join(".") : "";
+      return path && i.message ? `${path}: ${i.message}` : (i.message ?? "");
     })
     .filter(Boolean)
-    .join('; ');
+    .join("; ");
 
-  if (typeof err === 'string') {
+  if (typeof err === "string") {
     return proxyIssueLines ? `${err} (${proxyIssueLines})` : err;
   }
-  if (typeof err !== 'object') return '';
+  if (typeof err !== "object") return "";
   const e = err as {
     name?: string;
     message?: string;
     details?: { errors?: Array<{ path?: string[]; message?: string }> };
   };
   const head: string[] = [];
-  if (e.name && e.name !== 'ApplicationError') head.push(e.name);
+  if (e.name && e.name !== "ApplicationError") head.push(e.name);
   if (e.message) head.push(e.message);
   const fieldErrors = Array.isArray(e.details?.errors) ? e.details.errors : [];
   const detail = fieldErrors
     .map((d) => {
-      const path = Array.isArray(d.path) ? d.path.join('.') : '';
-      return path && d.message ? `${path}: ${d.message}` : d.message ?? '';
+      const path = Array.isArray(d.path) ? d.path.join(".") : "";
+      return path && d.message ? `${path}: ${d.message}` : (d.message ?? "");
     })
     .filter(Boolean)
-    .join('; ');
-  if (detail) return `${head.join(': ')} (${detail})`;
-  if (head.length > 0) return proxyIssueLines ? `${head.join(': ')} (${proxyIssueLines})` : head.join(': ');
-  return 'No se pudieron guardar los ajustes.';
+    .join("; ");
+  if (detail) return `${head.join(": ")} (${detail})`;
+  if (head.length > 0)
+    return proxyIssueLines ? `${head.join(": ")} (${proxyIssueLines})` : head.join(": ");
+  return "No se pudieron guardar los ajustes.";
 }
 
 /**
@@ -150,14 +253,11 @@ function normalizeSaveError(body: unknown): string {
  * still reflect what the operator typed so the UI shows their
  * original text on the next edit. Only the wire shape is reshaped.
  */
-function normalizeSocialHandle(
-  network: SocialNetwork,
-  value: string
-): string | null {
+function normalizeSocialHandle(network: SocialNetwork, value: string): string | null {
   const trimmed = value.trim();
-  if (trimmed === '') return null;
+  if (trimmed === "") return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  const handle = trimmed.replace(/^@+/, '');
+  const handle = trimmed.replace(/^@+/, "");
   return `${SOCIAL_BASE_URL[network]}${handle}`;
 }
 
@@ -170,10 +270,10 @@ function normalizeSocialHandle(
  */
 function buildSocialLinks(values: Values): Record<string, string | null> {
   return {
-    instagram: normalizeSocialHandle('instagram', values.socialInstagram),
-    facebook: normalizeSocialHandle('facebook', values.socialFacebook),
-    linkedin: normalizeSocialHandle('linkedin', values.socialLinkedIn),
-    tiktok: normalizeSocialHandle('tiktok', values.socialTiktok),
+    instagram: normalizeSocialHandle("instagram", values.socialInstagram),
+    facebook: normalizeSocialHandle("facebook", values.socialFacebook),
+    linkedin: normalizeSocialHandle("linkedin", values.socialLinkedIn),
+    tiktok: normalizeSocialHandle("tiktok", values.socialTiktok),
   };
 }
 
@@ -188,9 +288,7 @@ function buildSocialLinks(values: Values): Record<string, string | null> {
  * Exported so the matching payload test can exercise the form's
  * serialization without rendering React.
  */
-export function buildSubmitPayload(
-  values: Values
-): Record<string, unknown> {
+export function buildSubmitPayload(values: Values): Record<string, unknown> {
   const payload: Record<string, unknown> = {
     siteName: values.siteName.trim(),
     rut: values.rut.trim(),
@@ -239,7 +337,7 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
 
     startTransition(async () => {
       try {
-        const body = await adminPut<unknown>('/api/admin/site-setting', payload);
+        const body = await adminPut<unknown>("/api/admin/site-setting", payload);
         const message = normalizeSaveError(body);
         if (message) {
           setError(message);
@@ -247,20 +345,20 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
         }
         setSuccess(true);
       } catch (err) {
-        const fallback = 'No se pudieron guardar los ajustes.';
+        const fallback = "No se pudieron guardar los ajustes.";
         setError(err instanceof Error ? err.message : fallback);
       }
     });
   }
 
   const inputClass =
-    'w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none';
+    "w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none";
 
   return (
     <form onSubmit={onSubmit} className="space-y-8" noValidate>
       <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
         {FIELDS.map((field) => {
-          const colSpan = field.span === 'full' ? 'sm:col-span-2' : 'sm:col-span-1';
+          const colSpan = field.span === "full" ? "sm:col-span-2" : "sm:col-span-1";
           return (
             <label key={field.key} className={`block ${colSpan}`}>
               <span className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute">
@@ -271,7 +369,7 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
                   </span>
                 ) : null}
               </span>
-              {field.type === 'textarea' ? (
+              {field.type === "textarea" ? (
                 <textarea
                   value={values[field.key]}
                   onChange={(e) => update(field.key, e.target.value)}
@@ -303,10 +401,7 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
       </div>
 
       {error ? (
-        <p
-          role="alert"
-          className="border-l-2 border-ink bg-cream-soft px-4 py-3 text-sm text-ink"
-        >
+        <p role="alert" className="border-l-2 border-ink bg-cream-soft px-4 py-3 text-sm text-ink">
           {error}
         </p>
       ) : null}
@@ -326,7 +421,7 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
           disabled={pending}
           className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep disabled:opacity-50"
         >
-          {pending ? 'Guardando…' : 'Guardar ajustes'}
+          {pending ? "Guardando…" : "Guardar ajustes"}
         </button>
         <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
           Marcados con <span className="text-taupe-deep">*</span> son obligatorios.

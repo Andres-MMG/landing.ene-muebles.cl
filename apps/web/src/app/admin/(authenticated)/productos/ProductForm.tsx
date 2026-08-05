@@ -322,7 +322,7 @@ export function ProductForm({
                 // prettier-ignore
                 update('usageEnvironment', e.target.value);
               }}
-              maxLength={200}
+              maxLength={120}
               className={inputClass}
               placeholder="Sala de clases / educación inicial"
             />
@@ -352,7 +352,7 @@ export function ProductForm({
                 // prettier-ignore
                 update('observableMaterial', e.target.value);
               }}
-              maxLength={200}
+              maxLength={160}
               className={inputClass}
               placeholder="Melamina 18 mm"
             />

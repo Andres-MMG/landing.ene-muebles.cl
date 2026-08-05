@@ -1,5 +1,10 @@
 import Link from "next/link";
-import { getPublicRut, type FooterBlock, type SiteSetting } from "@/lib/strapi";
+import {
+  getProductCount,
+  getPublicRut,
+  type FooterBlock,
+  type SiteSetting,
+} from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 import { APP_VERSION } from "@/lib/version";
 
@@ -47,10 +52,17 @@ const navItems: { label: string; href: string }[] = [
  * across the width. Below: copyright + RUT/horario in mono. No social
  * icons; social handles are listed as text (industrial, not decorative).
  */
-export function Footer({ settings, block }: FooterProps) {
+export async function Footer({ settings, block }: FooterProps) {
   const year = new Date().getFullYear();
   const socials = settings.socialLinks ?? {};
-  const promiseText = block?.tagline ?? site.footerCopy;
+  // Live count of active products for the promise strip. The helper
+  // never throws (0 when Strapi is unreachable) so the static copy
+  // still renders when the CMS is down.
+  const productCount = await getProductCount();
+  const promiseText =
+    productCount > 0
+      ? `${productCount} productos certificados para instituciones`
+      : (block?.tagline ?? site.footerCopy);
   const defaultCopyright = `© ${year} ${settings.siteName}`;
   const copyrightText = block?.copyrightText ?? defaultCopyright;
   const legalSnippet = block?.legalSnippet ?? "Proveedor institucional · Chile";

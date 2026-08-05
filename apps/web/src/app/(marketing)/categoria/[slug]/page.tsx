@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { ContactCTA } from "@/components/ContactCTA";
+import { Pagination } from "@/components/Pagination";
 import { ProductCard } from "@/components/ProductCard";
 import {
   getCategories,
@@ -11,8 +12,16 @@ import {
 export const revalidate = 60;
 export const dynamic = "force-dynamic";
 
+const PAGE_SIZE = 12;
+
 type Props = {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ page?: string }>;
+};
+
+const parsePage = (raw: string | undefined): number => {
+  const parsed = Number.parseInt(raw ?? "1", 10);
+  return Math.max(1, Number.isNaN(parsed) ? 1 : parsed);
 };
 
 export async function generateMetadata({ params }: Props) {
@@ -26,16 +35,32 @@ export async function generateMetadata({ params }: Props) {
   };
 }
 
-export default async function CategoryPage({ params }: Props) {
+export default async function CategoryPage({ params, searchParams }: Props) {
   const { slug } = await params;
-  const [settings, categories, products] = await Promise.all([
+  const { page: pageParam } = await searchParams;
+  const [settings, categories, result] = await Promise.all([
     getSiteSettings(),
     getCategories(),
-    getProducts(slug),
+    getProducts({ categorySlug: slug, page: parsePage(pageParam), pageSize: PAGE_SIZE }),
   ]);
 
   const current = categories.find((c) => c.slug === slug);
   if (!current) notFound();
+
+  let page = parsePage(pageParam);
+  let products = result.products;
+  let total = result.total;
+  // Stale `?page=` beyond the last page: refetch the last valid page
+  // instead of rendering the empty state with products available.
+  if (total > 0 && products.length === 0) {
+    page = Math.ceil(total / PAGE_SIZE);
+    const result = await getProducts({ categorySlug: slug, page, pageSize: PAGE_SIZE });
+    products = result.products;
+    total = result.total;
+  }
+
+  const from = total > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
+  const to = Math.min(page * PAGE_SIZE, total);
 
   return (
     <>
@@ -79,16 +104,27 @@ export default async function CategoryPage({ params }: Props) {
             Próximamente publicaremos nuevos productos en esta línea.
           </p>
         ) : (
-          <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
-            {products.map((product) => (
-              <li key={product.id}>
-                <ProductCard
-                  product={product}
-                  whatsappNumber={settings.whatsappNumber}
-                />
-              </li>
-            ))}
-          </ul>
+          <>
+            <p className="t-mono mb-8 text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+              {from}–{to} de {total} productos
+            </p>
+            <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
+              {products.map((product) => (
+                <li key={product.id}>
+                  <ProductCard
+                    product={product}
+                    whatsappNumber={settings.whatsappNumber}
+                  />
+                </li>
+              ))}
+            </ul>
+            <Pagination
+              total={total}
+              page={page}
+              pageSize={PAGE_SIZE}
+              basePath={`/categoria/${slug}`}
+            />
+          </>
         )}
       </section>
 

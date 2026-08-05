@@ -2,9 +2,9 @@
 // should not live in Strapi. Keep this file small: long-form content
 // (about, tagline) belongs in the CMS.
 export const site = {
-  brand: "Ene Muebles",
+  brand: "ENE-MUEBLES",
   promise: "Mobiliario resistente para aulas, oficinas e instituciones.",
-  dispatch: "Despacho a todo Chile · Cotización en 24 h · Garantía escrita",
+  dispatch: "Despacho de la V a la X región · Cotización en 24 h · Garantía escrita",
   catalogAll: "Ver catálogo completo",
   whatsappCta: "Hablar por WhatsApp",
   quoteCta: "Solicitar cotización",
@@ -69,7 +69,7 @@ export const site = {
     {
       title: "Cobertura",
       body:
-        "Despacho a las 16 regiones. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
+        "Despacho desde la región de Valparaíso (V) hasta Los Lagos (X). Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
     },
     {
       title: "Atención",
@@ -89,7 +89,7 @@ export const site = {
   contactoFieldMessage: "Cuéntanos qué necesitas",
   contactoSubmit: "Enviar mensaje",
   contactoNote:
-    "También puede escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +56 2 2898 4421.",
+    "También puede escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +569 9539 5339.",
 
   legalUpdated: "Última actualización: enero 2026.",
   termsIntro:

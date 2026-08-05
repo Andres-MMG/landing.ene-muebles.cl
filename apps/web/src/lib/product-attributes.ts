@@ -201,14 +201,14 @@ export function buildProductJsonLd(
       i.url.startsWith('http') ? i.url : `${siteUrl}${i.url}`
     ),
     category: product.category?.name,
-    brand: { '@type': 'Brand', name: 'Ene Muebles' },
+    brand: { '@type': 'Brand', name: 'ENE-MUEBLES' },
     offers: {
       '@type': 'Offer',
       url: `${siteUrl}/producto/${product.slug}`,
       price: product.price,
       priceCurrency: product.currency,
       availability: 'https://schema.org/InStock',
-      seller: { '@type': 'Organization', name: 'Ene Muebles' },
+      seller: { '@type': 'Organization', name: 'ENE-MUEBLES' },
     },
   };
   const additional = buildJsonLdAdditionalProperty(product);

@@ -88,7 +88,7 @@ export function AdminHeader({ user, navItems }: AdminHeaderProps) {
         items={navItems}
         pathname={pathname}
         isActive={isActive}
-        brand="Ene Muebles"
+        brand="ENE-MUEBLES"
         menuLabel="Navegación del panel"
         footer={
           <>

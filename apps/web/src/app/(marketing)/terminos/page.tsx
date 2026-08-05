@@ -70,7 +70,7 @@ const sections = [
   {
     heading: "10. Contacto",
     body: [
-      "Para consultas sobre estos términos, escríbanos a contacto@ene-muebles.cl o llámenos al +56 2 2898 4421 en horario hábil.",
+      "Para consultas sobre estos términos, escríbanos a contacto@ene-muebles.cl o llámenos al +569 9539 5339 en horario hábil.",
     ],
   },
 ];

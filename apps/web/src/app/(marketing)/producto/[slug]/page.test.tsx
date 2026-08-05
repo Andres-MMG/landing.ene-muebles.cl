@@ -286,7 +286,7 @@ describe('producto/[slug] — JSON-LD additionalProperty payload', () => {
     expect(jsonLd['@type']).toBe('Product');
     expect(jsonLd.name).toBe('Silla');
     expect(jsonLd.category).toBe('Escolar');
-    expect(jsonLd.brand).toEqual({ '@type': 'Brand', name: 'Ene Muebles' });
+    expect(jsonLd.brand).toEqual({ '@type': 'Brand', name: 'ENE-MUEBLES' });
     expect(jsonLd.offers).toMatchObject({
       '@type': 'Offer',
       url: 'https://ene-muebles.cl/producto/silla',

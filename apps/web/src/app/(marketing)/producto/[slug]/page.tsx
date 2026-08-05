@@ -67,10 +67,10 @@ export async function generateMetadata({ params }: Props) {
     description: metaDescription,
     alternates: { canonical },
     openGraph: {
-      title: `${product.name} · Ene Muebles`,
+      title: `${product.name} · ENE-MUEBLES`,
       description: ogDescription,
       url: canonical,
-      siteName: "Ene Muebles",
+      siteName: "ENE-MUEBLES",
       locale: "es_CL",
       type: "website",
       images: ogImages,

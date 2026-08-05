@@ -193,14 +193,14 @@ describe('buildProductJsonLd', () => {
     expect(jsonLd.description).toBe('Silla de melamina.');
     expect(jsonLd.image).toEqual(['https://cdn.example.com/silla.jpg']);
     expect(jsonLd.category).toBe('Escolar');
-    expect(jsonLd.brand).toEqual({ '@type': 'Brand', name: 'Ene Muebles' });
+    expect(jsonLd.brand).toEqual({ '@type': 'Brand', name: 'ENE-MUEBLES' });
     expect(jsonLd.offers).toEqual({
       '@type': 'Offer',
       url: 'https://ene-muebles.cl/producto/silla-escolar',
       price: 89900,
       priceCurrency: 'CLP',
       availability: 'https://schema.org/InStock',
-      seller: { '@type': 'Organization', name: 'Ene Muebles' },
+      seller: { '@type': 'Organization', name: 'ENE-MUEBLES' },
     });
   });
 

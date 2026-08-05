@@ -118,13 +118,7 @@ export function AboutSection({
                 <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
                   Cobertura
                 </dt>
-                <dd className="t-mono text-2xl text-paper">16 regiones</dd>
-              </div>
-              <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
-                <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
-                  Plazo de despacho
-                </dt>
-                <dd className="t-mono text-2xl text-paper">7 – 15 d.h.</dd>
+                <dd className="t-mono text-2xl text-paper">V – X</dd>
               </div>
               <div className="flex items-baseline justify-between py-4">
                 <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">

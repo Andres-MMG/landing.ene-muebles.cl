@@ -25,7 +25,7 @@ export default async function MarketingLayout({
   // the Footer so the tree remains serial rather than racing renders.
   const footerBlock = await getFooterBlock();
 
-  const fallbackName = 'Ene Muebles';
+  const fallbackName = 'ENE-MUEBLES';
 
   return (
     <>

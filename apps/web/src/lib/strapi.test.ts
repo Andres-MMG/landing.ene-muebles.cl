@@ -100,7 +100,7 @@ describe("getSiteSettings", () => {
 
     const { getSiteSettings } = await import("./strapi");
 
-    await expect(getSiteSettings()).resolves.toEqual({ siteName: "Ene Muebles" });
+    await expect(getSiteSettings()).resolves.toEqual({ siteName: "ENE-MUEBLES" });
   });
 
   it("rejects a generic JSON 404", async () => {

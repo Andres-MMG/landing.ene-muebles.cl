@@ -60,16 +60,16 @@ const CATEGORIES = [
 ];
 
 const SITE_SETTING = {
-  siteName: 'Ene Muebles',
+  siteName: 'ENE-MUEBLES',
   tagline:
-    'Mobiliario escolar y de oficina para instituciones en Chile. Despacho a todo Chile y cotización en 24 h.',
+    'Mobiliario escolar y de oficina para instituciones en Chile. Despacho de la V a la X región y cotización en 24 h.',
   contactEmail: 'contacto@ene-muebles.cl',
-  contactPhone: '+56 2 2898 4421',
+  contactPhone: '+569 9539 5339',
   whatsappNumber: '+56978901234',
-  address: 'Av. Las Industrias 4520, Santiago, Chile',
+  address: 'Cautin 1782',
   businessHours: 'Lun a Vie 09:00 - 18:00',
   aboutText:
-    'Ene Muebles fabrica y distribuye mobiliario escolar y de oficina bajo estándares de pliego público. Cada pieza se entrega con ficha técnica, declaración de materiales y plazo de despacho por escrito. Suministramos mobiliario a instituciones educativas, empresas y organismos públicos en Chile. Trabajamos con los principales fabricantes y ofrecemos garantía, despacho y montaje a todo el país.',
+    'ENE-MUEBLES fabrica y distribuye mobiliario escolar y de oficina bajo estándares de pliego público. Cada pieza se entrega con ficha técnica, declaración de materiales y plazo de despacho por escrito. Suministramos mobiliario a instituciones educativas, empresas y organismos públicos de la región de Valparaíso a Los Lagos. Trabajamos con los principales fabricantes y ofrecemos garantía y despacho por escrito.',
   socialLinks: {
     instagram: '@enemuebles',
     facebook: 'enemuebles.cl',

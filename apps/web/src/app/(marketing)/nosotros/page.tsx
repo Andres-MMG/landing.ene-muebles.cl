@@ -77,7 +77,7 @@ export default async function NosotrosPage() {
                 <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
                   Cobertura
                 </dt>
-                <dd className="t-mono text-3xl text-ink">16 regiones</dd>
+                <dd className="t-mono text-3xl text-ink">V – X</dd>
               </div>
             </dl>
           </aside>

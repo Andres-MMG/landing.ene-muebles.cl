@@ -342,7 +342,7 @@ export async function getSiteSettings(): Promise<SiteSetting> {
 }
 
 const FALLBACK_SITE_SETTINGS: SiteSetting = {
-  siteName: "Ene Muebles",
+  siteName: "ENE-MUEBLES",
 };
 
 const PENDING_RUT_SENTINEL = "Pending confirmation";
@@ -465,7 +465,7 @@ const FALLBACK_HERO: HeroSection = {
   eyebrow: `${siteTokens.brand} · Proveedor institucional`,
   title: siteTokens.promise,
   subtitle:
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.",
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la región de Valparaíso hasta Los Lagos y garantía escrita.",
   primaryCtaLabel: siteTokens.catalogAll,
   primaryCtaHref: "/catalogo",
   secondaryCtaLabel: siteTokens.quoteCta,

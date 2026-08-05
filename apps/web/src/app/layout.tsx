@@ -23,15 +23,15 @@ export const metadata = {
     process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4780"
   ),
   title: {
-    default: "Ene Muebles · Mobiliario escolar y de oficina",
-    template: "%s · Ene Muebles",
+    default: "ENE-MUEBLES · Mobiliario escolar y de oficina",
+    template: "%s · ENE-MUEBLES",
   },
   description:
-    "Mobiliario escolar y de oficina certificado para instituciones en Chile. Catálogo, despacho a todo el país y cotización en 24 h.",
+    "Mobiliario escolar y de oficina certificado para instituciones en Chile. Catálogo, despacho desde la región de Valparaíso hasta Los Lagos y cotización en 24 h.",
   openGraph: {
     type: "website",
     locale: "es_CL",
-    siteName: "Ene Muebles",
+    siteName: "ENE-MUEBLES",
   },
   robots: {
     index: true,

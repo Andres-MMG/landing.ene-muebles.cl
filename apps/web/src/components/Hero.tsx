@@ -1,5 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
+import { useState, useEffect } from "react";
 import { getPublicRut, type HeroSection, type SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
@@ -33,7 +34,22 @@ type HeroProps = {
  * card" that doubles as a brand-spec readout. The bottom rail is a mono
  * one-liner that consolidates the proof points.
  */
+
+const HERO_GALLERY = [
+  "/images/4.webp",
+  "/images/6.webp",
+  "/images/3_1.webp",
+];
+
 export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps) {
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentImageIndex((prev) => (prev + 1) % HERO_GALLERY.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, []);
   const eyebrow = section?.eyebrow ?? `${site.brand} · Proveedor institucional`;
   const headline = section?.title?.trim() || settings.tagline?.trim() || site.promise;
   const subtitle =
@@ -108,7 +124,26 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                 </figcaption>
               </figure>
             ) : (
-              <SystemCard settings={settings} />
+              <div className="relative aspect-[4/5] w-full overflow-hidden border border-ink bg-paper-pure group">
+                {HERO_GALLERY.map((src, idx) => (
+                  <Image
+                    key={src}
+                    src={src}
+                    alt={`${site.brand} galería ${idx + 1}`}
+                    fill
+                    className={`object-cover transition-opacity duration-1000 ${
+                      idx === currentImageIndex ? "opacity-100" : "opacity-0"
+                    }`}
+                    priority={idx === 0}
+                  />
+                ))}
+                <div className="t-mono absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-paper">
+                  <span>Galería de Productos</span>
+                  <span className="opacity-60">
+                    {currentImageIndex + 1} / {HERO_GALLERY.length}
+                  </span>
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -118,9 +118,11 @@ export function ProductCard({
               </p>
             )}
           </div>
-          <p className="t-mono whitespace-nowrap text-base text-ink sm:text-lg">
-            {formatPrice({ price: product.price, currency: product.currency })}
-          </p>
+          {product.price > 0 ? (
+            <p className="t-mono whitespace-nowrap text-base text-ink sm:text-lg">
+              {formatPrice({ price: product.price, currency: product.currency })}
+            </p>
+          ) : null}
         </header>
 
         {(product.shortDescription || dimensions || product.materials?.length) && (

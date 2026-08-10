@@ -1,3 +1,4 @@
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const ORIGINAL_ENV = { ...process.env };
@@ -294,5 +295,39 @@ describe('producto/[slug] — JSON-LD additionalProperty payload', () => {
       priceCurrency: 'CLP',
       availability: 'https://schema.org/InStock',
     });
+  });
+});
+
+describe('producto/[slug] — public price visibility', () => {
+  const product = (price: number) => ({
+    id: 1,
+    documentId: 'doc-1',
+    name: 'Mesa institucional',
+    slug: 'mesa-institucional',
+    description: 'Mesa de prueba.',
+    price,
+    currency: 'CLP',
+  });
+
+  it('hides price markup when the product price is zero', async () => {
+    mockStrapi(product(0));
+    const { default: ProductDetailPage } = await import('./page');
+    const html = renderToStaticMarkup(
+      await ProductDetailPage({ params: Promise.resolve({ slug: 'mesa-institucional' }) })
+    );
+
+    expect(html).not.toContain('$0');
+    expect(html).not.toContain('t-mono mt-4 text-2xl text-ink');
+  });
+
+  it('renders the formatted price when the product price is positive', async () => {
+    mockStrapi(product(89900));
+    const { default: ProductDetailPage } = await import('./page');
+    const html = renderToStaticMarkup(
+      await ProductDetailPage({ params: Promise.resolve({ slug: 'mesa-institucional' }) })
+    );
+
+    expect(html).toContain('$89.900');
+    expect(html).toContain('t-mono mt-4 text-2xl text-ink');
   });
 });

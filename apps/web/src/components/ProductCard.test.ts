@@ -1,6 +1,10 @@
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { ProductCard } from './ProductCard';
+import type { Product } from '@/lib/strapi';
 
 /**
  * Catalog-import (S4) — source-level assertions on the public
@@ -43,5 +47,35 @@ describe('ProductCard — productType + subcategory metadata chips', () => {
     expect(source).toContain('t-mono');
     expect(source).toContain('uppercase');
     expect(source).toContain('tracking-[0.22em]');
+  });
+});
+
+describe('ProductCard — public price visibility', () => {
+  const product = (overrides: Partial<Product> = {}): Product => ({
+    id: 1,
+    name: 'Mesa institucional',
+    slug: 'mesa-institucional',
+    description: 'Mesa de prueba.',
+    price: 1000,
+    currency: 'CLP',
+    ...overrides,
+  });
+
+  it('hides price markup when the product price is zero', () => {
+    const html = renderToStaticMarkup(
+      createElement(ProductCard, { product: product({ price: 0 }) })
+    );
+
+    expect(html).not.toContain('$0');
+    expect(html).not.toContain('text-base text-ink sm:text-lg');
+  });
+
+  it('renders the formatted price when the product price is positive', () => {
+    const html = renderToStaticMarkup(
+      createElement(ProductCard, { product: product({ price: 89900 }) })
+    );
+
+    expect(html).toContain('$89.900');
+    expect(html).toContain('text-base text-ink sm:text-lg');
   });
 });

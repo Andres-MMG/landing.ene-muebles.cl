@@ -184,9 +184,11 @@ export default async function ProductDetailPage({ params }: Props) {
               >
                 {product.name}
               </h1>
-              <p className="t-mono mt-4 text-2xl text-ink">
-                {formatPrice({ price: product.price, currency: product.currency })}
-              </p>
+              {product.price > 0 ? (
+                <p className="t-mono mt-4 text-2xl text-ink">
+                  {formatPrice({ price: product.price, currency: product.currency })}
+                </p>
+              ) : null}
               {/* Catalog-import (S4) — visual specs strip under the
                   price. Only populated fields are emitted. Hairline
                   border + t-mono micro-labels match the existing

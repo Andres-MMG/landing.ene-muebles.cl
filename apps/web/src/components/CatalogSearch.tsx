@@ -20,11 +20,6 @@ export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
   const [value, setValue] = useState(defaultValue);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Keep the input in sync with back/forward navigation.
-  useEffect(() => {
-    setValue(defaultValue);
-  }, [defaultValue]);
-
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);

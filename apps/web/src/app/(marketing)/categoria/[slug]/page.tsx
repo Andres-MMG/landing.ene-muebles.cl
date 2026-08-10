@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { ContactCTA } from "@/components/ContactCTA";
 import { Pagination } from "@/components/Pagination";
-import { ProductCard } from "@/components/ProductCard";
+import { ProductSubcategoryGroups } from "@/components/ProductSubcategoryGroups";
 import {
   getCategories,
   getProducts,
@@ -108,16 +108,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             <p className="t-mono mb-8 text-[11px] uppercase tracking-[0.22em] text-ink-mute">
               {from}–{to} de {total} productos
             </p>
-            <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
-              {products.map((product) => (
-                <li key={product.id}>
-                  <ProductCard
-                    product={product}
-                    whatsappNumber={settings.whatsappNumber}
-                  />
-                </li>
-              ))}
-            </ul>
+            <ProductSubcategoryGroups
+              products={products}
+              whatsappNumber={settings.whatsappNumber}
+            />
             <Pagination
               total={total}
               page={page}

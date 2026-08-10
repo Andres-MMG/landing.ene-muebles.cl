@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState, useEffect } from "react";
-import { getPublicRut, type HeroSection, type SiteSetting } from "@/lib/strapi";
+import { type HeroSection, type SiteSetting } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type HeroProps = {
@@ -163,72 +163,5 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
         </div>
       </div>
     </section>
-  );
-}
-
-/**
- * SystemCard — typographic placeholder used when no hero image is set.
- * Functions as a brand-spec readout: brand name, contact essence, RUT-lite.
- */
-function SystemCard({ settings }: { settings: SiteSetting }) {
-  const rut = getPublicRut(settings.rut);
-
-  return (
-    <aside
-      className="relative aspect-[4/5] w-full overflow-hidden border border-ink bg-paper-pure"
-      aria-label={`${site.brand} — datos`}
-    >
-      <div className="t-mono absolute inset-x-0 top-0 flex items-center justify-between border-b border-ink-line px-5 py-3 text-[10px] uppercase tracking-[0.22em] text-ink-mute">
-        <span>F.01</span>
-        <span>Catálogo 2026</span>
-      </div>
-
-      <div className="flex h-full flex-col justify-between p-7 pt-16">
-        <div>
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">Proveedor</p>
-          <p className="t-h2 mt-2 text-3xl text-ink sm:text-4xl">{settings.siteName}</p>
-          {rut ? (
-            <p className="t-mono mt-3 text-[11px] uppercase tracking-[0.22em] text-taupe-deep">
-              {`RUT ${rut}`}
-            </p>
-          ) : null}
-        </div>
-
-        <div className="border-y border-ink-line py-5">
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-            Pliego público
-          </p>
-          <p className="t-h3 mt-2 text-base text-ink">
-            Muebles certificados bajo normativa vigente. Ficha técnica y declaración de materiales
-            por escrito.
-          </p>
-        </div>
-
-        <dl className="space-y-3">
-          {settings.contactPhone ? (
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">Tel</dt>
-              <dd className="t-mono text-sm text-ink">{settings.contactPhone}</dd>
-            </div>
-          ) : null}
-          {settings.contactEmail ? (
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-                Email
-              </dt>
-              <dd className="t-mono text-sm text-ink">{settings.contactEmail}</dd>
-            </div>
-          ) : null}
-          {settings.businessHours ? (
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
-                Horario
-              </dt>
-              <dd className="t-mono text-sm text-ink">{settings.businessHours}</dd>
-            </div>
-          ) : null}
-        </dl>
-      </div>
-    </aside>
   );
 }

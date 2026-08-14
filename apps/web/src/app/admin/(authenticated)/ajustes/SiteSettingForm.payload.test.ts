@@ -10,6 +10,9 @@ const baseValues = {
   whatsappNumber: '+56912345678',
   whatsappDefaultMessage: 'Hola, cotización',
   address: 'Av. Apoquindo 4000',
+  dispatchCoverage: 'Despacho a todo Chile',
+  addressCity: 'Temuco',
+  addressRegion: 'La Araucanía',
   businessHours: 'Lun a Vie 09:00-18:00',
   aboutText: 'Muebles artesanales',
   socialInstagram: 'https://instagram.com/enemuebles',
@@ -42,6 +45,25 @@ describe('SiteSettingForm.buildSubmitPayload', () => {
     const payload = buildSubmitPayload({ ...baseValues, tagline: '', contactPhone: '   ' });
     expect('tagline' in payload).toBe(false);
     expect('contactPhone' in payload).toBe(false);
+  });
+
+  it('sends non-blank dispatchCoverage, addressCity, and addressRegion', () => {
+    const payload = buildSubmitPayload(baseValues);
+    expect(payload.dispatchCoverage).toBe('Despacho a todo Chile');
+    expect(payload.addressCity).toBe('Temuco');
+    expect(payload.addressRegion).toBe('La Araucanía');
+  });
+
+  it('omits the new optional scalars when blank', () => {
+    const payload = buildSubmitPayload({
+      ...baseValues,
+      dispatchCoverage: '',
+      addressCity: '   ',
+      addressRegion: '',
+    });
+    expect('dispatchCoverage' in payload).toBe(false);
+    expect('addressCity' in payload).toBe(false);
+    expect('addressRegion' in payload).toBe(false);
   });
 
   it('packs every social key — blank ones become null so PUT clears them', () => {
@@ -94,6 +116,9 @@ describe('SiteSettingForm.buildSubmitPayload — social URL normalization', () =
     contactPhone: '+56 2 2898 4421',
     whatsappNumber: '+56 9 7890 1234',
     address: 'Av. Apoquindo 4000',
+    dispatchCoverage: '',
+    addressCity: '',
+    addressRegion: '',
     businessHours: 'Lun a Vie 09:00-18:00',
     aboutText: 'Muebles artesanales',
     socialInstagram: '',
@@ -202,6 +227,9 @@ describe('SiteSettingForm.buildSubmitPayload — does NOT touch input state', ()
     contactPhone: '',
     whatsappNumber: '',
     address: '',
+    dispatchCoverage: '',
+    addressCity: '',
+    addressRegion: '',
     businessHours: '',
     aboutText: '',
     socialInstagram: '',

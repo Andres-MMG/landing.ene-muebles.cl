@@ -12,6 +12,9 @@ type Values = {
   whatsappNumber: string;
   whatsappDefaultMessage: string;
   address: string;
+  dispatchCoverage: string;
+  addressCity: string;
+  addressRegion: string;
   businessHours: string;
   aboutText: string;
   socialInstagram: string;
@@ -124,6 +127,30 @@ const FIELDS: FieldDef[] = [
     type: "textarea",
     rows: 2,
     placeholder: "Cautin 1782",
+    span: "half",
+  },
+  {
+    key: "dispatchCoverage",
+    label: "Cobertura de despacho",
+    type: "text",
+    placeholder: "Despacho a todo Chile",
+    maxLength: 200,
+    span: "half",
+  },
+  {
+    key: "addressCity",
+    label: "Ciudad",
+    type: "text",
+    placeholder: "Ej. Temuco",
+    maxLength: 120,
+    span: "half",
+  },
+  {
+    key: "addressRegion",
+    label: "Región",
+    type: "text",
+    placeholder: "Ej. La Araucanía",
+    maxLength: 120,
     span: "half",
   },
   {
@@ -299,6 +326,9 @@ export function buildSubmitPayload(values: Values): Record<string, unknown> {
   if (values.contactPhone.trim()) payload.contactPhone = values.contactPhone.trim();
   if (values.whatsappNumber.trim()) payload.whatsappNumber = values.whatsappNumber.trim();
   if (values.address.trim()) payload.address = values.address.trim();
+  if (values.dispatchCoverage.trim()) payload.dispatchCoverage = values.dispatchCoverage.trim();
+  if (values.addressCity.trim()) payload.addressCity = values.addressCity.trim();
+  if (values.addressRegion.trim()) payload.addressRegion = values.addressRegion.trim();
   if (values.businessHours.trim()) payload.businessHours = values.businessHours.trim();
   if (values.aboutText.trim()) payload.aboutText = values.aboutText.trim();
   payload.socialLinks = buildSocialLinks(values);

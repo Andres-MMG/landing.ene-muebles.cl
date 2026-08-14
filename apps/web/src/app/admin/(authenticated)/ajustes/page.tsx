@@ -23,6 +23,9 @@ type SettingsShape = {
   whatsappNumber?: string;
   whatsappDefaultMessage?: string;
   address?: string;
+  dispatchCoverage?: string;
+  addressCity?: string;
+  addressRegion?: string;
   businessHours?: string;
   aboutText?: string;
   socialLinks?: {
@@ -95,6 +98,9 @@ export default async function AdminSettingsPage() {
             whatsappNumber: setting?.whatsappNumber ?? '',
             whatsappDefaultMessage: setting?.whatsappDefaultMessage ?? '',
             address: setting?.address ?? '',
+            dispatchCoverage: setting?.dispatchCoverage ?? '',
+            addressCity: setting?.addressCity ?? '',
+            addressRegion: setting?.addressRegion ?? '',
             businessHours: setting?.businessHours ?? '',
             aboutText: setting?.aboutText ?? '',
             socialInstagram: setting?.socialLinks?.instagram ?? '',

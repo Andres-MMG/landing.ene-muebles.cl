@@ -3,7 +3,11 @@ import { getAllProducts } from "@/lib/strapi";
 import { formatDimensions } from "@/lib/product-attributes";
 import { PrintButton } from "./PrintButton";
 
-export const revalidate = 60;
+// Print pages must NOT be statically prerendered at build time: the
+// CMS is unreachable during `next build` (Strapi boots at deploy time),
+// so a static fetch here fails the whole build. force-dynamic keeps the
+// printout always fresh and decoupled from the build pipeline.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Catálogo para imprimir",
@@ -28,7 +32,29 @@ const groupByCategory = (products: Awaited<ReturnType<typeof getAllProducts>>) =
 };
 
 export default async function CatalogoImprimirPage() {
-  const products = await getAllProducts();
+  let products: Awaited<ReturnType<typeof getAllProducts>>;
+  try {
+    products = await getAllProducts();
+  } catch {
+    // The CMS may be briefly unavailable; the print page must degrade
+    // to a readable error instead of throwing a 500.
+    return (
+      <section className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 lg:px-16">
+        <h1 className="t-h2 text-3xl text-ink">Catálogo no disponible</h1>
+        <p className="t-body mt-4 max-w-xl text-base text-ink-mute">
+          No pudimos cargar el catálogo en este momento. Intenta nuevamente en unos
+          minutos o vuelve al catálogo en línea.
+        </p>
+        <Link
+          href="/catalogo"
+          className="t-label mt-8 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-text hover:underline"
+        >
+          Volver al catálogo
+          <span aria-hidden>←</span>
+        </Link>
+      </section>
+    );
+  }
   const groups = groupByCategory(products);
   const printedAt = new Intl.DateTimeFormat("es-CL", {
     day: "2-digit",

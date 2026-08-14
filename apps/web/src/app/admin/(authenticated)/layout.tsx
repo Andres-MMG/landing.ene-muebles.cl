@@ -19,6 +19,9 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/admin/productos/importar', label: 'Importar (Excel)' },
   { href: '/admin/categorias', label: 'Categorías' },
   { href: '/admin/importaciones', label: 'Historial Excel' },
+  // Leads inbox: contact-form submissions the admin marks as managed
+  // (new → notified) or removes from the panel.
+  { href: '/admin/leads', label: 'Leads' },
   // Batch 2: marketing-section editors. Order mirrors the visual order
   // on the public page (hero first, then about, then contact CTA,
   // then footer) so the sidebar reads top-to-bottom in the same

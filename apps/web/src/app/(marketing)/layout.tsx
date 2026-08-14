@@ -29,6 +29,13 @@ export default async function MarketingLayout({
 
   return (
     <>
+      {/* B2/U13 — skip link (WCAG 2.4.1): first focusable element on
+          every marketing page. Visually hidden until :focus-visible
+          (see `.skip-link` in globals.css); the native hash jump to
+          #main-content moves focus because main carries tabIndex={-1}. */}
+      <a href="#main-content" className="skip-link t-label">
+        Saltar al contenido
+      </a>
       <Header
         siteName={settings?.siteName ?? fallbackName}
         whatsappNumber={settings?.whatsappNumber}
@@ -36,7 +43,18 @@ export default async function MarketingLayout({
         contactPhone={settings?.contactPhone}
         contactEmail={settings?.contactEmail}
       />
-      <div className="bg-paper text-ink">{children}</div>
+      {/* B2/U13 — the single `main` landmark for the marketing group.
+          tabIndex={-1} makes it the fragment-navigation focus target;
+          the focus ring is suppressed and scroll-margin-top clears the
+          sticky header (globals.css). Pages inside this group must NOT
+          render their own <main>. */}
+      <main
+        id="main-content"
+        tabIndex={-1}
+        className="bg-paper text-ink"
+      >
+        {children}
+      </main>
       {settings ? <Footer settings={settings} block={footerBlock} /> : null}
     </>
   );

@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Category } from "@/lib/strapi";
+import { pickMediaFormat } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 
 type CategoryGridProps = {
@@ -34,7 +35,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe-deep">
+              <span className="t-label text-taupe-text">
                 {site.catalogOverview}
               </span>
             </div>
@@ -53,7 +54,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
             </p>
             <Link
               href="/catalogo"
-              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
+              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
             >
               {site.catalogAll}
               <span aria-hidden>→</span>
@@ -86,7 +87,10 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                 <div className="img-zoom relative col-span-4 aspect-[4/3] overflow-hidden bg-cream-soft sm:col-span-3 lg:col-span-4">
                   {category.image ? (
                     <Image
-                      src={category.image.url}
+                      // Slot-aware media (ISR milestone): category rows
+                      // render the smallest Strapi responsive format
+                      // that fits (~30 vw slot), falling back upward.
+                      src={pickMediaFormat(category.image, "small") ?? category.image.url}
                       alt={category.image.alternativeText || category.name}
                       fill
                       sizes="(min-width: 1024px) 30vw, 50vw"
@@ -94,7 +98,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
-                      <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft">
+                      <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
                         Sin imagen
                       </span>
                     </div>
@@ -103,7 +107,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
                 {/* Text block. */}
                 <div className="col-span-6 sm:col-span-5 lg:col-span-6">
-                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                     Línea {ordinal}
                   </p>
                   <h3 className="t-h2 mt-2 text-2xl text-ink transition-colors duration-500 group-hover:text-taupe-deep sm:text-3xl lg:text-4xl">
@@ -121,7 +125,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   aria-hidden
                   className="col-span-12 mt-2 inline-flex items-center justify-end gap-3 text-ink transition-transform duration-500 ease-out-expo group-hover:translate-x-2 sm:col-span-2 sm:mt-0 lg:col-span-1"
                 >
-                  <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft sm:hidden lg:inline">
+                  <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text sm:hidden lg:inline">
                     Ir
                   </span>
                   <span className="inline-flex h-11 w-11 items-center justify-center border border-ink text-base transition-colors duration-500 group-hover:border-taupe-deep group-hover:bg-ink group-hover:text-paper">

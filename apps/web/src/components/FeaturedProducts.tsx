@@ -36,7 +36,7 @@ export function FeaturedProducts({
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe-deep">
+              <span className="t-label text-taupe-text">
                 {site.featuredOverline}
               </span>
             </div>
@@ -55,7 +55,7 @@ export function FeaturedProducts({
             </p>
             <a
               href="/catalogo"
-              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
+              className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
             >
               {site.catalogAll}
               <span aria-hidden>→</span>

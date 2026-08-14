@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Hanken_Grotesk, Source_Serif_4 } from "next/font/google";
-import { APP_VERSION } from "@/lib/version";
+import { siteMetadata } from "@/lib/site-metadata";
 import "./globals.css";
 
 const sourceSerif = Source_Serif_4({
@@ -19,29 +19,10 @@ const hankenGrotesk = Hanken_Grotesk({
   fallback: ["system-ui", "sans-serif"],
 });
 
-export const metadata = {
-  metadataBase: new URL(
-    process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:4780"
-  ),
-  title: {
-    default: "ENE-MUEBLES · Mobiliario escolar y de oficina",
-    template: "%s · ENE-MUEBLES",
-  },
-  description:
-    "Mobiliario escolar y de oficina certificado para instituciones en Chile. Catálogo, despacho desde la región de Valparaíso hasta Los Lagos y cotización en 24 h.",
-  openGraph: {
-    type: "website",
-    locale: "es_CL",
-    siteName: "ENE-MUEBLES",
-  },
-  robots: {
-    index: true,
-    follow: true,
-  },
-  other: {
-    version: APP_VERSION,
-  },
-};
+// B2/U11 — root metadata (Open Graph + Twitter + metadataBase) lives in
+// `@/lib/site-metadata` so the contract is unit-testable. The OG image
+// is generated at `app/opengraph-image.tsx` (file convention).
+export const metadata = siteMetadata;
 
 /**
  * Root layout: minimal shell (html + body + fonts). The marketing pages

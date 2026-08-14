@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useState } from "react";
 import type { StrapiMedia } from "@/lib/strapi";
+import { pickMediaFormat } from "@/lib/strapi";
 
 type ProductGalleryProps = {
   images: StrapiMedia[];
@@ -96,7 +97,12 @@ export function ProductGallery({ images, productName }: ProductGalleryProps) {
                     aria-current={isActive ? "true" : undefined}
                   >
                     <Image
-                      src={image.url}
+                      // Slot-aware media (ISR milestone): thumbnails are
+                      // small squares — request the smallest Strapi
+                      // responsive format (thumbnail, falling back
+                      // upward). The main gallery image above keeps the
+                      // ORIGINAL url because it is the LCP element.
+                      src={pickMediaFormat(image, "thumbnail") ?? image.url}
                       alt=""
                       fill
                       sizes="(min-width: 1024px) 16vw, 33vw"

@@ -1,22 +1,15 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Product } from "@/lib/strapi";
-import { formatPrice, buildWhatsAppLink } from "@/lib/strapi";
+import { formatPrice, pickMediaFormat } from "@/lib/strapi";
+import { formatDimensions } from "@/lib/product-attributes";
+import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 
 type ProductCardProps = {
   product: Product;
   whatsappNumber?: string;
   variant?: "default" | "hero" | "wide";
   priority?: boolean;
-};
-
-const fmtDimension = (d?: Product["dimensions"]): string | null => {
-  if (!d) return null;
-  const parts: string[] = [];
-  if (d.width) parts.push(`${d.width} cm W`);
-  if (d.height) parts.push(`${d.height} cm H`);
-  if (d.depth) parts.push(`${d.depth} cm D`);
-  return parts.length > 0 ? parts.join(" × ") : null;
 };
 
 /**
@@ -34,12 +27,27 @@ export function ProductCard({
   priority = false,
 }: ProductCardProps) {
   const cover = product.images?.[0];
-  const message = `Hola, me gustaría cotizar ${product.name} para mi institución.`;
-  const whatsappHref = whatsappNumber
-    ? buildWhatsAppLink(whatsappNumber, message)
-    : null;
-  const dimensions = fmtDimension(product.dimensions);
   const isHero = variant === "hero";
+  // Slot-aware media (ISR milestone): card grids render the smallest
+  // Strapi responsive format that fits (`small`, falling back upward),
+  // cutting transferred bytes per card. The hero variant keeps the
+  // ORIGINAL url — it is an LCP image and must not be degraded.
+  const coverUrl = cover
+    ? isHero
+      ? cover.url
+      : (pickMediaFormat(cover, "small") ?? cover.url)
+    : null;
+  // whatsapp-handoff spec: the per-product message names the published
+  // product (never price, availability, or visitor data). The builder
+  // returns null when no verified number is configured.
+  const whatsappHref =
+    buildWhatsAppHandoff({ whatsappNumber }, { product: { name: product.name } })?.href ??
+    null;
+  // B1 (T5) — the card reads the same source as the product page: the
+  // structured width/height/depth when present, the raw `source`
+  // string from the Excel import otherwise. English W/H/D abbreviations
+  // are gone; the row is a compact Spanish "Medidas:" readout.
+  const dimensions = formatDimensions(product);
 
   const imageAspect = isHero ? "aspect-[16/10]" : variant === "wide" ? "aspect-[3/2]" : "aspect-[4/5]";
 
@@ -53,7 +61,7 @@ export function ProductCard({
         <div className={`relative w-full ${imageAspect}`}>
           {cover ? (
             <Image
-              src={cover.url}
+              src={coverUrl!}
               alt={cover.alternativeText || product.name}
               fill
               sizes={
@@ -68,7 +76,7 @@ export function ProductCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft">
+              <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
                 Sin imagen
               </span>
             </div>
@@ -83,10 +91,10 @@ export function ProductCard({
 
       <div className="flex flex-1 flex-col gap-3 pt-5">
         <div className="flex items-baseline justify-between gap-3 border-t border-taupe-faint pt-4">
-          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-taupe-deep">
+          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-taupe-text">
             {product.category?.name ?? "Catálogo"}
           </span>
-          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
             {`SKU · ${product.slug.toUpperCase().slice(0, 12)}`}
           </span>
         </div>
@@ -103,7 +111,7 @@ export function ProductCard({
             {(product.productType || product.subcategory) && (
               <p
                 data-testid="product-meta-chips"
-                className="t-mono mt-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-taupe-deep"
+                className="t-mono mt-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-taupe-text"
               >
                 {product.productType ? (
                   <span className="border border-taupe-faint px-2 py-0.5">
@@ -129,13 +137,13 @@ export function ProductCard({
           <dl className="grid grid-cols-1 gap-x-6 gap-y-1 t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute sm:grid-cols-2">
             {dimensions ? (
               <div className="flex items-baseline justify-between gap-2 sm:justify-start sm:gap-4">
-                <dt className="text-ink-soft">Dim</dt>
+                <dt className="text-ink-soft-text">Medidas</dt>
                 <dd className="text-ink">{dimensions}</dd>
               </div>
             ) : null}
             {product.materials && product.materials.length > 0 ? (
               <div className="flex items-baseline justify-between gap-2 sm:justify-start sm:gap-4">
-                <dt className="text-ink-soft">Mat</dt>
+                <dt className="text-ink-soft-text">Mat</dt>
                 <dd className="text-ink normal-case">{product.materials.join(", ")}</dd>
               </div>
             ) : null}
@@ -151,7 +159,7 @@ export function ProductCard({
         <div className="mt-auto flex items-center gap-6 pt-2">
           <Link
             href={`/producto/${product.slug}` as never}
-            className="t-label inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
+            className="t-label inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
           >
             Ver detalle
             <span aria-hidden>→</span>
@@ -161,7 +169,7 @@ export function ProductCard({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="t-label ml-auto text-ink-soft transition-colors hover:text-ink tap-target"
+              className="t-label ml-auto text-ink-soft-text transition-colors hover:text-ink tap-target"
             >
               WhatsApp
             </a>

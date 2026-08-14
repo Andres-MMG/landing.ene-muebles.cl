@@ -6,6 +6,7 @@ import { Pagination } from "@/components/Pagination";
 import { ProductSubcategoryGroups } from "@/components/ProductSubcategoryGroups";
 import {
   getCategories,
+  getProductCount,
   getProducts,
   getSiteSettings,
   type Category,
@@ -13,7 +14,6 @@ import {
 } from "@/lib/strapi";
 
 export const revalidate = 60;
-export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Catálogo",
@@ -34,13 +34,19 @@ const parsePage = (raw: string | undefined): number => {
 
 export default async function CatalogoPage({ searchParams }: Props) {
   const { page: pageParam, q: qParam } = await searchParams;
-  const q = qParam?.trim();
+  // Duplicate query params arrive as `string[]` (e.g. `?q=a&q=b`) —
+  // a non-string value is not a usable search term.
+  const q = typeof qParam === "string" ? qParam.trim() : undefined;
   const settings = await getSiteSettings();
 
   let categories: Category[] = [];
   let products: Product[] = [];
   let total = 0;
-  let page = parsePage(pageParam);
+  let page = parsePage(typeof pageParam === "string" ? pageParam : undefined);
+  // B1 (U5) — live active-product count for the header fallback when
+  // the paginated read returns nothing (empty catalog or unreachable
+  // CMS). `getProductCount` never throws (0 on failure).
+  const productCount = await getProductCount();
   try {
     [categories, { products, total }] = await Promise.all([
       getCategories(),
@@ -75,7 +81,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
             <div className="lg:col-span-7">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe-deep">
+                <span className="t-label text-taupe-text">
                   Catálogo institucional
                 </span>
               </div>
@@ -83,34 +89,56 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 id="catalogo-heading"
                 className="t-h2 mt-6 max-w-[24ch] text-[clamp(2rem,1.2rem+3.2vw,3.75rem)] text-ink"
               >
+                {/* B1 (U5): live count when the paginated read has data,
+                    the standalone count helper when the read came back
+                    empty but the CMS is up, and only then the static
+                    "20" placeholder (both reads returned 0, i.e. Strapi
+                    unreachable — never render "00" for a live count). */}
                 {total > 0
                   ? `${total} productos certificados para instituciones.`
-                  : "20 productos certificados para instituciones."}
+                  : productCount > 0
+                    ? `${productCount} productos certificados para instituciones.`
+                    : "20 productos certificados para instituciones."}
               </h1>
             </div>
             <div className="lg:col-span-4 lg:col-start-9">
               <p className="t-body text-base text-ink-mute">
-                Despacho a todo Chile, descuentos por volumen y pago a
-                30, 60 o 90 días para instituciones. Cada producto se
-                entrega con ficha técnica y declaración de materiales.
+                {/* B1 (U6): coverage reads from the site-setting
+                    singleton so /catalogo stops contradicting the
+                    hero/footer copy. */}
+                {settings.dispatchCoverage ?? "Despacho a todo Chile"}, descuentos por
+                volumen y pago a 30, 60 o 90 días para instituciones. Cada producto
+                se entrega con ficha técnica y declaración de materiales.
               </p>
               <div className="mt-6 space-y-6">
                 <CatalogSearch key={q ?? ""} defaultValue={q} />
                 <div>
-                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                     Filtrar por línea
                   </p>
                   <div className="mt-3">
-                    <CategoryFilter categories={categories} />
+                    <CategoryFilter categories={categories} q={q} />
                   </div>
                 </div>
-                <a
-                  href="/api/catalog/export"
-                  download
-                  className="inline-flex border border-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-ink transition-colors hover:bg-ink hover:text-paper"
-                >
-                  Descargar catálogo JSON
-                </a>
+                {/* B1 (U1): the primary export CTA is now the printable
+                    catalog; the JSON download stays as a secondary
+                    technical link (the API route is unchanged). */}
+                <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+                  <Link
+                    href={"/catalogo/imprimir" as never}
+                    className="inline-flex items-center gap-3 bg-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
+                  >
+                    Imprimir / PDF
+                    <span aria-hidden>→</span>
+                  </Link>
+                  <a
+                    href="/api/catalog/export"
+                    download
+                    className="t-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft-text underline-offset-4 transition-colors hover:text-taupe-text hover:underline"
+                  >
+                    Exportar datos JSON
+                  </a>
+                </div>
               </div>
             </div>
           </header>
@@ -133,7 +161,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
               {q ? (
                 <Link
                   href="/catalogo"
-                  className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-deep underline-offset-4 hover:underline"
+                  className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-text underline-offset-4 hover:underline"
                 >
                   Limpiar
                 </Link>

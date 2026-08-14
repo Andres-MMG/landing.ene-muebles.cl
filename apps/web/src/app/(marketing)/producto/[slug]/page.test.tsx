@@ -37,8 +37,6 @@ function mockStrapi(product: Record<string, unknown> | null, settings?: unknown)
         currency: p.currency,
         maximumFractionDigits: 0,
       }).format(p.price),
-    buildWhatsAppLink: (n: string, m: string) =>
-      `https://wa.me/${n.replace(/\D/g, '')}?text=${encodeURIComponent(m)}`,
   }));
 }
 

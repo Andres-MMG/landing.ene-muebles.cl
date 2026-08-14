@@ -1,5 +1,6 @@
 import type { ContactCTASection, SiteSetting } from "@/lib/strapi";
-import { buildWhatsAppLink } from "@/lib/strapi";
+import { buildWhatsAppHandoff } from "@/lib/whatsapp";
+import { formatAddress } from "@/lib/address";
 import { site } from "@ene/ui-tokens";
 
 type ContactCTAProps = {
@@ -35,12 +36,16 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
   // CTA (e.g. mailto:). When absent we build the WhatsApp href from
   // `settings.whatsappNumber` exactly like before.
   const explicitHref = section?.buttonHref?.trim() || null;
-  const message = settings.whatsappDefaultMessage?.trim() || DEFAULT_WHATSAPP_MESSAGE;
   const whatsAppHref =
-    !explicitHref && settings.whatsappNumber
-      ? buildWhatsAppLink(settings.whatsappNumber, message)
-      : null;
+    !explicitHref &&
+    (buildWhatsAppHandoff(settings, {
+      fallbackMessage: DEFAULT_WHATSAPP_MESSAGE,
+    })?.href ??
+      null);
   const buttonHref = explicitHref ?? whatsAppHref;
+  // B1 (U7): same structured address as the footer and /contacto —
+  // street alone until the client confirms city/region.
+  const address = formatAddress(settings);
 
   return (
     <section
@@ -123,13 +128,13 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
                   </dd>
                 </div>
               ) : null}
-              {settings.address ? (
+              {address ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
                   <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
                     {site.addressLabel}
                   </dt>
                   <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">
-                    {settings.address}
+                    {address}
                   </dd>
                 </div>
               ) : null}

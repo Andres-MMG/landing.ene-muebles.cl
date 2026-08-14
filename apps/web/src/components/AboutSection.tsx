@@ -7,6 +7,12 @@ type AboutSectionProps = {
   productCount?: number;
   categoryCount?: number;
   /**
+   * B1 (U6) — dispatch-coverage copy from the site-setting singleton
+   * ("Despacho a todo Chile" seeded by default). Renders in the stats
+   * rail instead of the old region-range claim ("V – X").
+   */
+  dispatchCoverage?: string;
+  /**
    * Batch 2: when provided, eyebrow/title/intro come from the Strapi
    * `about-section` singleton (which already returns a typed fallback
    * when Strapi is unreachable). The legacy `aboutText` prop is kept
@@ -29,6 +35,7 @@ export function AboutSection({
   siteName,
   productCount,
   categoryCount,
+  dispatchCoverage,
   section,
 }: AboutSectionProps) {
   const eyebrow = section?.eyebrow ?? site.aboutOverline;
@@ -114,11 +121,16 @@ export function AboutSection({
                   </dd>
                 </div>
               ) : null}
-              <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
+              {/* B1 (U6): the region-range claim ("V – X") is gone; the
+                  row reads the site-setting coverage field with the
+                  static token as fallback. */}
+              <div className="flex items-baseline justify-between gap-4 border-b border-paper-line-on-ink py-4">
                 <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
                   Cobertura
                 </dt>
-                <dd className="t-mono text-2xl text-paper">V – X</dd>
+                <dd className="t-mono text-right text-lg text-paper">
+                  {dispatchCoverage ?? site.dispatchCoverageFallback}
+                </dd>
               </div>
               <div className="flex items-baseline justify-between py-4">
                 <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">

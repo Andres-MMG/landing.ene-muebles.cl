@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { MobileMenu } from "./MobileMenu";
-import { buildWhatsAppLink } from "@/lib/strapi";
+import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 
 type HeaderProps = {
   siteName: string;
@@ -48,17 +48,18 @@ export function Header({
   const [menuOpen, setMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
 
-  const message = whatsappDefaultMessage?.trim() || DEFAULT_WHATSAPP_MESSAGE;
-  const whatsappHref = whatsappNumber
-    ? buildWhatsAppLink(whatsappNumber, message)
-    : null;
+  const whatsappHref =
+    buildWhatsAppHandoff(
+      { whatsappNumber, whatsappDefaultMessage },
+      { fallbackMessage: DEFAULT_WHATSAPP_MESSAGE },
+    )?.href ?? null;
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-line bg-paper">
       <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-6 px-6 sm:px-10 lg:h-20 lg:px-16">
         <Link
           href="/"
-          className="inline-flex items-center py-2 font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-deep lg:py-0 lg:text-xl"
+          className="inline-flex items-center py-2 font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-text lg:py-0 lg:text-xl"
         >
           {siteName}
         </Link>
@@ -73,7 +74,7 @@ export function Header({
               <Link
                 key={item.href}
                 href={item.href as never}
-                className={`relative inline-flex items-center py-1 text-sm font-medium tracking-tight transition-colors hover:text-taupe-deep ${
+                className={`relative inline-flex items-center py-1 text-sm font-medium tracking-tight transition-colors hover:text-taupe-text ${
                   active ? "text-ink" : "text-ink-mute"
                 }`}
                 aria-current={active ? "page" : undefined}

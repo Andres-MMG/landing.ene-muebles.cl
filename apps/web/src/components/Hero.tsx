@@ -56,7 +56,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
   const headline = section?.title?.trim() || settings.tagline?.trim() || site.promise;
   const subtitle =
     section?.subtitle ??
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la región de Valparaíso hasta Los Lagos y garantía escrita.";
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.";
   const primaryLabel = section?.primaryCtaLabel ?? site.catalogAll;
   const primaryHref = section?.primaryCtaHref ?? "/catalogo";
   const secondaryLabel = section?.secondaryCtaLabel ?? site.quoteCta;
@@ -99,7 +99,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
             {!omitSecondaryCta && secondaryLabel ? (
               <Link
                 href={(secondaryHref || "#contacto") as never}
-                className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-deep hover:underline tap-target"
+                className="text-sm font-medium uppercase tracking-[0.18em] text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
               >
                 {secondaryLabel}
               </Link>
@@ -155,10 +155,12 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
       <div className="border-t border-ink-line">
         <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-x-8 gap-y-2 px-6 py-5 sm:px-10 lg:px-16">
           <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
-            {site.dispatch}
+            {/* B1 (U6): coverage reads the site-setting field; the
+                static token only renders when the CMS is unreachable. */}
+            {settings.dispatchCoverage ?? site.dispatch}
           </span>
-          <span className="t-mono ml-auto text-[11px] uppercase tracking-[0.22em] text-ink-soft">
-            Santiago · Chile
+          <span className="t-mono ml-auto text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
+            Fabricación y distribución
           </span>
         </div>
       </div>

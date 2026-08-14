@@ -79,7 +79,7 @@ export default function PrivacidadPage() {
         <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-16 sm:px-10 sm:pt-28 sm:pb-20 lg:px-16 lg:pt-32 lg:pb-24">
           <div className="flex items-center gap-3">
             <span className="block h-px w-10 bg-taupe" aria-hidden />
-            <span className="t-label text-taupe-deep">Legal</span>
+            <span className="t-label text-taupe-text">Legal</span>
           </div>
           <h1
             id="privacidad-heading"
@@ -98,7 +98,7 @@ export default function PrivacidadPage() {
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
             <aside className="lg:col-span-3">
               <div className="lg:sticky lg:top-28">
-                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Contenido
                 </p>
                 <ol className="mt-4 space-y-2 t-mono text-xs text-ink-mute">
@@ -106,7 +106,7 @@ export default function PrivacidadPage() {
                     <li key={s.heading}>
                       <a
                         href={`#${s.heading.replace(/\s+/g, "-").toLowerCase()}`}
-                        className="hover:text-taupe-deep"
+                        className="hover:text-taupe-text"
                       >
                         {String(i + 1).padStart(2, "0")} ·{" "}
                         {s.heading.replace(/^\d+\.\s*/, "")}
@@ -137,7 +137,7 @@ export default function PrivacidadPage() {
                   </section>
                 ))}
               </div>
-              <p className="t-mono mt-16 text-[11px] uppercase tracking-[0.22em] text-ink-soft">
+              <p className="t-mono mt-16 text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
                 {site.legalUpdated}
               </p>
             </article>

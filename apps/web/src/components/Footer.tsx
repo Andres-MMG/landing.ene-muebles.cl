@@ -5,8 +5,9 @@ import {
   type FooterBlock,
   type SiteSetting,
 } from "@/lib/strapi";
+import { formatAddress } from "@/lib/address";
+import { isSocialNetwork, socialHref } from "@/lib/social";
 import { site } from "@ene/ui-tokens";
-import { APP_VERSION } from "@/lib/version";
 
 type FooterProps = {
   settings: SiteSetting;
@@ -18,23 +19,6 @@ type FooterProps = {
    * copy that ever needs translation or version control per release.
    */
   block?: FooterBlock;
-};
-
-const socialHref = (network: string, value: string): string => {
-  if (!value) return "#";
-  const v = value.replace(/^@/, "");
-  switch (network) {
-    case "instagram":
-      return `https://instagram.com/${v}`;
-    case "facebook":
-      return `https://facebook.com/${v}`;
-    case "tiktok":
-      return `https://tiktok.com/@${v}`;
-    case "linkedin":
-      return v.startsWith("http") ? v : `https://linkedin.com/in/${v}`;
-    default:
-      return v;
-  }
 };
 
 const navItems: { label: string; href: string }[] = [
@@ -55,6 +39,10 @@ const navItems: { label: string; href: string }[] = [
 export async function Footer({ settings, block }: FooterProps) {
   const year = new Date().getFullYear();
   const socials = settings.socialLinks ?? {};
+  // B1 (U7): structured address — street alone until the client
+  // confirms the city, then "Cautín 1782, {ciudad}" (region appended
+  // when configured).
+  const address = formatAddress(settings);
   // Live count of active products for the promise strip. The helper
   // never throws (0 when Strapi is unreachable) so the static copy
   // still renders when the CMS is down.
@@ -163,7 +151,7 @@ export async function Footer({ settings, block }: FooterProps) {
               </li>
             ) : null}
             {settings.whatsappNumber ? <li>{settings.whatsappNumber}</li> : null}
-            {settings.address ? <li className="text-xs">{settings.address}</li> : null}
+            {address ? <li className="text-xs">{address}</li> : null}
           </ul>
         </div>
 
@@ -198,11 +186,13 @@ export async function Footer({ settings, block }: FooterProps) {
               </p>
               <ul className="mt-4 space-y-2 t-mono text-xs text-paper-mute-on-ink">
                 {Object.entries(socials).map(([network, handle]) => {
-                  if (!handle) return null;
+                  if (!isSocialNetwork(network)) return null;
+                  const href = socialHref(network, handle);
+                  if (!href) return null;
                   return (
                     <li key={network}>
                       <a
-                        href={socialHref(network, handle)}
+                        href={href}
                         target="_blank"
                         rel="noopener noreferrer"
                         className="transition-colors hover:text-taupe tap-target"
@@ -221,7 +211,10 @@ export async function Footer({ settings, block }: FooterProps) {
       <div className="border-t border-paper-line-on-ink">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center sm:px-10 lg:px-16">
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
-            Catálogo institucional · 2026 · v{APP_VERSION}
+            {/* B1 (U9): the year is computed at render time (this
+                component is server-rendered) and the technical build
+                version is gone from the public footer. */}
+            Catálogo institucional · {year}
           </p>
           <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
             Respaldo escrito · Garantía 1 año

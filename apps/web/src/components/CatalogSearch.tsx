@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState, type ChangeEvent } from "react";
 
 type CatalogSearchProps = {
@@ -10,13 +10,16 @@ type CatalogSearchProps = {
 
 /**
  * CatalogSearch — server-driven search input. Every keystroke is
- * debounced (350ms) and then pushed to `/catalogo?q=...`; the server
- * component re-renders with the filtered, paginated list (page
- * resets because no `page` param is sent). Cleared input returns to
- * the plain catalog.
+ * debounced (350ms) and then pushed to the CURRENT page with `?q=...`
+ * (page resets because no `page` param is sent); the server component
+ * re-renders with the filtered, paginated list. Works on both
+ * `/catalogo` and `/categoria/[slug]` because the push URL is derived
+ * from `usePathname()` — the category slug is preserved, `q` is set or
+ * cleared, and `page` is dropped so search always restarts at page 1.
  */
 export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
   const router = useRouter();
+  const pathname = usePathname();
   const [value, setValue] = useState(defaultValue);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -32,7 +35,7 @@ export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       const q = next.trim();
-      const href = q ? `/catalogo?q=${encodeURIComponent(q)}` : "/catalogo";
+      const href = q ? `${pathname}?q=${encodeURIComponent(q)}` : pathname;
       router.push(href as never);
     }, 350);
   };
@@ -41,7 +44,7 @@ export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
     <div>
       <label
         htmlFor="catalog-search"
-        className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-soft"
+        className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-soft-text"
       >
         Buscar
       </label>
@@ -52,7 +55,7 @@ export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
         onChange={handleChange}
         placeholder="Buscar productos…"
         autoComplete="off"
-        className="mt-2 w-full border-b border-ink-line bg-transparent pb-2 text-base text-ink outline-none transition-colors placeholder:text-ink-mute/60 focus:border-ink"
+        className="mt-2 w-full border-b border-ink-line bg-transparent pb-2 text-base text-ink outline-none transition-colors placeholder:text-ink-soft-text focus:border-ink"
       />
     </div>
   );

@@ -174,7 +174,7 @@ export function MobileMenu({
         className="relative ml-auto flex h-full w-full max-w-xl flex-col bg-paper"
       >
       <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink-line px-6 sm:px-10">
-        <span className={brand ? "t-display text-lg font-semibold tracking-tight text-ink" : "t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft"}>
+        <span className={brand ? "t-display text-lg font-semibold tracking-tight text-ink" : "t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft-text"}>
           {brand ?? menuLabel}
         </span>
         <button
@@ -241,7 +241,7 @@ export function MobileMenu({
               href={`tel:${contactPhone.replace(/\s/g, "")}`}
               className="t-mono block min-h-[44px] py-2 text-base text-ink"
             >
-              <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+              <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                 Tel
               </span>
               <span className="mt-1 block">{contactPhone}</span>
@@ -252,7 +252,7 @@ export function MobileMenu({
               href={`mailto:${contactEmail}`}
               className="t-mono block min-h-[44px] py-2 text-base text-ink"
             >
-              <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+              <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                 Email
               </span>
               <span className="mt-1 block">{contactEmail}</span>

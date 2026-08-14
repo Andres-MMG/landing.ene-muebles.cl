@@ -62,9 +62,13 @@ const sections = [
     ],
   },
   {
+    // B1 (U8): the previous clause named "los tribunales ordinarios de
+    // la ciudad de Santiago", which claims a jurisdiction outside the
+    // business's own region. The neutral formulation names no commune;
+    // pending client confirmation of the preferred one.
     heading: "9. Ley aplicable y jurisdicción",
     body: [
-      "Estos términos se rigen por las leyes de la República de Chile. Cualquier controversia se resolverá ante los tribunales ordinarios de la ciudad de Santiago, sin perjuicio de los derechos del consumidor cuando correspondan.",
+      "Estos términos se rigen por las leyes de la República de Chile. Cualquier controversia se resolverá ante los tribunales ordinarios competentes de la República de Chile, sin perjuicio de los derechos del consumidor cuando correspondan.",
     ],
   },
   {
@@ -82,7 +86,7 @@ export default function TerminosPage() {
         <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-16 sm:px-10 sm:pt-28 sm:pb-20 lg:px-16 lg:pt-32 lg:pb-24">
           <div className="flex items-center gap-3">
             <span className="block h-px w-10 bg-taupe" aria-hidden />
-            <span className="t-label text-taupe-deep">Legal</span>
+            <span className="t-label text-taupe-text">Legal</span>
           </div>
           <h1
             id="terminos-heading"
@@ -101,7 +105,7 @@ export default function TerminosPage() {
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
             <aside className="lg:col-span-3">
               <div className="lg:sticky lg:top-28">
-                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Contenido
                 </p>
                 <ol className="mt-4 space-y-2 t-mono text-xs text-ink-mute">
@@ -109,7 +113,7 @@ export default function TerminosPage() {
                     <li key={s.heading}>
                       <a
                         href={`#${s.heading.replace(/\s+/g, "-").toLowerCase()}`}
-                        className="hover:text-taupe-deep"
+                        className="hover:text-taupe-text"
                       >
                         {String(i + 1).padStart(2, "0")} ·{" "}
                         {s.heading.replace(/^\d+\.\s*/, "")}
@@ -140,7 +144,7 @@ export default function TerminosPage() {
                   </section>
                 ))}
               </div>
-              <p className="t-mono mt-16 text-[11px] uppercase tracking-[0.22em] text-ink-soft">
+              <p className="t-mono mt-16 text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
                 {site.legalUpdated}
               </p>
             </article>

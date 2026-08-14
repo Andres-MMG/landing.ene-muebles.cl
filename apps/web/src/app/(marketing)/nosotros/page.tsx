@@ -1,10 +1,9 @@
 import Link from "next/link";
-import { getAboutSection, getContactCTASection, getSiteSettings } from "@/lib/strapi";
+import { getAboutSection, getContactCTASection, getProductCount, getSiteSettings } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
 import { ContactCTA } from "@/components/ContactCTA";
 
 export const revalidate = 60;
-export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Sobre nosotros",
@@ -22,7 +21,13 @@ export default async function NosotrosPage() {
     getAboutSection(),
     getContactCTASection(),
   ]);
-  const productCount = 20;
+  // B1 (U5): live active-product count like the home/footer read.
+  // `getProductCount` never throws — it returns 0 when Strapi is
+  // unreachable — so the "20" placeholder below is the LAST-resort
+  // fallback and only renders when the CMS is down (a genuine empty
+  // catalog would also report 0; the client will seed products before
+  // launch).
+  const productCount = await getProductCount();
   const categoryCount = 2;
   const years = 30;
 
@@ -33,7 +38,7 @@ export default async function NosotrosPage() {
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe-deep">
+              <span className="t-label text-taupe-text">
                 {site.aboutOverlineSec}
               </span>
             </div>
@@ -50,7 +55,7 @@ export default async function NosotrosPage() {
           <aside className="lg:col-span-4 lg:col-start-9">
             <dl className="space-y-0 border-t border-ink-line">
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Años en el rubro
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
@@ -58,26 +63,30 @@ export default async function NosotrosPage() {
                 </dd>
               </div>
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Productos en catálogo
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
-                  {String(productCount).padStart(2, "0")}
+                  {String(productCount > 0 ? productCount : 20).padStart(2, "0")}
                 </dd>
               </div>
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Líneas de producto
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
                   {String(categoryCount).padStart(2, "0")}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+              <div className="flex items-baseline justify-between gap-4 py-5">
+                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Cobertura
                 </dt>
-                <dd className="t-mono text-3xl text-ink">V – X</dd>
+                {/* B1 (U6): the "V – X" region-range claim is gone; the
+                    row reads the site-setting coverage field. */}
+                <dd className="t-mono text-right text-sm text-ink">
+                  {settings.dispatchCoverage ?? site.dispatchCoverageFallback}
+                </dd>
               </div>
             </dl>
           </aside>
@@ -113,7 +122,7 @@ export default async function NosotrosPage() {
             <div className="lg:col-span-4">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe-deep">
+                <span className="t-label text-taupe-text">
                   {aboutSection.visionLabel ?? site.visionLabel}
                 </span>
               </div>
@@ -136,7 +145,7 @@ export default async function NosotrosPage() {
             <div className="lg:col-span-7">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe-deep">
+                <span className="t-label text-taupe-text">
                   {aboutSection.valuesLabel ?? site.valuesLabel}
                 </span>
               </div>
@@ -151,7 +160,7 @@ export default async function NosotrosPage() {
                 key={value.title ?? index}
                 className="relative border-t border-ink-line pt-6"
               >
-                <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft">
+                <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="t-h2 mt-3 text-2xl text-ink">{value.title}</h3>
@@ -179,7 +188,7 @@ export default async function NosotrosPage() {
               </p>
               <Link
                 href="/contacto"
-                className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-deep hover:underline tap-target"
+                className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] hover:text-taupe-text hover:underline tap-target"
               >
                 Ir a contacto
                 <span aria-hidden>→</span>

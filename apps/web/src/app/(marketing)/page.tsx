@@ -13,9 +13,9 @@ import {
   type Category,
   type Product,
 } from "@/lib/strapi";
+import { isSocialNetwork, socialHref } from "@/lib/social";
 
 export const revalidate = 60;
-export const dynamic = "force-dynamic";
 
 export default async function MarketingPage() {
   // site-settings is already fetched by the root layout and passed via
@@ -58,6 +58,15 @@ export default async function MarketingPage() {
     console.warn("[home] catalog fetch failed:", err);
   }
 
+  // sameAs must be canonical profile URLs (social URLs must not
+  // break): bare handles are normalized through the shared helper and
+  // values that cannot be normalized are omitted entirely.
+  const sameAs = Object.entries(settings.socialLinks ?? {})
+    .flatMap(([network, value]) =>
+      isSocialNetwork(network) ? [socialHref(network, value)] : [],
+    )
+    .filter((href): href is string => href !== null);
+
   return (
     <>
       <script
@@ -75,6 +84,11 @@ export default async function MarketingPage() {
               ? {
                   "@type": "PostalAddress",
                   streetAddress: settings.address,
+                  // B1 (U7): addressLocality/addressRegion are emitted
+                  // ONLY when configured — the city is still pending
+                  // client confirmation and must never be invented.
+                  ...(settings.addressCity ? { addressLocality: settings.addressCity } : {}),
+                  ...(settings.addressRegion ? { addressRegion: settings.addressRegion } : {}),
                   addressCountry: "CL",
                 }
               : undefined,
@@ -88,7 +102,7 @@ export default async function MarketingPage() {
                 availableLanguage: ["es-CL"],
               },
             ],
-            sameAs: Object.values(settings.socialLinks ?? {}).filter(Boolean),
+            sameAs: sameAs.length > 0 ? sameAs : undefined,
           }),
         }}
       />
@@ -104,6 +118,9 @@ export default async function MarketingPage() {
         siteName={settings.siteName}
         productCount={productCount}
         categoryCount={categoryCount}
+        // B1 (U6): the coverage stat row reads the same site-setting
+        // field as the hero rail and the footer promise strip.
+        dispatchCoverage={settings.dispatchCoverage}
         section={aboutSection}
       />
       <FeaturedProducts

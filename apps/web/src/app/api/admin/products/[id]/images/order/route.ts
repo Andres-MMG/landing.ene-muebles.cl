@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -52,5 +54,8 @@ export async function PUT(
     cache: 'no-store',
   });
   const data = await res.json().catch(() => null);
+  // ISR milestone: the gallery order is visible on the product page —
+  // purge catalog-tagged fetches on success.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(data, { status: res.status });
 }

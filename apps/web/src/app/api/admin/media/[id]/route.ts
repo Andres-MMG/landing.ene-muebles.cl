@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -31,6 +33,10 @@ export async function DELETE(
     headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
     cache: 'no-store',
   });
+  // ISR milestone: media files are referenced by products/categories —
+  // purge catalog-tagged fetches so pages stop referencing a deleted
+  // binary (broken <img> → placeholder on the next read).
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   // 204 = deleted, 200 = Strapi sometimes returns 200 with a body;
   // pass through. Client treats both as success.
   if (res.status === 204) {

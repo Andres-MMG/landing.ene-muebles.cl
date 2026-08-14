@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "@/lib/admin/session";
 import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import { STRAPI_CACHE_TAGS } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -129,5 +131,9 @@ export async function POST(req: NextRequest) {
     cache: "no-store",
   });
   const jsonResponse = await res.json().catch(() => null);
+  // ISR milestone: a created product must surface on public catalog
+  // pages immediately — purge every fetch tagged `catalog`
+  // ({ expire: 0 } = blocking cache miss on the next read).
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(jsonResponse, { status: res.status });
 }

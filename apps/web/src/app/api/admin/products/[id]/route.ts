@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
+import { revalidateTag } from "next/cache";
 import { getServerSession } from "@/lib/admin/session";
 import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import { STRAPI_CACHE_TAGS } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -112,6 +114,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     cache: "no-store",
   });
   const json = await res.json().catch(() => null);
+  // ISR milestone: the edit must be visible on public catalog pages
+  // immediately — purge every fetch tagged `catalog`.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(json, { status: res.status });
 }
 
@@ -127,5 +132,8 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     cache: "no-store",
   });
   // 204 = deleted, 200 = also OK in Strapi v5 sometimes. Pass through.
+  // ISR milestone: purge catalog-tagged fetches so the deleted product
+  // disappears from public pages immediately.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return new NextResponse(null, { status: res.status === 204 ? 200 : res.status });
 }

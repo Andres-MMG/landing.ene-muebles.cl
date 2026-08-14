@@ -20,6 +20,10 @@ vi.mock('@/lib/admin/strapi-admin', async () => {
   };
 });
 
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
+}));
+
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
@@ -132,6 +136,39 @@ describe('POST /api/admin/products/import — role guard', () => {
       row({ externalId: 'CAT-1', name: 'Silla', description: 's' }, 'Escolar'),
     ]);
     expect(res.status).toBe(200);
+  });
+});
+
+describe('POST /api/admin/products/import — cache invalidation', () => {
+  it('purges the catalog tag when the batch writes at least one product', async () => {
+    mockBatchSetup();
+    mockFetchOnce(200, { data: [] }); // bulk dedup GET — no matches
+    mockFetchOnce(201, { data: { documentId: 'doc-prod-1', id: 101 } }); // product POST
+    mockBatchCountersPut();
+
+    const { revalidateTag } = await import('next/cache');
+    const res = await callPost([
+      row({ externalId: 'CAT-1', name: 'Silla', description: 's' }),
+    ]);
+    expect(res.status).toBe(200);
+    expect(revalidateTag).toHaveBeenCalledWith('catalog', { expire: 0 });
+  });
+
+  it('keeps the cache intact when every row in the batch fails', async () => {
+    mockBatchSetup();
+    mockFetchOnce(200, { data: [] }); // bulk dedup GET — no matches
+    mockFetchOnce(400, { error: { message: 'invalid row' } }); // product POST fails
+    mockBatchCountersPut();
+
+    const { revalidateTag } = await import('next/cache');
+    // The mock accumulates calls from the previous test in this
+    // describe block (no global mock clear), so reset the spy locally.
+    vi.mocked(revalidateTag).mockClear();
+    const res = await callPost([
+      row({ externalId: 'CAT-1', name: 'Silla', description: 's' }),
+    ]);
+    expect(res.status).toBe(200);
+    expect(revalidateTag).not.toHaveBeenCalled();
   });
 });
 

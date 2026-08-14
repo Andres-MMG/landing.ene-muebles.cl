@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -113,6 +115,9 @@ export async function POST(
     cache: 'no-store',
   });
   const bound = await bindRes.json().catch(() => null);
+  // ISR milestone: the category image is rendered on home — purge
+  // catalog-tagged fetches once the relation is persisted.
+  if (bindRes.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(bound ?? { ok: true }, { status: bindRes.status });
 }
 
@@ -164,6 +169,10 @@ export async function DELETE(
       cache: 'no-store',
     });
   }
+
+  // ISR milestone: the image was cleared — purge catalog-tagged
+  // fetches so the placeholder renders immediately.
+  revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
 
   return new NextResponse(null, { status: 204 });
 }

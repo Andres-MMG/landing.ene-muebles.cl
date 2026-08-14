@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -89,6 +91,9 @@ export async function PUT(
     cache: 'no-store',
   });
   const data = await res.json().catch(() => null);
+  // ISR milestone: category edits surface on home/category pages —
+  // purge catalog-tagged fetches on success.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(data, { status: res.status });
 }
 
@@ -136,6 +141,9 @@ export async function DELETE(
     headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
     cache: 'no-store',
   });
+  // ISR milestone: a deleted category must leave public pages
+  // immediately — purge catalog-tagged fetches on success.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   if (res.status === 204) {
     return new NextResponse(null, { status: 200 });
   }

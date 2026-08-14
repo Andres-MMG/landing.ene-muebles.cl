@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import {
   getStrapiAdminToken,
@@ -7,6 +8,7 @@ import {
   type ImportRow,
   type RowResult,
 } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -331,6 +333,13 @@ export async function POST(req: NextRequest) {
     });
   } catch (err) {
     console.error('[import] recordBatchCounters failed', err);
+  }
+
+  // ISR milestone: any row that landed (created OR updated) changes the
+  // public catalog — purge catalog-tagged fetches. A batch where every
+  // row failed touched nothing, so we keep the cached pages intact.
+  if (created.length + updated.length > 0) {
+    revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   }
 
   return NextResponse.json({

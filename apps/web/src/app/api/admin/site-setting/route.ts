@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -88,6 +90,11 @@ const PatchBody = z
     whatsappNumber: optionalClearedString(40),
     whatsappDefaultMessage: requiredTrimmed(1000, 'Mensaje predeterminado WhatsApp').optional(),
     address: optionalClearedString(280),
+    // Newer singleton fields (schema: `text`, no maxLength) — sensible
+    // caps mirror the ones used for comparable scalar text fields.
+    dispatchCoverage: optionalClearedString(200),
+    addressCity: optionalClearedString(120),
+    addressRegion: optionalClearedString(120),
     businessHours: optionalClearedString(280),
     aboutText: optionalClearedString(2000),
     rut: requiredTrimmed(20, 'RUT').optional(),
@@ -192,5 +199,9 @@ export async function PUT(req: NextRequest) {
     cache: 'no-store',
   });
   const json = await res.json().catch(() => null);
+  // ISR milestone: the singleton feeds every public page (brand copy,
+  // contacts, dispatch coverage) — purge site-settings-tagged fetches
+  // so edits render immediately.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.siteSettings, { expire: 0 });
   return NextResponse.json(json, { status: res.status });
 }

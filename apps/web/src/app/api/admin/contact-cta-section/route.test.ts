@@ -14,6 +14,10 @@ vi.mock('@/lib/admin/strapi-admin', () => ({
   getStrapiAdminToken: vi.fn().mockReturnValue('mock-strapi-token'),
 }));
 
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
+}));
+
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {

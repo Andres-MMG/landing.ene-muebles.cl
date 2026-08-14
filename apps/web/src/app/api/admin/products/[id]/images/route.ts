@@ -1,6 +1,8 @@
 import { NextResponse, type NextRequest } from 'next/server';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -114,5 +116,8 @@ export async function POST(
     cache: 'no-store',
   });
   const data = await uploadRes.json().catch(() => null);
+  // ISR milestone: new gallery images change the product page —
+  // purge catalog-tagged fetches on success.
+  if (uploadRes.ok) revalidateTag(STRAPI_CACHE_TAGS.catalog, { expire: 0 });
   return NextResponse.json(data, { status: uploadRes.status });
 }

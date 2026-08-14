@@ -1,7 +1,9 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { z } from 'zod';
+import { revalidateTag } from 'next/cache';
 import { getServerSession } from '@/lib/admin/session';
 import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
+import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -109,5 +111,8 @@ export async function PUT(req: NextRequest) {
     }
   );
   const json = await res.json().catch(() => null);
+  // ISR milestone: hero copy renders on home/contacto/nosotros —
+  // purge sections-tagged fetches so edits render immediately.
+  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.sections, { expire: 0 });
   return NextResponse.json(json, { status: res.status });
 }

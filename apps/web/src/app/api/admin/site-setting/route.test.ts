@@ -14,6 +14,10 @@ vi.mock('@/lib/admin/strapi-admin', () => ({
   getStrapiAdminToken: vi.fn().mockReturnValue('mock-strapi-token'),
 }));
 
+vi.mock('next/cache', () => ({
+  revalidateTag: vi.fn(),
+}));
+
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
@@ -173,6 +177,25 @@ describe('PUT /api/admin/site-setting — validation', () => {
     expect('contactPhone' in (body.data ?? {})).toBe(false);
   });
 
+  it('accepts dispatchCoverage, addressCity, and addressRegion and forwards them', async () => {
+    mockFetch(200, { data: { ok: true } });
+    const res = await callPut({
+      siteName: 'Ene Muebles',
+      rut: '76.123.456-7',
+      whatsappDefaultMessage: 'Hola',
+      dispatchCoverage: '  Despacho a todo Chile  ',
+      addressCity: 'Temuco',
+      addressRegion: 'La Araucanía',
+    });
+    expect(res.status).toBe(200);
+    const body = (await putBody({})) as { data?: Record<string, unknown> };
+    expect(body.data).toMatchObject({
+      dispatchCoverage: 'Despacho a todo Chile',
+      addressCity: 'Temuco',
+      addressRegion: 'La Araucanía',
+    });
+  });
+
   it('forwards a non-OK Strapi response with the upstream status', async () => {
     mockFetch(400, {
       error: {
@@ -302,5 +325,32 @@ describe('PUT /api/admin/site-setting — validation', () => {
     expect(body.data?.socialLinks).toEqual({
       instagram: 'https://instagram.com/enemuebles',
     });
+  });
+
+  it('purges the site-settings cache tag after a successful update', async () => {
+    mockFetch(200, { data: { ok: true } });
+    const { revalidateTag } = await import('next/cache');
+    const res = await callPut({
+      siteName: 'Ene Muebles',
+      rut: '76.123.456-7',
+      whatsappDefaultMessage: 'Hola',
+    });
+    expect(res.status).toBe(200);
+    expect(revalidateTag).toHaveBeenCalledWith('site-settings', { expire: 0 });
+  });
+
+  it('does not purge the cache when the Strapi update fails', async () => {
+    mockFetch(400, { error: { message: 'ValidationError' } });
+    const { revalidateTag } = await import('next/cache');
+    // The mock accumulates calls from earlier successful PUT tests in
+    // this file (no global mock clear), so reset the spy locally.
+    vi.mocked(revalidateTag).mockClear();
+    const res = await callPut({
+      siteName: 'Ene Muebles',
+      rut: '76.123.456-7',
+      whatsappDefaultMessage: 'Hola',
+    });
+    expect(res.status).toBe(400);
+    expect(revalidateTag).not.toHaveBeenCalled();
   });
 });

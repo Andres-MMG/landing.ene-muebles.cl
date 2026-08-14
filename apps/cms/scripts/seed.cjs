@@ -71,7 +71,7 @@ const SITE_SETTING = {
   aboutText:
     'ENE-MUEBLES fabrica y distribuye mobiliario escolar y de oficina bajo estándares de pliego público. Cada pieza se entrega con ficha técnica, declaración de materiales y plazo de despacho por escrito. Suministramos mobiliario a instituciones educativas, empresas y organismos públicos de la región de Valparaíso a Los Lagos. Trabajamos con los principales fabricantes y ofrecemos garantía y despacho por escrito.',
   socialLinks: {
-    instagram: '@enemuebles',
+    instagram: 'enemuebles',
     facebook: 'enemuebles.cl',
   },
 };

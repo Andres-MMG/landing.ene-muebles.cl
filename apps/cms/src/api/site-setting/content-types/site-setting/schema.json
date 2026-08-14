@@ -39,6 +39,18 @@
     "address": {
       "type": "text"
     },
+    "addressCity": {
+      "type": "text",
+      "required": false
+    },
+    "addressRegion": {
+      "type": "text",
+      "required": false
+    },
+    "dispatchCoverage": {
+      "type": "text",
+      "required": false
+    },
     "socialLinks": {
       "type": "json"
     },

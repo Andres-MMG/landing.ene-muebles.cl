@@ -87,6 +87,13 @@ export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
       siteName: "Ene Muebles",
       whatsappDefaultMessage: "Hola, quisiera información sobre mobiliario.",
       rut: PENDING_RUT_SENTINEL,
+      // B1 (U6): dispatch-coverage copy, single source of truth for the
+      // hero rail, catalog, and stats rows. Seeded per PRODUCT.md
+      // positioning; PENDING business confirmation — the client must
+      // confirm "todo Chile" vs a regional scope before launch.
+      dispatchCoverage: "Despacho a todo Chile",
+      // B1 (U7): the city is intentionally left empty — the client has
+      // not confirmed the commune; renderers append it only when set.
     },
   },
   {

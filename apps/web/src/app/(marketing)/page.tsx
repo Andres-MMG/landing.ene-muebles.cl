@@ -15,7 +15,11 @@ import {
 } from "@/lib/strapi";
 import { isSocialNetwork, socialHref } from "@/lib/social";
 
-export const revalidate = 60;
+// Must not be statically prerendered at build time: this page fetches
+// site settings from the CMS, which is unreachable during `next build`
+// (web and cms build in parallel in the Coolify compose). The fetches
+// in lib/strapi.ts keep their own 60s SWR cache at runtime.
+export const dynamic = "force-dynamic";
 
 export default async function MarketingPage() {
   // site-settings is already fetched by the root layout and passed via

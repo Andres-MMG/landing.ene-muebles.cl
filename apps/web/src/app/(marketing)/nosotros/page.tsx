@@ -3,7 +3,11 @@ import { getAboutSection, getContactCTASection, getProductCount, getSiteSettings
 import { site } from "@ene/ui-tokens";
 import { ContactCTA } from "@/components/ContactCTA";
 
-export const revalidate = 60;
+// Must not be statically prerendered at build time: this page fetches
+// site settings and sections from the CMS, which is unreachable during
+// `next build` in the Coolify compose topology. The fetches in
+// lib/strapi.ts keep their own 60s SWR cache at runtime.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Sobre nosotros",

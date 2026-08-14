@@ -4,7 +4,11 @@ import { formatAddress } from "@/lib/address";
 import { site } from "@ene/ui-tokens";
 import { ContactForm } from "@/components/ContactForm";
 
-export const revalidate = 60;
+// Must not be statically prerendered at build time: this page fetches
+// site settings from the CMS, which is unreachable during `next build`
+// (web and cms build in parallel in the Coolify compose). The fetches
+// in lib/strapi.ts keep their own 60s SWR cache at runtime.
+export const dynamic = "force-dynamic";
 
 export const metadata = {
   title: "Contacto",

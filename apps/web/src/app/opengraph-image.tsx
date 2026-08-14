@@ -120,6 +120,9 @@ export default async function OpengraphImage() {
         </div>
       </div>
     ),
-    { ...size, fonts }
+    {
+      ...size,
+      ...(fonts.length > 0 ? { fonts } : {}),
+    }
   );
 }

@@ -4,7 +4,13 @@
 export const site = {
   brand: "ENE-MUEBLES",
   promise: "Mobiliario resistente para aulas, oficinas e instituciones.",
-  dispatch: "Despacho de la V a la X región · Cotización en 24 h · Garantía escrita",
+  // B1 (U6): single static default for dispatch coverage. The live
+  // value lives in the site-setting `dispatchCoverage` field (seed:
+  // "Despacho a todo Chile", pending business confirmation); every
+  // static fallback string below uses the SAME wording so the site
+  // never contradicts itself when the CMS is unreachable.
+  dispatchCoverageFallback: "Despacho a todo Chile",
+  dispatch: "Despacho a todo Chile · Cotización en 24 h · Garantía escrita",
   catalogAll: "Ver catálogo completo",
   whatsappCta: "Hablar por WhatsApp",
   quoteCta: "Solicitar cotización",
@@ -26,7 +32,7 @@ export const site = {
   footerCatalog: "Catálogo",
   footerContact: "Contacto",
   footerLegal: "Legal",
-  footerCopy: "Proveedor de mobiliario escolar y de oficina en Chile. Despacho a todo el país.",
+  footerCopy: "Proveedor de mobiliario escolar y de oficina en Chile. Despacho a todo Chile.",
 
   nav: [
     { label: "Inicio", href: "/" },
@@ -69,7 +75,7 @@ export const site = {
     {
       title: "Cobertura",
       body:
-        "Despacho desde la región de Valparaíso (V) hasta Los Lagos (X). Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
+        "Despacho a todo Chile. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
     },
     {
       title: "Atención",

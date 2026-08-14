@@ -34,6 +34,47 @@ const STRAPI_TOKEN = process.env.STRAPI_API_TOKEN || "";
 
 export const REVALIDATE_SECONDS = 60;
 
+/**
+ * Cache tags attached to every cached Strapi fetch (ISR milestone).
+ * Admin mutation routes call `revalidateTag(tag, { expire: 0 })` with
+ * these same tags after a successful write so public pages pick up
+ * CMS changes immediately instead of waiting for the 60 s window.
+ */
+export const STRAPI_CACHE_TAGS = {
+  /** Product/category/subcategory lists and single products. */
+  catalog: "catalog",
+  /** The `site-setting` singleton (brand copy, contacts, hero image). */
+  siteSettings: "site-settings",
+  /** Marketing-section singletons: hero/about/contact-cta/footer. */
+  sections: "sections",
+} as const;
+
+export type StrapiCacheTag = (typeof STRAPI_CACHE_TAGS)[keyof typeof STRAPI_CACHE_TAGS];
+
+/**
+ * Strapi responsive formats, ordered from smallest to largest. Strapi
+ * generates these per upload (thumbnail=245 px, small=500 px,
+ * medium=750 px, large=1000 px). Card/thumbnail slots request the
+ * SMALLEST format that fits via `pickMediaFormat` so the browser
+ * downloads fewer bytes than the original; hero/LCP slots keep the
+ * original and are never downscaled.
+ */
+export const MEDIA_FORMAT_ORDER = ["thumbnail", "small", "medium", "large"] as const;
+
+export type MediaFormat = (typeof MEDIA_FORMAT_ORDER)[number];
+
+export type NormalizeMediaOptions = {
+  /**
+   * When set, `normalizeMedia` resolves the URL of the smallest format
+   * >= this size that exists, falling back upward through the format
+   * order and finally to the original. When unset the original URL is
+   * used (the historical behavior), so callers that need full
+   * resolution — heroes, the product gallery main image, admin — are
+   * unaffected unless they opt in.
+   */
+  preferredFormat?: MediaFormat;
+};
+
 export type StrapiMedia = {
   id: number;
   documentId?: string;
@@ -62,6 +103,18 @@ export type SiteSetting = {
   whatsappNumber?: string;
   whatsappDefaultMessage?: string;
   address?: string;
+  /**
+   * B1 (U7) — optional structured address parts. The city is NOT
+   * confirmed by the client yet: the seed leaves it empty and
+   * renderers append it only when set (see `lib/address.ts`).
+   */
+  addressCity?: string;
+  addressRegion?: string;
+  /**
+   * B1 (U6) — dispatch-coverage copy, single source of truth.
+   * Seeded as "Despacho a todo Chile" (pending business confirmation).
+   */
+  dispatchCoverage?: string;
   socialLinks?: SocialLinks;
   businessHours?: string;
   aboutText?: string;
@@ -150,7 +203,20 @@ export type Product = {
   shortDescription?: string;
   price: number;
   currency: string;
-  dimensions?: { width?: number; height?: number; depth?: number; weight?: number };
+  dimensions?: {
+    width?: number;
+    height?: number;
+    depth?: number;
+    weight?: number;
+    /**
+     * B1 (T5) — raw measurement string written by the Excel
+     * importer/scraper, e.g. `"49cm x 65cm x 42cm"` (order assumed
+     * Ancho x Alto x Profundidad, unit cm). `formatDimensions` in
+     * `lib/product-attributes.ts` parses it when the structured
+     * width/height/depth fields are absent.
+     */
+    source?: string;
+  };
   materials?: string[];
   featured?: boolean;
   active?: boolean;
@@ -276,14 +342,24 @@ class StrapiResponseError extends Error {
   }
 }
 
-async function request<T>(path: string, init?: RequestInit): Promise<T> {
+async function request<T>(
+  path: string,
+  init?: RequestInit,
+  options?: { tags?: StrapiCacheTag[] },
+): Promise<T> {
   const url = `${STRAPI_URL.replace(/\/+$/, "")}${path}`;
   let res: Response;
   try {
     res = await fetch(url, {
       ...init,
       headers: { ...buildHeaders(), ...(init?.headers || {}) },
-      next: { revalidate: REVALIDATE_SECONDS },
+      next: {
+        revalidate: REVALIDATE_SECONDS,
+        // Tagged fetches can be purged on demand by the admin mutation
+        // routes via `revalidateTag` — without tags the 60 s ISR window
+        // would be the only way to surface CMS edits.
+        ...(options?.tags?.length ? { tags: options.tags } : {}),
+      },
     });
   } catch (err) {
     throw new Error(`[strapi] Network error contacting ${url}: ${(err as Error).message}`);
@@ -305,13 +381,58 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   }
 }
 
-const normalizeMedia = (media: any): StrapiMedia | null => {
+/**
+ * Resolve the URL of the smallest Strapi responsive format that is
+ * >= `preferredFormat` in size. Walks the format order upward from the
+ * preference and returns the first entry that exists (relative URL),
+ * or `undefined` when no format qualifies — the caller then falls back
+ * to the original. Never returns a format SMALLER than the slot needs.
+ */
+function resolvePreferredFormatUrl(media: any, preferredFormat: MediaFormat): string | undefined {
+  const start = MEDIA_FORMAT_ORDER.indexOf(preferredFormat);
+  if (start === -1) return undefined;
+  for (let i = start; i < MEDIA_FORMAT_ORDER.length; i++) {
+    const formatUrl = media?.formats?.[MEDIA_FORMAT_ORDER[i]]?.url;
+    if (typeof formatUrl === "string" && formatUrl.length > 0) return formatUrl;
+  }
+  return undefined;
+}
+
+/**
+ * Pick the render-slot URL for an already-normalized media object:
+ * the smallest format >= `preferredFormat` that exists, falling back
+ * upward and finally to the original `url`. Returns null only when the
+ * media object itself is null/undefined. Components that know their
+ * slot size (cards, thumbnails) call this at render time; the
+ * normalized `url` itself always stays the original so hero/LCP
+ * consumers are untouched.
+ */
+export function pickMediaFormat(
+  media: StrapiMedia | null | undefined,
+  preferredFormat: MediaFormat,
+): string | null {
+  if (!media) return null;
+  const start = MEDIA_FORMAT_ORDER.indexOf(preferredFormat);
+  for (let i = start; i < MEDIA_FORMAT_ORDER.length; i++) {
+    const formatUrl = media.formats?.[MEDIA_FORMAT_ORDER[i]]?.url;
+    if (typeof formatUrl === "string" && formatUrl.length > 0) {
+      return ensureAbsoluteUrl(formatUrl);
+    }
+  }
+  return media.url ?? null;
+}
+
+const normalizeMedia = (media: any, options?: NormalizeMediaOptions): StrapiMedia | null => {
   if (!media) return null;
   if (Array.isArray(media)) {
     const first = media[0];
-    return first ? normalizeMedia(first) : null;
+    return first ? normalizeMedia(first, options) : null;
   }
-  const url = media.url || media?.formats?.thumbnail?.url || media?.formats?.small?.url;
+  let url = media.url;
+  if (options?.preferredFormat) {
+    url = resolvePreferredFormatUrl(media, options.preferredFormat) ?? url;
+  }
+  url = url || media?.formats?.thumbnail?.url || media?.formats?.small?.url;
   if (!url) return null;
   return {
     id: media.id,
@@ -325,15 +446,21 @@ const normalizeMedia = (media: any): StrapiMedia | null => {
   };
 };
 
-const normalizeImageList = (images: any): StrapiMedia[] => {
+const normalizeImageList = (images: any, options?: NormalizeMediaOptions): StrapiMedia[] => {
   if (!images) return [];
   if (!Array.isArray(images)) return [];
-  return images.map(normalizeMedia).filter((m): m is StrapiMedia => m !== null);
+  return images
+    .map((m) => normalizeMedia(m, options))
+    .filter((m): m is StrapiMedia => m !== null);
 };
 
 export async function getSiteSettings(): Promise<SiteSetting> {
   try {
-    const json = await request<SingleEnvelope<unknown> | unknown>("/api/site-setting?populate=*");
+    const json = await request<SingleEnvelope<unknown> | unknown>(
+      "/api/site-setting?populate=*",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.siteSettings] },
+    );
     if (!isRecord(json) || !("data" in json)) {
       throw new Error("[strapi] getSiteSettings: malformed response envelope");
     }
@@ -409,6 +536,9 @@ function normalizeSiteSettings(raw: unknown): SiteSetting {
     whatsappNumber: optionalString(raw.whatsappNumber, "whatsappNumber"),
     whatsappDefaultMessage: optionalString(raw.whatsappDefaultMessage, "whatsappDefaultMessage"),
     address: optionalString(raw.address, "address"),
+    addressCity: optionalString(raw.addressCity, "addressCity"),
+    addressRegion: optionalString(raw.addressRegion, "addressRegion"),
+    dispatchCoverage: optionalString(raw.dispatchCoverage, "dispatchCoverage"),
     socialLinks,
     businessHours: optionalString(raw.businessHours, "businessHours"),
     aboutText: optionalString(raw.aboutText, "aboutText"),
@@ -470,7 +600,7 @@ const FALLBACK_HERO: HeroSection = {
   eyebrow: `${siteTokens.brand} · Proveedor institucional`,
   title: siteTokens.promise,
   subtitle:
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la región de Valparaíso hasta Los Lagos y garantía escrita.",
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.",
   primaryCtaLabel: siteTokens.catalogAll,
   primaryCtaHref: "/catalogo",
   secondaryCtaLabel: siteTokens.quoteCta,
@@ -493,6 +623,8 @@ export async function getAboutSection(): Promise<AboutSection> {
   try {
     const json = await request<SingleEnvelope<AboutSection> | { data: null }>(
       "/api/about-section?populate=*",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.sections] },
     );
     const raw = (json as { data?: AboutSection | null }).data;
     if (!raw) return FALLBACK_ABOUT;
@@ -506,6 +638,8 @@ export async function getHeroSection(): Promise<HeroSection> {
   try {
     const json = await request<SingleEnvelope<HeroSection> | { data: null }>(
       "/api/hero-section?populate=*",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.sections] },
     );
     const raw = (json as { data?: HeroSection | null }).data;
     if (!raw) return FALLBACK_HERO;
@@ -519,6 +653,8 @@ export async function getContactCTASection(): Promise<ContactCTASection> {
   try {
     const json = await request<SingleEnvelope<ContactCTASection> | { data: null }>(
       "/api/contact-cta-section?populate=*",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.sections] },
     );
     const raw = (json as { data?: ContactCTASection | null }).data;
     if (!raw) return FALLBACK_CONTACT_CTA;
@@ -530,7 +666,11 @@ export async function getContactCTASection(): Promise<ContactCTASection> {
 
 export async function getFooterBlock(): Promise<FooterBlock> {
   try {
-    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>("/api/footer-block");
+    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>(
+      "/api/footer-block",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.sections] },
+    );
     const raw = (json as { data?: FooterBlock | null }).data;
     if (!raw) {
       return {
@@ -613,13 +753,15 @@ export function resolveSection<T extends Record<string, unknown>>(
   return data;
 }
 
-export async function getCategories(): Promise<Category[]> {
+export async function getCategories(options?: NormalizeMediaOptions): Promise<Category[]> {
   const json = await request<CollectionEnvelope<Category>>(
     "/api/categories?filters[active][$eq]=true&sort=order&populate=*",
+    undefined,
+    { tags: [STRAPI_CACHE_TAGS.catalog] },
   );
   return (json.data ?? []).map((c) => ({
     ...c,
-    image: normalizeMedia(c.image),
+    image: normalizeMedia(c.image, options),
   }));
 }
 
@@ -629,14 +771,18 @@ export async function getFeaturedProducts(limit = 6): Promise<Product[]> {
   // never renders an empty section while the catalog is still being curated.
   const featured = await request<CollectionEnvelope<Product>>(
     `/api/products?filters[featured][$eq]=true&filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`,
+    undefined,
+    { tags: [STRAPI_CACHE_TAGS.catalog] },
   );
-  const featuredData = (featured.data ?? []).map(normalizeProduct);
+  const featuredData = (featured.data ?? []).map((raw) => normalizeProduct(raw));
   if (featuredData.length > 0) return featuredData;
 
   const fallback = await request<CollectionEnvelope<Product>>(
     `/api/products?filters[active][$eq]=true&populate=*&pagination[limit]=${limit}&sort=publishedAt:desc`,
+    undefined,
+    { tags: [STRAPI_CACHE_TAGS.catalog] },
   );
-  return (fallback.data ?? []).map(normalizeProduct);
+  return (fallback.data ?? []).map((raw) => normalizeProduct(raw));
 }
 
 export type ProductListResult = {
@@ -649,6 +795,14 @@ export type ProductListOptions = {
   page?: number;
   pageSize?: number;
   q?: string;
+  /**
+   * When set, product images are normalized to the smallest Strapi
+   * responsive format >= this size (see `NormalizeMediaOptions`).
+   * Card-grid callers may pass `"small"` to cut transferred bytes;
+   * consumers that render the original (gallery main image, JSON-LD)
+   * simply omit it.
+   */
+  preferredFormat?: MediaFormat;
 };
 
 /**
@@ -677,9 +831,11 @@ export async function getProducts(options?: ProductListOptions): Promise<Product
   if (q) {
     params.set("filters[name][$containsi]", q);
   }
-  const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
+  const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
+    tags: [STRAPI_CACHE_TAGS.catalog],
+  });
   return {
-    products: (json.data ?? []).map(normalizeProduct),
+    products: (json.data ?? []).map((raw) => normalizeProduct(raw, options)),
     total: json.meta?.pagination?.total ?? json.data?.length ?? 0,
   };
 }
@@ -699,8 +855,10 @@ export async function getAllProducts(): Promise<Product[]> {
     params.set("populate", "*");
     params.set("pagination[page]", String(page));
     params.set("pagination[pageSize]", "100");
-    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
-    const batch = (json.data ?? []).map(normalizeProduct);
+    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
+      tags: [STRAPI_CACHE_TAGS.catalog],
+    });
+    const batch = (json.data ?? []).map((raw) => normalizeProduct(raw));
     all.push(...batch);
     const total = json.meta?.pagination?.total ?? all.length;
     if (batch.length === 0 || all.length >= total) break;
@@ -721,7 +879,9 @@ export async function getProductCount(): Promise<number> {
     params.set("filters[active][$eq]", "true");
     params.set("fields[0]", "documentId");
     params.set("pagination[pageSize]", "1");
-    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`);
+    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
+      tags: [STRAPI_CACHE_TAGS.catalog],
+    });
     return json.meta?.pagination?.total ?? json.data?.length ?? 0;
   } catch {
     return 0;
@@ -731,13 +891,15 @@ export async function getProductCount(): Promise<number> {
 export async function getProductBySlug(slug: string): Promise<Product | null> {
   const json = await request<CollectionEnvelope<Product>>(
     `/api/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`,
+    undefined,
+    { tags: [STRAPI_CACHE_TAGS.catalog] },
   );
   const raw = json.data?.[0];
   if (!raw) return null;
   return normalizeProduct(raw);
 }
 
-function normalizeProduct(raw: any): Product {
+function normalizeProduct(raw: any, options?: NormalizeMediaOptions): Product {
   const category = raw.category
     ? {
         id: raw.category.id,
@@ -780,7 +942,7 @@ function normalizeProduct(raw: any): Product {
     active: raw.active !== false,
     order: raw.order ?? 0,
     category,
-    images: normalizeImageList(raw.images),
+    images: normalizeImageList(raw.images, options),
     externalId: raw.externalId ?? undefined,
     productType: raw.productType ?? undefined,
     subcategory: raw.subcategory ?? undefined,

@@ -31,6 +31,18 @@
   --color-taupe-deep: #8a7560;
   --color-taupe-soft: color-mix(in oklch, var(--color-taupe) 55%, transparent);
   --color-taupe-faint: color-mix(in oklch, var(--color-taupe) 14%, transparent);
+
+  /* WCAG AA text-safe aliases (B2/U10). Solid hex so contrast is
+     deterministic and testable — the color-mix variants above are
+     deliberately NOT darkened (ink-soft stays for subtle non-text
+     UI; taupe/taupe-deep stay for backgrounds, borders and large
+     text) because they also serve decorative surfaces. These two
+     tokens are for TEXT ONLY over paper/light surfaces:
+       - ink-soft-text: visual ≈ ink @70 % over paper; 5.17:1 vs paper
+       - taupe-text:    darkened taupe;              5.19:1 vs paper
+     Mirrors: packages/ui-tokens/src/colors.ts (same hex values). */
+  --color-ink-soft-text: #6a6969;
+  --color-taupe-text: #7a6650;
   --color-cream-soft: color-mix(in oklch, var(--color-cream) 50%, transparent);
   --color-paper-on-ink: var(--color-paper);
   --color-paper-mute-on-ink: color-mix(in oklch, var(--color-paper) 78%, transparent);

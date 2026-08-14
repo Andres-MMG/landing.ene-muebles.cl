@@ -619,3 +619,230 @@ describe("buildWhatsAppLink", () => {
     );
   });
 });
+
+// ISR milestone — every cached Strapi fetch carries `next.revalidate`
+// plus a domain tag so admin mutations can purge it via revalidateTag.
+describe("cache tags (ISR milestone)", () => {
+  const fetchInit = (callIndex = 0) =>
+    (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[callIndex]?.[1] as RequestInit;
+
+  it("tags product-list fetches with catalog", async () => {
+    mockFetch(200, { data: [], meta: { pagination: { total: 0 } } });
+
+    const { getProducts } = await import("./strapi");
+    await getProducts();
+
+    expect(fetchInit().next).toEqual({ revalidate: 60, tags: ["catalog"] });
+  });
+
+  it("tags single-product fetches with catalog", async () => {
+    mockFetch(200, { data: [] });
+
+    const { getProductBySlug } = await import("./strapi");
+    await getProductBySlug("missing");
+
+    expect(fetchInit().next).toEqual({ revalidate: 60, tags: ["catalog"] });
+  });
+
+  it("tags category fetches with catalog", async () => {
+    mockFetch(200, { data: [] });
+
+    const { getCategories } = await import("./strapi");
+    await getCategories();
+
+    expect(fetchInit().next).toEqual({ revalidate: 60, tags: ["catalog"] });
+  });
+
+  it("tags site-setting fetches with site-settings", async () => {
+    mockFetch(200, { data: { siteName: "Ene Muebles" } });
+
+    const { getSiteSettings } = await import("./strapi");
+    await getSiteSettings();
+
+    expect(fetchInit().next).toEqual({ revalidate: 60, tags: ["site-settings"] });
+  });
+
+  it("tags marketing-section fetches with sections", async () => {
+    mockFetch(200, { data: null });
+
+    const { getHeroSection } = await import("./strapi");
+    await getHeroSection();
+
+    expect(fetchInit().next).toEqual({ revalidate: 60, tags: ["sections"] });
+  });
+});
+
+// ISR milestone — slot-aware media: callers can ask normalizeMedia /
+// the fetchers for the smallest Strapi responsive format that fits
+// their render slot; the default (no option) keeps the original url so
+// heroes, product galleries and admin flows are untouched.
+describe("normalizeMedia preferredFormat", () => {
+  const formats = {
+    thumbnail: { url: "/uploads/thumb_1.jpg" },
+    small: { url: "/uploads/small_1.jpg" },
+    medium: { url: "/uploads/medium_1.jpg" },
+    large: { url: "/uploads/large_1.jpg" },
+  };
+
+  const PRODUCT_WITH_IMAGES = {
+    id: 1,
+    name: "Mesa escolar",
+    slug: "mesa-escolar",
+    description: "Mesa",
+    price: 150000,
+    currency: "CLP",
+    images: [
+      {
+        id: 10,
+        url: "/uploads/original_1.jpg",
+        alternativeText: null,
+        width: 2000,
+        height: 1500,
+        formats,
+      },
+    ],
+  };
+
+  it("keeps the original url when no option is passed (regression)", async () => {
+    mockFetch(200, { data: [PRODUCT_WITH_IMAGES] });
+
+    const { getProductBySlug } = await import("./strapi");
+    const product = await getProductBySlug("mesa-escolar");
+
+    expect(product?.images?.[0]?.url).toBe("http://localhost:1337/uploads/original_1.jpg");
+  });
+
+  it("uses the smallest sufficient format when preferredFormat is set", async () => {
+    mockFetch(200, { data: [PRODUCT_WITH_IMAGES] });
+
+    const { getProducts } = await import("./strapi");
+    const result = await getProducts({ preferredFormat: "small" });
+
+    expect(result.products[0].images?.[0]?.url).toBe(
+      "http://localhost:1337/uploads/small_1.jpg",
+    );
+    // The formats map is preserved regardless of the picked url.
+    expect(result.products[0].images?.[0]?.formats).toEqual(formats);
+  });
+
+  it("skips missing formats and falls upward to the next larger one", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          ...PRODUCT_WITH_IMAGES,
+          images: [
+            {
+              ...PRODUCT_WITH_IMAGES.images[0],
+              formats: {
+                thumbnail: { url: "/uploads/thumb_1.jpg" },
+                large: { url: "/uploads/large_1.jpg" },
+              },
+            },
+          ],
+        },
+      ],
+    });
+
+    const { getProducts } = await import("./strapi");
+    const result = await getProducts({ preferredFormat: "small" });
+
+    // small and medium are absent — never go smaller than requested,
+    // so the first available format above is large.
+    expect(result.products[0].images?.[0]?.url).toBe(
+      "http://localhost:1337/uploads/large_1.jpg",
+    );
+  });
+
+  it("falls back to the original when no format >= preferred exists", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          ...PRODUCT_WITH_IMAGES,
+          images: [
+            {
+              ...PRODUCT_WITH_IMAGES.images[0],
+              formats: { thumbnail: { url: "/uploads/thumb_1.jpg" } },
+            },
+          ],
+        },
+      ],
+    });
+
+    const { getProducts } = await import("./strapi");
+    const result = await getProducts({ preferredFormat: "medium" });
+
+    expect(result.products[0].images?.[0]?.url).toBe(
+      "http://localhost:1337/uploads/original_1.jpg",
+    );
+  });
+
+  it("applies preferredFormat to category images", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          id: 1,
+          name: "Escolar",
+          slug: "escolar",
+          active: true,
+          order: 0,
+          image: {
+            id: 5,
+            url: "/uploads/cat_original.jpg",
+            formats: { small: { url: "/uploads/cat_small.jpg" } },
+          },
+        },
+      ],
+    });
+
+    const { getCategories } = await import("./strapi");
+    const categories = await getCategories({ preferredFormat: "small" });
+
+    expect(categories[0].image?.url).toBe("http://localhost:1337/uploads/cat_small.jpg");
+  });
+});
+
+describe("pickMediaFormat", () => {
+  it("returns the preferred format when it exists (absolute url)", async () => {
+    const { pickMediaFormat } = await import("./strapi");
+    const url = pickMediaFormat(
+      {
+        id: 1,
+        url: "http://localhost:1337/uploads/original.jpg",
+        formats: {
+          thumbnail: { url: "/uploads/thumb.jpg" },
+          small: { url: "/uploads/small.jpg" },
+        },
+      },
+      "thumbnail",
+    );
+    expect(url).toBe("http://localhost:1337/uploads/thumb.jpg");
+  });
+
+  it("falls back upward when the preferred format is missing", async () => {
+    const { pickMediaFormat } = await import("./strapi");
+    const url = pickMediaFormat(
+      {
+        id: 1,
+        url: "http://localhost:1337/uploads/original.jpg",
+        formats: { large: { url: "/uploads/large.jpg" } },
+      },
+      "small",
+    );
+    expect(url).toBe("http://localhost:1337/uploads/large.jpg");
+  });
+
+  it("returns the original url when no format is available", async () => {
+    const { pickMediaFormat } = await import("./strapi");
+    const url = pickMediaFormat(
+      { id: 1, url: "http://localhost:1337/uploads/original.jpg" },
+      "small",
+    );
+    expect(url).toBe("http://localhost:1337/uploads/original.jpg");
+  });
+
+  it("returns null for null media", async () => {
+    const { pickMediaFormat } = await import("./strapi");
+    expect(pickMediaFormat(null, "small")).toBeNull();
+    expect(pickMediaFormat(undefined, "thumbnail")).toBeNull();
+  });
+});

@@ -126,6 +126,75 @@ export function buildJsonLdAdditionalProperty(
 }
 
 /**
+ * B1 (T5) — parsed measurements in the catalog's canonical order:
+ * Ancho x Alto x Profundidad, all in cm. `parseDimensions` merges the
+ * structured width/height/depth fields when present and otherwise
+ * falls back to the raw `dimensions.source` string written by the
+ * Excel importer (e.g. `"49cm x 65cm x 42cm"` or `"49x65x42"`).
+ * Returns `null` when nothing usable is available so callers can skip
+ * rendering instead of showing a partial readout.
+ */
+export type ParsedDimensions = { width?: number; height?: number; depth?: number };
+
+const parseNumber = (raw: string): number | null => {
+  const normalized = raw.replace(",", ".");
+  const value = Number.parseFloat(normalized);
+  return Number.isFinite(value) && value > 0 ? value : null;
+};
+
+const SOURCE_DIMENSION_RE =
+  /^\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*[xX×]\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*[xX×]\s*(\d+(?:[.,]\d+)?)\s*(?:cm)?\s*$/;
+
+export function parseDimensions(
+  dimensions: Pick<Product, "dimensions">["dimensions"] | null | undefined,
+): ParsedDimensions | null {
+  // Structured fields win: the admin UI and any future importer write
+  // width/height/depth directly. At least one positive value is enough
+  // to consider the structured shape authoritative.
+  if (dimensions && typeof dimensions === "object") {
+    const structured: ParsedDimensions = {};
+    if (typeof dimensions.width === "number" && dimensions.width > 0)
+      structured.width = dimensions.width;
+    if (typeof dimensions.height === "number" && dimensions.height > 0)
+      structured.height = dimensions.height;
+    if (typeof dimensions.depth === "number" && dimensions.depth > 0)
+      structured.depth = dimensions.depth;
+    if (structured.width !== undefined || structured.height !== undefined || structured.depth !== undefined) {
+      return structured;
+    }
+    // Fall through to the raw source string when the structured shape
+    // is present but empty (e.g. only `weight` populated).
+    const source = dimensions.source?.trim();
+    if (source) {
+      const match = SOURCE_DIMENSION_RE.exec(source);
+      if (!match) return null;
+      const [w, h, d] = [parseNumber(match[1]), parseNumber(match[2]), parseNumber(match[3])];
+      if (w === null || h === null || d === null) return null;
+      return { width: w, height: h, depth: d };
+    }
+    return null;
+  }
+  return null;
+}
+
+/**
+ * Format the product's measurements as a single compact Spanish row:
+ * `"49 x 65 x 42 cm"` (Ancho x Alto x Profundidad). Returns `null`
+ * when the product has no parseable dimensions so callers can skip
+ * the row entirely.
+ */
+export function formatDimensions(
+  product: Pick<Product, "dimensions">,
+): string | null {
+  const parsed = parseDimensions(product.dimensions);
+  if (!parsed) return null;
+  const parts = [parsed.width, parsed.height, parsed.depth]
+    .filter((n): n is number => n !== undefined)
+    .map((n) => String(n));
+  return parts.length > 0 ? `${parts.join(" x ")} cm` : null;
+}
+
+/**
  * A spec entry rendered under the price. `label` is the human-readable
  * micro-label shown in `t-mono`; `value` is the actual observation.
  * Only entries with a non-empty value are emitted by `buildSpecsStrip`.
@@ -146,11 +215,16 @@ export function buildSpecsStrip(
     | 'observableColor'
     | 'observableMaterial'
     | 'usageEnvironment'
+    | 'dimensions'
   >
 ): SpecStripEntry[] {
   const out: SpecStripEntry[] = [];
   if (product.productType?.trim())
     out.push({ label: 'Qué es', value: product.productType.trim() });
+  // B1 (T5) — measurements join the strip ahead of the descriptive
+  // fields; they are the institutional sell for institutional buyers.
+  const dimensions = formatDimensions(product);
+  if (dimensions) out.push({ label: 'Medidas', value: dimensions });
   if (product.subcategory?.trim())
     out.push({ label: 'Subcategoría', value: product.subcategory.trim() });
   if (product.observableColor?.trim())
@@ -187,7 +261,39 @@ export function buildSitemapImageTitle(
  * Build the `Product` JSON-LD payload that ships to the public page.
  * Strictly additive: every previously-existing field is preserved
  * verbatim; the catalog-import fields are appended as `additionalProperty`.
+ *
+ * B2/U12 — `offers` is emitted ONLY when the product carries a
+ * VERIFIED offer (see `hasVerifiedOffer`): a finite price > 0 with CLP
+ * currency. Zero/empty/NaN prices are hidden by the UI, so the
+ * structured data must not contradict the visible page (seo-geo-aeo
+ * spec). `aggregateRating` and `Review` are NEVER emitted. Callers
+ * MUST pass published products only — the public `getProductBySlug`
+ * already filters by `publishedAt`; this builder does not re-check
+ * publication state.
  */
+export const PRODUCT_CURRENCY_DEFAULT = "CLP";
+
+/**
+ * True when the product has an offer that may be published: price is a
+ * finite number strictly greater than zero AND the currency is CLP
+ * (case-insensitive; missing/empty currency defaults to CLP exactly
+ * like `formatPrice` in `lib/strapi.ts`).
+ */
+export function hasVerifiedOffer(
+  product: Pick<Product, "price" | "currency">
+): boolean {
+  if (
+    typeof product.price !== "number" ||
+    !Number.isFinite(product.price) ||
+    product.price <= 0
+  ) {
+    return false;
+  }
+  const currency =
+    product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT;
+  return currency === PRODUCT_CURRENCY_DEFAULT;
+}
+
 export function buildProductJsonLd(
   product: Product,
   siteUrl: string
@@ -202,15 +308,21 @@ export function buildProductJsonLd(
     ),
     category: product.category?.name,
     brand: { '@type': 'Brand', name: 'ENE-MUEBLES' },
-    offers: {
+  };
+  // B2/U12 — omit offers (and with them availability) unless the price
+  // is verified and visible. Matches the UI: `price > 0` gates the
+  // rendered price on both the card and the product page.
+  if (hasVerifiedOffer(product)) {
+    base.offers = {
       '@type': 'Offer',
       url: `${siteUrl}/producto/${product.slug}`,
       price: product.price,
-      priceCurrency: product.currency,
+      priceCurrency:
+        product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT,
       availability: 'https://schema.org/InStock',
       seller: { '@type': 'Organization', name: 'ENE-MUEBLES' },
-    },
-  };
+    };
+  }
   const additional = buildJsonLdAdditionalProperty(product);
   if (additional.length > 0) base.additionalProperty = additional;
   return base;

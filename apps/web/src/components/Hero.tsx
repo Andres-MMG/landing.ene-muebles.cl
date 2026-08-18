@@ -120,7 +120,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                   priority
                   className="object-cover"
                 />
-                <figcaption className="t-mono absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-paper">
+                <figcaption className="t-overline absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-paper">
                   <span>Catálogo 2026</span>
                   <span className="opacity-60">F.05</span>
                 </figcaption>
@@ -139,7 +139,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                     priority={idx === 0}
                   />
                 ))}
-                <div className="t-mono absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-[11px] uppercase tracking-[0.18em] text-paper">
+                <div className="t-overline absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-paper">
                   <span>Nuestras instalaciones</span>
                   <span className="opacity-60">
                     {currentImageIndex + 1} / {HERO_GALLERY.length}
@@ -154,12 +154,12 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
       {/* Bottom rail — mono proof line. */}
       <div className="border-t border-ink-line">
         <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center gap-x-8 gap-y-2 px-6 py-5 sm:px-10 lg:px-16">
-          <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+          <span className="t-overline text-ink-mute">
             {/* B1 (U6): coverage reads the site-setting field; the
                 static token only renders when the CMS is unreachable. */}
             {settings.dispatchCoverage ?? site.dispatch}
           </span>
-          <span className="t-mono ml-auto text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
+          <span className="t-overline ml-auto text-ink-mute">
             Fabricación y distribución
           </span>
         </div>

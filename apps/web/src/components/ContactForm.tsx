@@ -156,7 +156,7 @@ export function ContactForm() {
   const inputClasses =
     "mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper placeholder:text-paper-soft focus:border-taupe focus:outline-none aria-invalid:border-[#ffb4ab]";
   const labelClasses =
-    "t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink";
+    "t-overline text-paper-mute-on-ink";
   const submitting = status.state === "submitting";
 
   return (
@@ -318,7 +318,7 @@ export function ContactForm() {
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6">
-        <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+        <p className="t-overline text-paper-mute-on-ink">
           Respondemos en 24 h hábiles
         </p>
         <button

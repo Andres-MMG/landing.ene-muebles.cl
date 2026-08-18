@@ -39,7 +39,7 @@ export function ProductSubcategoryGroups({
             <h2 id={`${group.id}-heading`} className="t-h2 text-2xl text-ink sm:text-3xl">
               {group.name}
             </h2>
-            <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+            <p className="t-overline text-ink-mute">
               {group.products.length} producto{group.products.length === 1 ? "" : "s"}
             </p>
           </header>

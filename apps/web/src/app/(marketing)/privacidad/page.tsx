@@ -98,7 +98,7 @@ export default function PrivacidadPage() {
           <div className="grid grid-cols-1 gap-12 lg:grid-cols-12 lg:gap-16">
             <aside className="lg:col-span-3">
               <div className="lg:sticky lg:top-28">
-                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <p className="t-overline text-ink-mute">
                   Contenido
                 </p>
                 <ol className="mt-4 space-y-2 t-mono text-xs text-ink-mute">
@@ -137,7 +137,7 @@ export default function PrivacidadPage() {
                   </section>
                 ))}
               </div>
-              <p className="t-mono mt-16 text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
+              <p className="t-overline mt-16 text-ink-mute">
                 {site.legalUpdated}
               </p>
             </article>

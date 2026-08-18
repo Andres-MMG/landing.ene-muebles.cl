@@ -101,7 +101,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                   make typing unusable. */}
               <CatalogSearch defaultValue={q} />
               <div className="mt-6">
-                <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <p className="t-overline text-ink-mute">
                   Filtrar por línea
                 </p>
                 <div className="mt-3">
@@ -121,7 +121,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         ) : (
           <>
             <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
-              <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+              <p className="t-overline text-ink-mute">
                 {q
                   ? `${total} resultado${total === 1 ? "" : "s"} para «${q}»`
                   : `${from}–${to} de ${total} productos`}
@@ -129,7 +129,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               {q ? (
                 <Link
                   href={`/categoria/${slug}`}
-                  className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-text underline-offset-4 hover:underline"
+                  className="t-overline text-ink-mute underline-offset-4 hover:underline"
                 >
                   Limpiar
                 </Link>

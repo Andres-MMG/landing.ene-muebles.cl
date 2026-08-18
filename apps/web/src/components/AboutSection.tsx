@@ -94,7 +94,7 @@ export function AboutSection({
                   ))}
               </div>
             ) : (
-              <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+              <p className="t-overline text-paper-mute-on-ink">
                 Contenido en preparación.
               </p>
             )}
@@ -103,7 +103,7 @@ export function AboutSection({
             <dl className="border-t border-paper-line-on-ink pt-6">
               {productCount !== undefined ? (
                 <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
-                  <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     Productos en catálogo
                   </dt>
                   <dd className="t-mono text-2xl text-paper">
@@ -113,7 +113,7 @@ export function AboutSection({
               ) : null}
               {categoryCount !== undefined ? (
                 <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
-                  <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     Líneas de producto
                   </dt>
                   <dd className="t-mono text-2xl text-paper">
@@ -125,7 +125,7 @@ export function AboutSection({
                   row reads the site-setting coverage field with the
                   static token as fallback. */}
               <div className="flex items-baseline justify-between gap-4 border-b border-paper-line-on-ink py-4">
-                <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                <dt className="t-overline text-paper-mute-on-ink">
                   Cobertura
                 </dt>
                 <dd className="t-mono text-right text-lg text-paper">
@@ -133,7 +133,7 @@ export function AboutSection({
                 </dd>
               </div>
               <div className="flex items-baseline justify-between py-4">
-                <dt className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                <dt className="t-overline text-paper-mute-on-ink">
                   Garantía
                 </dt>
                 <dd className="t-mono text-2xl text-paper">1 año</dd>
@@ -193,11 +193,11 @@ export function AboutSectionCompact({
                   ))}
               </div>
             ) : (
-              <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+              <p className="t-overline text-paper-mute-on-ink">
                 Contenido en preparación.
               </p>
             )}
-            <p className="t-mono mt-8 text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+            <p className="t-overline mt-8 text-paper-mute-on-ink">
               {siteName}
             </p>
           </div>

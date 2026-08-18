@@ -58,8 +58,10 @@
   --tracking-display: -0.025em;
   --tracking-tight: -0.015em;
   --tracking-normal: 0;
-  --tracking-label: 0.18em;
-  --tracking-kicker: 0.22em;
+  /* Legibility (client report): 0.18em/0.22em tracking on small uppercase
+     text broke word shapes. The floor is 0.14em for labels/overlines. */
+  --tracking-label: 0.14em;
+  --tracking-kicker: 0.14em;
   --leading-display: 0.95;
   --leading-tight: 1.1;
   --leading-snug: 1.3;

@@ -59,7 +59,7 @@ export default async function NosotrosPage() {
           <aside className="lg:col-span-4 lg:col-start-9">
             <dl className="space-y-0 border-t border-ink-line">
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <dt className="t-overline text-ink-mute">
                   Años en el rubro
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
@@ -67,7 +67,7 @@ export default async function NosotrosPage() {
                 </dd>
               </div>
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <dt className="t-overline text-ink-mute">
                   Productos en catálogo
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
@@ -75,7 +75,7 @@ export default async function NosotrosPage() {
                 </dd>
               </div>
               <div className="flex items-baseline justify-between border-b border-ink-line py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <dt className="t-overline text-ink-mute">
                   Líneas de producto
                 </dt>
                 <dd className="t-mono text-3xl text-ink">
@@ -83,7 +83,7 @@ export default async function NosotrosPage() {
                 </dd>
               </div>
               <div className="flex items-baseline justify-between gap-4 py-5">
-                <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <dt className="t-overline text-ink-mute">
                   Cobertura
                 </dt>
                 {/* B1 (U6): the "V – X" region-range claim is gone; the
@@ -164,7 +164,7 @@ export default async function NosotrosPage() {
                 key={value.title ?? index}
                 className="relative border-t border-ink-line pt-6"
               >
-                <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                <span className="t-overline text-ink-mute">
                   {String(index + 1).padStart(2, "0")}
                 </span>
                 <h3 className="t-h2 mt-3 text-2xl text-ink">{value.title}</h3>

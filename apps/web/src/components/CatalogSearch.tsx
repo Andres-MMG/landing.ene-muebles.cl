@@ -81,7 +81,7 @@ export function CatalogSearch({ defaultValue = "" }: CatalogSearchProps) {
     <div>
       <label
         htmlFor="catalog-search"
-        className="t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-soft-text"
+        className="t-overline block text-ink-mute"
       >
         Buscar
       </label>

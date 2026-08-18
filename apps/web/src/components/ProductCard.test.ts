@@ -43,10 +43,19 @@ describe('ProductCard — productType + subcategory metadata chips', () => {
     expect(hasProductTypeNull || hasSubcategoryNull).toBe(true);
   });
 
-  it('uses the typography tokens (t-mono + uppercase + tracking)', () => {
-    expect(source).toContain('t-mono');
-    expect(source).toContain('uppercase');
-    expect(source).toContain('tracking-[0.22em]');
+  it('uses the legibility overline token (t-overline) with a readable meta color', () => {
+    // Typography legibility pass: the old `text-[10px] uppercase
+    // tracking-[0.22em]` chips were replaced by the `t-overline`
+    // utility (12px floor, 0.14em tracking) and the soft gray
+    // (`ink-soft-text`) was darkened to `ink-mute` for small text.
+    // Scoped to the chips container so a regression anywhere else in
+    // the file cannot satisfy the assertion. The data-testid and the
+    // className sit on adjacent lines, so assert over the small block.
+    const lines = source.split('\n');
+    const chipsIdx = lines.findIndex((line) => line.includes('product-meta-chips'));
+    const chipsBlock = lines.slice(chipsIdx, chipsIdx + 3).join('\n');
+    expect(chipsBlock).toContain('t-overline');
+    expect(chipsBlock).toContain('text-ink-mute');
   });
 });
 

@@ -44,8 +44,9 @@ describe("WCAG AA contrast — text tokens over paper", () => {
     ["paper × ink (headings, body)", colors.paper, colors.ink],
     ["paper × ink-soft-text (labels, SKUs, kickers)", colors.paper, colors.inkSoftText],
     ["paper × taupe-text (kickers, chips)", colors.paper, colors.taupeText],
-    // Kept as-is (not swapped): ink-mute renders at ≈5.5:1 — it was
-    // already compliant and stays for muted descriptions.
+    // ink-mute is now the small-text legibility token (typography pass):
+    // the runtime color-mix over paper renders ≈6.7:1 — well above the
+    // 4.5:1 floor, and the solid approximation below stays conservative.
     ["paper × ink-mute (muted descriptions)", colors.paper, colors.inkMute],
   ];
 

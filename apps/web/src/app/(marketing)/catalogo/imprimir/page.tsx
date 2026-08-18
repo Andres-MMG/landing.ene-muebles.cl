@@ -89,13 +89,13 @@ export default async function CatalogoImprimirPage() {
         {/* Toolbar — hidden when printing. */}
         <div className="no-print mb-10 flex flex-wrap items-center justify-between gap-4 border-b border-ink-line pb-8">
           <div>
-            <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-taupe-text">
+            <p className="t-overline text-ink-mute">
               Versión imprimible
             </p>
             <h1 className="t-h2 mt-2 text-3xl text-ink">
               Catálogo de productos · {products.length} ítems
             </h1>
-            <p className="t-mono mt-2 text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+            <p className="t-overline mt-2 text-ink-mute">
               {printedAt}
             </p>
           </div>
@@ -114,7 +114,7 @@ export default async function CatalogoImprimirPage() {
         {/* Print header — repeats on the first page only. */}
         <header className="mb-8 flex items-baseline justify-between border-b border-ink pb-4">
           <p className="t-h2 text-2xl text-ink">ENE-MUEBLES · Catálogo institucional</p>
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+          <p className="t-overline text-ink-mute">
             Medidas en cm · An x Al x Pr · {printedAt}
           </p>
         </header>
@@ -126,7 +126,7 @@ export default async function CatalogoImprimirPage() {
         ) : (
           groups.map((group) => (
             <section key={group.name} className="print-section mb-10">
-              <h2 className="t-mono border-b border-ink-line pb-2 text-xs uppercase tracking-[0.22em] text-taupe-text">
+              <h2 className="t-overline border-b border-ink-line pb-2 text-ink-mute">
                 {group.name}
               </h2>
               <ul className="mt-4">
@@ -154,7 +154,7 @@ export default async function CatalogoImprimirPage() {
                           </span>
                         ) : null}
                       </div>
-                      <span className="t-mono shrink-0 text-[11px] uppercase tracking-[0.18em] text-ink-soft-text">
+                      <span className="t-overline shrink-0 text-ink-mute">
                         {product.category?.name ?? "Catálogo"}
                       </span>
                     </li>

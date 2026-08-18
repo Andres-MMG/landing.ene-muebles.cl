@@ -116,7 +116,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                     its value from `defaultValue` on URL changes. */}
                 <CatalogSearch defaultValue={q} />
                 <div>
-                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <p className="t-overline text-ink-mute">
                     Filtrar por línea
                   </p>
                   <div className="mt-3">
@@ -137,7 +137,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                   <a
                     href="/api/catalog/export"
                     download
-                    className="t-mono text-[10px] uppercase tracking-[0.2em] text-ink-soft-text underline-offset-4 transition-colors hover:text-taupe-text hover:underline"
+                    className="t-overline text-ink-mute underline-offset-4 transition-colors hover:text-taupe-text hover:underline"
                   >
                     Exportar datos JSON
                   </a>
@@ -156,7 +156,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
         ) : (
           <>
             <div className="mb-8 flex flex-wrap items-baseline justify-between gap-4">
-              <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
+              <p className="t-overline text-ink-mute">
                 {q
                   ? `${total} resultado${total === 1 ? "" : "s"} para «${q}»`
                   : `${from}–${to} de ${total} productos`}
@@ -164,7 +164,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
               {q ? (
                 <Link
                   href="/catalogo"
-                  className="t-mono text-[11px] uppercase tracking-[0.22em] text-taupe-text underline-offset-4 hover:underline"
+                  className="t-overline text-ink-mute underline-offset-4 hover:underline"
                 >
                   Limpiar
                 </Link>

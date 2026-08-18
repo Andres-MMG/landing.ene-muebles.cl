@@ -68,13 +68,13 @@ export default async function ContactoPage() {
             </div>
           </div>
           <aside className="lg:col-span-4 lg:col-start-9">
-            <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+            <p className="t-overline text-ink-mute">
               Si prefieres
             </p>
             <dl className="mt-4 space-y-0 border-t border-ink-line">
               {settings.contactPhone ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <dt className="t-overline text-ink-mute">
                     {site.phoneLabel}
                   </dt>
                   <dd className="t-mono text-base text-ink">
@@ -89,7 +89,7 @@ export default async function ContactoPage() {
               ) : null}
               {settings.whatsappNumber ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <dt className="t-overline text-ink-mute">
                     {site.whatsappLabel}
                   </dt>
                   <dd className="t-mono text-base text-ink">
@@ -99,7 +99,7 @@ export default async function ContactoPage() {
               ) : null}
               {settings.businessHours ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <dt className="t-overline text-ink-mute">
                     {site.hoursLabel}
                   </dt>
                   <dd className="t-mono text-base text-ink">
@@ -109,7 +109,7 @@ export default async function ContactoPage() {
               ) : null}
               {address ? (
                 <div className="flex items-baseline justify-between py-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <dt className="t-overline text-ink-mute">
                     {site.addressLabel}
                   </dt>
                   <dd className="t-mono text-sm text-ink-mute">

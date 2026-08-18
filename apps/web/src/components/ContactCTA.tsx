@@ -105,7 +105,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
             <dl className="space-y-6">
               {settings.contactPhone ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     {site.phoneLabel}
                   </dt>
                   <dd className="t-mono mt-2 text-lg text-paper">
@@ -120,7 +120,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
               ) : null}
               {settings.whatsappNumber ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     {site.whatsappLabel}
                   </dt>
                   <dd className="t-mono mt-2 text-lg text-paper">
@@ -130,7 +130,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
               ) : null}
               {address ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     {site.addressLabel}
                   </dt>
                   <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">
@@ -140,7 +140,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
               ) : null}
               {settings.businessHours ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+                  <dt className="t-overline text-paper-mute-on-ink">
                     {site.hoursLabel}
                   </dt>
                   <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">

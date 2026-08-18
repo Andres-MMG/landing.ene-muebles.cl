@@ -209,7 +209,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 >
                   {specsStrip.map((entry) => (
                     <div key={entry.label}>
-                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <dt className="t-overline text-ink-mute">
                         {entry.label}
                       </dt>
                       <dd className="mt-1.5 t-mono text-sm text-ink">
@@ -238,7 +238,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-ink-line pt-6">
                   {fmtDim(parsedDimensions?.width, "cm") ? (
                     <div>
-                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <dt className="t-overline text-ink-mute">
                         Ancho
                       </dt>
                       <dd className="mt-2 t-mono text-base text-ink">
@@ -248,7 +248,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {fmtDim(parsedDimensions?.height, "cm") ? (
                     <div>
-                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <dt className="t-overline text-ink-mute">
                         Altura
                       </dt>
                       <dd className="mt-2 t-mono text-base text-ink">
@@ -258,7 +258,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {fmtDim(parsedDimensions?.depth, "cm") ? (
                     <div>
-                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <dt className="t-overline text-ink-mute">
                         Profundidad
                       </dt>
                       <dd className="mt-2 t-mono text-base text-ink">
@@ -268,7 +268,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {weightValue ? (
                     <div>
-                      <dt className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <dt className="t-overline text-ink-mute">
                         Peso
                       </dt>
                       <dd className="mt-2 t-mono text-base text-ink">
@@ -281,14 +281,14 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {Array.isArray(product.materials) && product.materials.length > 0 ? (
                 <div className="mt-8 border-t border-ink-line pt-6">
-                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <p className="t-overline text-ink-mute">
                     Materialidad
                   </p>
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {product.materials.map((material) => (
                       <li
                         key={material}
-                        className="t-mono rounded-full border border-ink-line px-3 py-1 text-[11px] uppercase tracking-[0.18em] text-ink"
+                        className="t-overline rounded-full border border-ink-line px-3 py-1 text-ink"
                       >
                         {material}
                       </li>
@@ -327,7 +327,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {related.length > 0 ? (
           <section className="mx-auto w-full max-w-[1440px] px-6 pt-16 pb-20 sm:px-10 sm:pt-20 sm:pb-24 lg:px-16 lg:pt-24 lg:pb-28">
             <header className="border-b border-ink-line pb-8">
-              <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+              <p className="t-overline text-ink-mute">
                 Más de la línea
               </p>
               <h2 className="t-h2 mt-3 text-[clamp(1.5rem,1rem+1.5vw,2.25rem)] text-ink">

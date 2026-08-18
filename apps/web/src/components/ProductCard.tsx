@@ -76,14 +76,14 @@ export function ProductCard({
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
+              <span className="t-overline text-ink-mute">
                 Sin imagen
               </span>
             </div>
           )}
         </div>
         {product.featured ? (
-          <span className="t-mono absolute left-4 top-4 bg-paper px-2 py-1 text-[10px] uppercase tracking-[0.22em] text-ink">
+          <span className="t-overline absolute left-4 top-4 bg-paper px-2 py-1 text-ink">
             Destacado
           </span>
         ) : null}
@@ -91,10 +91,10 @@ export function ProductCard({
 
       <div className="flex flex-1 flex-col gap-3 pt-5">
         <div className="flex items-baseline justify-between gap-3 border-t border-taupe-faint pt-4">
-          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-taupe-text">
+          <span className="t-overline text-ink-mute">
             {product.category?.name ?? "Catálogo"}
           </span>
-          <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+          <span className="t-overline text-ink-mute">
             {`SKU · ${product.slug.toUpperCase().slice(0, 12)}`}
           </span>
         </div>
@@ -111,7 +111,7 @@ export function ProductCard({
             {(product.productType || product.subcategory) && (
               <p
                 data-testid="product-meta-chips"
-                className="t-mono mt-2 flex flex-wrap items-center gap-2 text-[10px] uppercase tracking-[0.22em] text-taupe-text"
+                className="t-overline mt-2 flex flex-wrap items-center gap-2 text-ink-mute"
               >
                 {product.productType ? (
                   <span className="border border-taupe-faint px-2 py-0.5">
@@ -134,16 +134,16 @@ export function ProductCard({
         </header>
 
         {(product.shortDescription || dimensions || product.materials?.length) && (
-          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute sm:grid-cols-2">
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-1 t-overline text-ink-mute sm:grid-cols-2">
             {dimensions ? (
               <div className="flex items-baseline justify-between gap-2 sm:justify-start sm:gap-4">
-                <dt className="text-ink-soft-text">Medidas</dt>
+                <dt className="text-ink-mute">Medidas</dt>
                 <dd className="text-ink">{dimensions}</dd>
               </div>
             ) : null}
             {product.materials && product.materials.length > 0 ? (
               <div className="flex items-baseline justify-between gap-2 sm:justify-start sm:gap-4">
-                <dt className="text-ink-soft-text">Mat</dt>
+                <dt className="text-ink-mute">Mat</dt>
                 <dd className="text-ink normal-case">{product.materials.join(", ")}</dd>
               </div>
             ) : null}
@@ -169,7 +169,7 @@ export function ProductCard({
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="t-label ml-auto text-ink-soft-text transition-colors hover:text-ink tap-target"
+              className="t-label ml-auto text-ink-mute transition-colors hover:text-ink tap-target"
             >
               WhatsApp
             </a>

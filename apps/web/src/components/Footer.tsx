@@ -61,7 +61,7 @@ export async function Footer({ settings, block }: FooterProps) {
       {/* Promise strip. */}
       <div className="border-t border-paper-line-on-ink">
         <div className="mx-auto w-full max-w-[1440px] px-6 py-10 sm:px-10 lg:px-16 lg:py-12">
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             {promiseText}
           </p>
         </div>
@@ -77,14 +77,14 @@ export async function Footer({ settings, block }: FooterProps) {
             </p>
           ) : null}
           {rut ? (
-            <p className="t-mono mt-8 text-[11px] uppercase tracking-[0.22em] text-taupe">
+            <p className="t-overline mt-8 text-taupe">
               {`RUT ${rut}`}
             </p>
           ) : null}
         </div>
 
         <div className="lg:col-span-2">
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             {site.footerCatalog}
           </p>
           <ul className="mt-6 space-y-3">
@@ -126,7 +126,7 @@ export async function Footer({ settings, block }: FooterProps) {
         </div>
 
         <div className="lg:col-span-3">
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             {site.footerContact}
           </p>
           <ul className="mt-6 space-y-3 t-mono text-sm text-paper-mute-on-ink">
@@ -156,7 +156,7 @@ export async function Footer({ settings, block }: FooterProps) {
         </div>
 
         <div className="lg:col-span-3">
-          <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             {site.footerLegal}
           </p>
           <ul className="mt-6 space-y-3 t-mono text-sm text-paper-mute-on-ink">
@@ -181,7 +181,7 @@ export async function Footer({ settings, block }: FooterProps) {
           </ul>
           {Object.keys(socials).length > 0 ? (
             <div className="mt-8">
-              <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+              <p className="t-overline text-paper-mute-on-ink">
                 Redes
               </p>
               <ul className="mt-4 space-y-2 t-mono text-xs text-paper-mute-on-ink">
@@ -210,13 +210,13 @@ export async function Footer({ settings, block }: FooterProps) {
 
       <div className="border-t border-paper-line-on-ink">
         <div className="mx-auto flex w-full max-w-[1440px] flex-col items-start justify-between gap-2 px-6 py-6 sm:flex-row sm:items-center sm:px-10 lg:px-16">
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             {/* B1 (U9): the year is computed at render time (this
                 component is server-rendered) and the technical build
                 version is gone from the public footer. */}
             Catálogo institucional · {year}
           </p>
-          <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
+          <p className="t-overline text-paper-mute-on-ink">
             Respaldo escrito · Garantía 1 año
           </p>
         </div>

@@ -13,7 +13,7 @@ export function focusSubcategoryTarget(id: string) {
 export function SubcategoryNavigation({ groups }: SubcategoryNavigationProps) {
   return (
     <nav aria-label="Subcategorías de esta página" className="border-y border-ink-line py-4">
-      <p className="t-mono mb-3 text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+      <p className="t-overline mb-3 text-ink-mute">
         Ver por subcategoría
       </p>
       <ul className="flex flex-wrap gap-x-5 gap-y-3">
@@ -25,7 +25,7 @@ export function SubcategoryNavigation({ groups }: SubcategoryNavigationProps) {
               className="t-label inline-flex items-baseline gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ink"
             >
               {group.name}
-              <span className="t-mono text-[10px] text-ink-soft-text">{group.products.length}</span>
+              <span className="t-mono text-xs text-ink-mute">{group.products.length}</span>
             </a>
           </li>
         ))}

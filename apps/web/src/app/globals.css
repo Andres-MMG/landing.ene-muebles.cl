@@ -154,10 +154,24 @@
     letter-spacing: 0;
   }
 
+  /* Small uppercase overline/caption — single source for the former
+     `t-mono text-[10px] uppercase tracking-[0.22em]` one-offs. Floor is
+     12px (legibility report: 10-11px was unreadable even with good
+     eyesight); tracking tightened to 0.14em so word shapes survive. */
+  .t-overline {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.4;
+    letter-spacing: var(--tracking-label);
+    text-transform: uppercase;
+    font-variant-numeric: tabular-nums;
+  }
+
   .t-label {
     font-family: var(--font-body);
     font-weight: 500;
-    font-size: 0.6875rem;
+    font-size: 0.75rem;
     letter-spacing: var(--tracking-label);
     text-transform: uppercase;
   }

@@ -98,7 +98,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                     />
                   ) : (
                     <div className="flex h-full w-full items-center justify-center">
-                      <span className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-soft-text">
+                      <span className="t-overline text-ink-mute">
                         Sin imagen
                       </span>
                     </div>
@@ -107,7 +107,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
 
                 {/* Text block. */}
                 <div className="col-span-6 sm:col-span-5 lg:col-span-6">
-                  <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
+                  <p className="t-overline text-ink-mute">
                     Línea {ordinal}
                   </p>
                   <h3 className="t-h2 mt-2 text-2xl text-ink transition-colors duration-500 group-hover:text-taupe-deep sm:text-3xl lg:text-4xl">
@@ -125,7 +125,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
                   aria-hidden
                   className="col-span-12 mt-2 inline-flex items-center justify-end gap-3 text-ink transition-transform duration-500 ease-out-expo group-hover:translate-x-2 sm:col-span-2 sm:mt-0 lg:col-span-1"
                 >
-                  <span className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text sm:hidden lg:inline">
+                  <span className="t-overline text-ink-mute sm:hidden lg:inline">
                     Ir
                   </span>
                   <span className="inline-flex h-11 w-11 items-center justify-center border border-ink text-base transition-colors duration-500 group-hover:border-taupe-deep group-hover:bg-ink group-hover:text-paper">

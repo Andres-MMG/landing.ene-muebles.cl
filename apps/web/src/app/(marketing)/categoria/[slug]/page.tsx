@@ -96,8 +96,10 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             <div className="lg:col-span-4 lg:col-start-9">
               {/* B1 (U2): the same debounced search input as /catalogo.
                   It builds its push URL from the current pathname, so
-                  searching here searches within this line. */}
-              <CatalogSearch key={q ?? ""} defaultValue={q} />
+                  searching here searches within this line. No `key`:
+                  remounting on every `?q=` change would drop focus and
+                  make typing unusable. */}
+              <CatalogSearch defaultValue={q} />
               <div className="mt-6">
                 <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                   Filtrar por línea

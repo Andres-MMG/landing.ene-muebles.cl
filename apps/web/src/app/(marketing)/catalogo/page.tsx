@@ -111,7 +111,10 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 se entrega con ficha técnica y declaración de materiales.
               </p>
               <div className="mt-6 space-y-6">
-                <CatalogSearch key={q ?? ""} defaultValue={q} />
+                {/* No `key`: remounting on every `?q=` change would drop
+                    focus and make typing unusable. The component re-syncs
+                    its value from `defaultValue` on URL changes. */}
+                <CatalogSearch defaultValue={q} />
                 <div>
                   <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-ink-soft-text">
                     Filtrar por línea

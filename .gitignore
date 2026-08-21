@@ -57,6 +57,26 @@ apps/cms/scripts/_scrape/
 .agents/
 .claude/
 .atl/
+.codex/
+.playwright-mcp/
+opencode.json
+.github/hooks/
+
+# Local catalog-import workspace artifacts
+/api/
+/carga/
+
+# Local source assets; runtime assets live under apps/web/public/
+/images/
+
+# Local visual review artifacts
+/home*.png
+/catalogo.png
+/catalogo_productos_202.xlsx
+/categoria-oficina.png
+/typeset-home.png
+infrastructure/before-*.png
+infrastructure/after-*.png
 
 # Tool caches
 .eslintcache

@@ -8,6 +8,7 @@ import {
 import { formatAddress } from "@/lib/address";
 import { isSocialNetwork, socialHref } from "@/lib/social";
 import { site } from "@ene/ui-tokens";
+import { SocialIcon } from "./SocialIcon";
 
 type FooterProps = {
   settings: SiteSetting;
@@ -34,7 +35,7 @@ const navItems: { label: string; href: string }[] = [
  * 4-column grid: brand identity, navigation, contact channel, legal.
  * Above the grid: a hairline divider with the brand promise stretched
  * across the width. Below: copyright + RUT/horario in mono. No social
- * icons; social handles are listed as text (industrial, not decorative).
+ * icons; social handles remain available through accessible labels and titles.
  */
 export async function Footer({ settings, block }: FooterProps) {
   const year = new Date().getFullYear();
@@ -184,7 +185,7 @@ export async function Footer({ settings, block }: FooterProps) {
               <p className="t-overline text-paper-mute-on-ink">
                 Redes
               </p>
-              <ul className="mt-4 space-y-2 t-mono text-xs text-paper-mute-on-ink">
+              <ul className="mt-4 flex flex-wrap gap-3 text-paper-mute-on-ink">
                 {Object.entries(socials).map(([network, handle]) => {
                   if (!isSocialNetwork(network)) return null;
                   const href = socialHref(network, handle);
@@ -195,9 +196,11 @@ export async function Footer({ settings, block }: FooterProps) {
                         href={href}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="transition-colors hover:text-taupe tap-target"
+                        aria-label={`Abrir ${network} de ENE Muebles`}
+                        title={`${network} · ${handle}`}
+                        className="inline-flex h-11 w-11 items-center justify-center border border-paper-line-on-ink transition-colors hover:border-taupe hover:text-taupe focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-paper"
                       >
-                        {network} · {handle}
+                        <SocialIcon network={network} />
                       </a>
                     </li>
                   );

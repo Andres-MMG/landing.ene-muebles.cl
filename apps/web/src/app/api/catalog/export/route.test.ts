@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 vi.mock("@/lib/strapi", () => ({
-  getAllProducts: vi.fn(),
+  getCatalogSnapshot: vi.fn(),
 }));
 
-import { getAllProducts } from "@/lib/strapi";
+import { getCatalogSnapshot } from "@/lib/strapi";
 
-const mockedGetAllProducts = vi.mocked(getAllProducts);
+const mockedGetCatalogSnapshot = vi.mocked(getCatalogSnapshot);
 
 beforeEach(() => {
   vi.resetModules();
@@ -23,11 +23,15 @@ const callGet = async () => {
 };
 
 describe("GET /api/catalog/export", () => {
-  it("returns every product as a downloadable JSON attachment", async () => {
-    mockedGetAllProducts.mockResolvedValue([
-      { id: 1, name: "Silla escolar", slug: "silla-escolar" },
-      { id: 2, name: "Mesa escolar", slug: "mesa-escolar" },
-    ]);
+  it("returns the bounded snapshot products as a downloadable JSON attachment", async () => {
+    mockedGetCatalogSnapshot.mockResolvedValue({
+      products: [
+        { id: 1, name: "Silla escolar", slug: "silla-escolar" },
+        { id: 2, name: "Mesa escolar", slug: "mesa-escolar" },
+      ] as never,
+      truncated: false,
+      fetchedAt: "2026-08-21T00:00:00.000Z",
+    });
 
     const res = await callGet();
 
@@ -40,8 +44,24 @@ describe("GET /api/catalog/export", () => {
     await expect(res.json()).resolves.toHaveLength(2);
   });
 
+  it("preserves the current product payload without leaking snapshot metadata", async () => {
+    mockedGetCatalogSnapshot.mockResolvedValue({
+      products: [{ id: 7, name: "Producto vigente", slug: "producto-vigente" }] as never,
+      truncated: true,
+      fetchedAt: "2026-08-21T00:00:00.000Z",
+    });
+
+    const res = await callGet();
+    const payload = await res.json();
+
+    expect(payload).toEqual([{ id: 7, name: "Producto vigente", slug: "producto-vigente" }]);
+    expect(payload).not.toHaveProperty("truncated");
+    expect(payload).not.toHaveProperty("fetchedAt");
+    expect(mockedGetCatalogSnapshot).toHaveBeenCalledOnce();
+  });
+
   it("returns 502 with the fallback message when Strapi fails", async () => {
-    mockedGetAllProducts.mockRejectedValue(new Error("ECONNREFUSED"));
+    mockedGetCatalogSnapshot.mockRejectedValue(new Error("ECONNREFUSED"));
 
     const res = await callGet();
 

@@ -378,6 +378,126 @@ describe("getAllProducts", () => {
   });
 });
 
+describe("getCatalogSnapshot", () => {
+  const product = (id: number) => ({
+    id,
+    name: `Producto ${id}`,
+    slug: `producto-${id}`,
+    description: "Descripción vigente",
+    price: 0,
+    currency: "CLP",
+    active: true,
+    order: id,
+    category: {
+      id: 1,
+      name: "Escolar",
+      slug: "escolar",
+      active: true,
+      publishedAt: "2026-08-01T00:00:00.000Z",
+    },
+    images: Array.from({ length: 6 }, (_, imageId) => ({
+      id: imageId + 1,
+      url: `/uploads/${id}-${imageId}.jpg`,
+      formats: { medium: { url: `/uploads/${id}-${imageId}-medium.jpg` } },
+    })),
+  });
+
+  it("uses one bounded published snapshot with selected fields, normalized media, and cache tags", async () => {
+    mockFetch(200, {
+      data: [product(1)],
+      meta: { pagination: { total: 1 } },
+    });
+
+    const { getCatalogSnapshot, CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT } = await import("./strapi");
+    const snapshot = await getCatalogSnapshot();
+
+    expect(snapshot.products).toHaveLength(1);
+    expect(snapshot.products[0]?.images).toHaveLength(CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT);
+    expect(snapshot.products[0]?.images?.[0]?.url).toBe("http://localhost:1337/uploads/1-0.jpg");
+    expect(snapshot.truncated).toBe(false);
+    expect(snapshot.fetchedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
+
+    const url = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string);
+    expect(url).toMatch(/status=published/);
+    expect(url).toMatch(/filters\[active\]\[\$eq\]=true/);
+    expect(url).toMatch(/pagination\[pageSize\]=100/);
+    expect(url).toMatch(/sort\[0\]=order:asc/);
+    expect(url).toMatch(/populate\[category\]\[fields\]\[0\]=id/);
+    expect(url).toMatch(/populate\[images\]\[fields\]\[2\]=url/);
+    expect(url).not.toContain("populate=*");
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.next).toEqual({
+      revalidate: 60,
+      tags: ["catalog"],
+    });
+  });
+
+  it("stops at the hard product ceiling and reports a truncated snapshot", async () => {
+    const firstPage = Array.from({ length: 100 }, (_, index) => product(index + 1));
+    const secondPage = Array.from({ length: 100 }, (_, index) => product(index + 101));
+    mockFetch(200, { data: firstPage, meta: { pagination: { total: 250 } } });
+    mockFetch(200, { data: secondPage, meta: { pagination: { total: 250 } } });
+
+    const { getCatalogSnapshot, CATALOG_SNAPSHOT_MAX_PRODUCTS } = await import("./strapi");
+    const snapshot = await getCatalogSnapshot();
+
+    expect(snapshot.products).toHaveLength(CATALOG_SNAPSHOT_MAX_PRODUCTS);
+    expect(snapshot.truncated).toBe(true);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const secondUrl = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as string);
+    expect(secondUrl).toMatch(/pagination\[page\]=2/);
+  });
+
+  it("keeps current published data and drops unusable media without a second uncached read", async () => {
+    mockFetch(200, {
+      data: [
+        {
+          ...product(1),
+          name: "Producto vigente",
+          category: { ...product(1).category, active: false },
+          images: [
+            { id: 99, url: "not-a-public-url", formats: { thumbnail: { url: "" } } },
+            { id: 100, url: "/uploads/current.jpg", formats: { medium: { url: "/uploads/current-medium.jpg" } } },
+          ],
+        },
+      ],
+      meta: { pagination: { total: 1 } },
+    });
+
+    const { getCatalogSnapshot } = await import("./strapi");
+    const snapshot = await getCatalogSnapshot();
+
+    expect(snapshot.products[0]?.name).toBe("Producto vigente");
+    expect(snapshot.products[0]?.category).toBeNull();
+    expect(snapshot.products[0]?.images).toHaveLength(1);
+    expect(snapshot.products[0]?.images?.[0]?.url).toBe("http://localhost:1337/uploads/current.jpg");
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.next).toEqual({
+      revalidate: 60,
+      tags: ["catalog"],
+    });
+  });
+
+  it("does not retain a previous snapshot when the CMS returns newer product data", async () => {
+    mockFetch(200, {
+      data: [{ ...product(1), name: "Primera versión" }],
+      meta: { pagination: { total: 1 } },
+    });
+    mockFetch(200, {
+      data: [{ ...product(1), name: "Versión actualizada" }],
+      meta: { pagination: { total: 1 } },
+    });
+
+    const { getCatalogSnapshot } = await import("./strapi");
+    await expect(getCatalogSnapshot()).resolves.toMatchObject({
+      products: [expect.objectContaining({ name: "Primera versión" })],
+    });
+    await expect(getCatalogSnapshot()).resolves.toMatchObject({
+      products: [expect.objectContaining({ name: "Versión actualizada" })],
+    });
+    expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
 describe("contact product helpers", () => {
   it("returns only lightweight active published options across pages", async () => {
     mockFetch(200, {

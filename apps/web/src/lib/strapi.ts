@@ -193,6 +193,7 @@ export type Category = {
   image?: StrapiMedia | null;
   order?: number;
   active?: boolean;
+  publishedAt?: string | null;
 };
 
 export type Product = {
@@ -317,6 +318,20 @@ type CollectionEnvelope<T> = {
 };
 type SingleEnvelope<T> = { data: T; meta?: unknown };
 
+/**
+ * Bounds for the request-time print/catalog snapshot. Keep these explicit so
+ * a CMS content spike cannot turn a public request into an unbounded read.
+ */
+export const CATALOG_SNAPSHOT_PAGE_SIZE = 100;
+export const CATALOG_SNAPSHOT_MAX_PRODUCTS = 200;
+export const CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT = 4;
+
+export type CatalogSnapshot = {
+  products: Product[];
+  truncated: boolean;
+  fetchedAt: string;
+};
+
 const buildHeaders = (): HeadersInit => {
   const headers: Record<string, string> = {
     Accept: "application/json",
@@ -400,9 +415,17 @@ function resolvePreferredFormatUrl(media: any, preferredFormat: MediaFormat): st
   if (start === -1) return undefined;
   for (let i = start; i < MEDIA_FORMAT_ORDER.length; i++) {
     const formatUrl = media?.formats?.[MEDIA_FORMAT_ORDER[i]]?.url;
-    if (typeof formatUrl === "string" && formatUrl.length > 0) return formatUrl;
+    if (isUsablePublicMediaUrl(formatUrl)) return formatUrl;
   }
   return undefined;
+}
+
+function isUsablePublicMediaUrl(value: unknown): value is string {
+  return (
+    typeof value === "string" &&
+    value.length > 0 &&
+    (value.startsWith("/") || value.startsWith("http://") || value.startsWith("https://"))
+  );
 }
 
 /**
@@ -439,8 +462,10 @@ const normalizeMedia = (media: any, options?: NormalizeMediaOptions): StrapiMedi
   if (options?.preferredFormat) {
     url = resolvePreferredFormatUrl(media, options.preferredFormat) ?? url;
   }
-  url = url || media?.formats?.thumbnail?.url || media?.formats?.small?.url;
-  if (!url) return null;
+  url = isUsablePublicMediaUrl(url)
+    ? url
+    : media?.formats?.thumbnail?.url || media?.formats?.small?.url;
+  if (!isUsablePublicMediaUrl(url)) return null;
   return {
     id: media.id,
     documentId: media.documentId,
@@ -907,31 +932,121 @@ export async function getSubcategorySummaries(options?: {
   return Array.from(counts.values());
 }
 
+const CATALOG_PRODUCT_FIELDS = [
+  "id",
+  "documentId",
+  "name",
+  "slug",
+  "description",
+  "shortDescription",
+  "price",
+  "currency",
+  "dimensions",
+  "materials",
+  "active",
+  "order",
+  "productType",
+  "subcategory",
+  "usageEnvironment",
+  "observableColor",
+  "observableMaterial",
+  "catalogPage",
+  "publishedAt",
+] as const;
+
+const CATALOG_CATEGORY_FIELDS = ["id", "documentId", "name", "slug", "active", "order", "publishedAt"] as const;
+const CATALOG_IMAGE_FIELDS = ["id", "documentId", "url", "alternativeText", "width", "height", "mime", "formats"] as const;
+
+const addIndexedParams = (params: URLSearchParams, key: string, values: readonly string[]) => {
+  values.forEach((value, index) => params.set(`${key}[${index}]`, value));
+};
+
+const buildCatalogSnapshotParams = (page: number): string => {
+  const params = new URLSearchParams();
+  params.set("status", "published");
+  params.set("filters[active][$eq]", "true");
+  params.set("pagination[page]", String(page));
+  params.set("pagination[pageSize]", String(CATALOG_SNAPSHOT_PAGE_SIZE));
+  params.set("sort[0]", "order:asc");
+  params.set("sort[1]", "name:asc");
+  addIndexedParams(params, "fields", CATALOG_PRODUCT_FIELDS);
+  addIndexedParams(params, "populate[category][fields]", CATALOG_CATEGORY_FIELDS);
+  addIndexedParams(params, "populate[images][fields]", CATALOG_IMAGE_FIELDS);
+  return params.toString();
+};
+
+const normalizeCatalogProduct = (raw: any): Product => {
+  const product = normalizeProduct(raw);
+  const category = raw.category;
+  const categoryIsEligible =
+    !category || (category.active !== false && category.publishedAt !== null);
+  const images = normalizeImageList(raw.images)
+    .slice(0, CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT)
+    .map((image) => ({
+      ...image,
+      formats: image.formats
+        ? Object.fromEntries(
+            Object.entries(image.formats).filter(([, format]) =>
+              isUsablePublicMediaUrl(format?.url),
+            ),
+          )
+        : undefined,
+    }));
+
+  return {
+    ...product,
+    category: categoryIsEligible ? product.category : null,
+    images,
+  };
+};
+
 /**
- * Fetch every active product, paginating internally with
- * `pagination[pageSize]=100` until `meta.pagination.total` is reached.
- * Used by the JSON catalog export route; not intended for page reads.
+ * Loads one coherent, bounded active/published catalog snapshot. Pagination is
+ * deliberately internal to this seam so print, sitemap, and compatibility
+ * callers cannot accidentally create separate unbounded export loops.
  */
-export async function getAllProducts(): Promise<Product[]> {
+export async function getCatalogSnapshot(): Promise<CatalogSnapshot> {
   const all: Product[] = [];
   let page = 1;
+  let total: number | undefined;
+
   while (true) {
-    const params = new URLSearchParams();
-    params.set("filters[active][$eq]", "true");
-    params.set("sort", "order");
-    params.set("populate", "*");
-    params.set("pagination[page]", String(page));
-    params.set("pagination[pageSize]", "100");
-    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
-      tags: [STRAPI_CACHE_TAGS.catalog],
-    });
-    const batch = (json.data ?? []).map((raw) => normalizeProduct(raw));
+    const json = await request<CollectionEnvelope<Product>>(
+      `/api/products?${buildCatalogSnapshotParams(page)}`,
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalog] },
+    );
+    const batch = (json.data ?? []).map(normalizeCatalogProduct);
     all.push(...batch);
-    const total = json.meta?.pagination?.total ?? all.length;
-    if (batch.length === 0 || all.length >= total) break;
+    total = json.meta?.pagination?.total ?? total;
+
+    if (
+      batch.length === 0 ||
+      all.length >= CATALOG_SNAPSHOT_MAX_PRODUCTS ||
+      (total !== undefined && all.length >= total)
+    ) {
+      break;
+    }
     page += 1;
   }
-  return all;
+
+  const boundedProducts = all.slice(0, CATALOG_SNAPSHOT_MAX_PRODUCTS);
+  return {
+    products: boundedProducts,
+    truncated:
+      boundedProducts.length >= CATALOG_SNAPSHOT_MAX_PRODUCTS &&
+      (total === undefined || total >= CATALOG_SNAPSHOT_MAX_PRODUCTS),
+    fetchedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * Compatibility wrapper for callers that still require the historical
+ * Product[] shape. The implementation remains bounded and cache-tagged via
+ * getCatalogSnapshot rather than retaining the old unbounded export loop.
+ */
+export async function getAllProducts(): Promise<Product[]> {
+  return (await getCatalogSnapshot()).products;
 }
 
 const normalizeContactProductOption = (raw: unknown): ContactProductOption | null => {

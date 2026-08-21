@@ -1,21 +1,23 @@
 import { NextResponse } from "next/server";
-import { getAllProducts } from "@/lib/strapi";
+import { getCatalogSnapshot } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
 /**
  * GET /api/catalog/export
- *   Download every active product as a JSON file (all pages, no
- *   pagination truncation). Used by the "Descargar catálogo JSON"
- *   link on the public catalog page. `no-store` keeps intermediaries
- *   from caching the snapshot; the upstream Strapi read still honors
- *   the shared 60s revalidate window.
+ *   Download the bounded active/published catalog snapshot as JSON. The route
+ *   remains a technical compatibility surface; public visibility is handled
+ *   separately by the catalog UI work unit.
+ *
+ *   Consumer audit (2026-08-21): repository search found no non-UI consumer.
+ *   Deployment inventory is not available from source, so owner approval is
+ *   still required before deleting this breaking API surface.
  */
 export async function GET() {
   try {
-    const products = await getAllProducts();
-    return NextResponse.json(products, {
+    const snapshot = await getCatalogSnapshot();
+    return NextResponse.json(snapshot.products, {
       headers: {
         "Content-Disposition": 'attachment; filename="catalogo-ene-muebles.json"',
         "Content-Type": "application/json; charset=utf-8",

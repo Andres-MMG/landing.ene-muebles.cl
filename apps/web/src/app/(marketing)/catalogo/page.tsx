@@ -132,24 +132,14 @@ export default async function CatalogoPage({ searchParams }: Props) {
                     <CategoryFilter categories={categories} q={q} />
                   </div>
                 </div>
-                {/* B1 (U1): the primary export CTA is now the printable
-                    catalog; the JSON download stays as a secondary
-                    technical link (the API route is unchanged). */}
                 <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
                   <Link
                     href={"/catalogo/imprimir" as never}
-                    className="inline-flex items-center gap-3 bg-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
+                    className="tap-target inline-flex items-center gap-3 bg-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink"
                   >
-                    Imprimir / PDF
+                    Imprimir PDF
                     <span aria-hidden>→</span>
                   </Link>
-                  <a
-                    href="/api/catalog/export"
-                    download
-                    className="t-overline text-ink-mute underline-offset-4 transition-colors hover:text-taupe-text hover:underline"
-                  >
-                    Exportar datos JSON
-                  </a>
                 </div>
               </div>
             </div>

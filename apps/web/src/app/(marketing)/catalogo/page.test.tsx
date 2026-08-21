@@ -83,18 +83,17 @@ describe("CatalogoPage", () => {
     });
   });
 
-  it("promotes the print catalog as the primary export CTA and keeps JSON as secondary", async () => {
+  it("exposes only the browser print CTA and hides the technical JSON action", async () => {
     const { default: CatalogoPage } = await import("./page");
     const html = renderToStaticMarkup(
       await CatalogoPage({ searchParams: Promise.resolve({}) })
     );
 
     expect(html).toContain('href="/catalogo/imprimir"');
-    expect(html).toContain("Imprimir / PDF");
-    // The JSON export stays reachable as the secondary technical link.
-    expect(html).toContain('href="/api/catalog/export"');
-    expect(html).toContain("Exportar datos JSON");
-    expect(html).not.toContain("Descargar catálogo JSON");
+    expect(html).toContain("Imprimir PDF");
+    expect(html).not.toContain('href="/api/catalog/export"');
+    expect(html).not.toContain("Exportar datos JSON");
+    expect(html).not.toContain("Imprimir / PDF");
   });
 
   it("uses the live count helper for the header when the paginated read is empty", async () => {

@@ -56,7 +56,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
   const headline = section?.title?.trim() || settings.tagline?.trim() || site.promise;
   const subtitle =
     section?.subtitle ??
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.";
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la Región de Valparaíso hasta la Región de Los Lagos y garantía escrita.";
   const primaryLabel = section?.primaryCtaLabel ?? site.catalogAll;
   const primaryHref = section?.primaryCtaHref ?? "/catalogo";
   const secondaryLabel = section?.secondaryCtaLabel ?? site.quoteCta;

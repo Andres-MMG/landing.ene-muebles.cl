@@ -14,7 +14,7 @@ import { ImageResponse } from "next/og";
  */
 
 export const alt =
-  "ENE Muebles — Mobiliario institucional · Catálogo · Despacho a todo Chile";
+  "ENE Muebles — Mobiliario institucional · Catálogo · Regiones desde Valparaíso hasta Los Lagos";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 export const dynamic = "force-static";
@@ -97,7 +97,7 @@ export default async function OpengraphImage() {
             color: "#656565",
           }}
         >
-          Catálogo 2026 · Despacho a todo Chile · Cotización en 24 h
+          Catálogo 2026 · Regiones desde Valparaíso hasta Los Lagos · Cotización en 24 h
         </div>
 
         {/* Bottom rail — brand readout like the site footer. */}

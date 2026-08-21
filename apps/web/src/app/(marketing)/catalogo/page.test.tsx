@@ -115,13 +115,15 @@ describe("CatalogoPage", () => {
   it("renders the dispatch coverage from site settings", async () => {
     getSiteSettings.mockResolvedValue({
       whatsappNumber: "+56912345678",
-      dispatchCoverage: "Despacho a todo Chile",
+      dispatchCoverage: "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos",
     });
     const { default: CatalogoPage } = await import("./page");
     const html = renderToStaticMarkup(
       await CatalogoPage({ searchParams: Promise.resolve({}) })
     );
 
-    expect(html).toContain("Despacho a todo Chile, descuentos por");
+    expect(html).toContain(
+      "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos, descuentos por",
+    );
   });
 });

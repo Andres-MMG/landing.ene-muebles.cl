@@ -112,7 +112,7 @@ export type SiteSetting = {
   addressRegion?: string;
   /**
    * B1 (U6) — dispatch-coverage copy, single source of truth.
-   * Seeded as "Despacho a todo Chile" (pending business confirmation).
+    * Seeded as the confirmed Valparaíso-to-Los-Lagos regional range.
    */
   dispatchCoverage?: string;
   socialLinks?: SocialLinks;
@@ -600,7 +600,7 @@ const FALLBACK_HERO: HeroSection = {
   eyebrow: `${siteTokens.brand} · Proveedor institucional`,
   title: siteTokens.promise,
   subtitle:
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho a todo Chile y garantía escrita.",
+    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la Región de Valparaíso hasta la Región de Los Lagos y garantía escrita.",
   primaryCtaLabel: siteTokens.catalogAll,
   primaryCtaHref: "/catalogo",
   secondaryCtaLabel: siteTokens.quoteCta,

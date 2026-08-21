@@ -10,7 +10,7 @@ const baseValues = {
   whatsappNumber: '+56912345678',
   whatsappDefaultMessage: 'Hola, cotización',
   address: 'Av. Apoquindo 4000',
-  dispatchCoverage: 'Despacho a todo Chile',
+  dispatchCoverage: 'Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos',
   addressCity: 'Temuco',
   addressRegion: 'La Araucanía',
   businessHours: 'Lun a Vie 09:00-18:00',
@@ -49,7 +49,9 @@ describe('SiteSettingForm.buildSubmitPayload', () => {
 
   it('sends non-blank dispatchCoverage, addressCity, and addressRegion', () => {
     const payload = buildSubmitPayload(baseValues);
-    expect(payload.dispatchCoverage).toBe('Despacho a todo Chile');
+    expect(payload.dispatchCoverage).toBe(
+      'Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos',
+    );
     expect(payload.addressCity).toBe('Temuco');
     expect(payload.addressRegion).toBe('La Araucanía');
   });

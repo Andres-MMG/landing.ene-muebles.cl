@@ -4,6 +4,7 @@ import { CatalogSearch } from "@/components/CatalogSearch";
 import { ContactCTA } from "@/components/ContactCTA";
 import { Pagination } from "@/components/Pagination";
 import { ProductSubcategoryGroups } from "@/components/ProductSubcategoryGroups";
+import { site } from "@ene/ui-tokens";
 import {
   getCategories,
   getProductCount,
@@ -106,7 +107,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 {/* B1 (U6): coverage reads from the site-setting
                     singleton so /catalogo stops contradicting the
                     hero/footer copy. */}
-                {settings.dispatchCoverage ?? "Despacho a todo Chile"}, descuentos por
+                {settings.dispatchCoverage ?? site.dispatchCoverageFallback}, descuentos por
                 volumen y pago a 30, 60 o 90 días para instituciones. Cada producto
                 se entrega con ficha técnica y declaración de materiales.
               </p>

@@ -48,7 +48,7 @@ export default async function AdminLoginPage({
               </p>
             </div>
             <p className="t-mono text-[10px] uppercase tracking-[0.22em] text-paper-mute-on-ink">
-              Despacho a todo Chile · 7–15 d.h.
+              Regiones desde Valparaíso hasta Los Lagos · 7–15 d.h.
             </p>
           </div>
         </aside>

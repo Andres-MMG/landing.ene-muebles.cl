@@ -133,7 +133,7 @@ const FIELDS: FieldDef[] = [
     key: "dispatchCoverage",
     label: "Cobertura de despacho",
     type: "text",
-    placeholder: "Despacho a todo Chile",
+    placeholder: "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos",
     maxLength: 200,
     span: "half",
   },

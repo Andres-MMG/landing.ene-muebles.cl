@@ -21,7 +21,7 @@ const OG_IMAGE_PATH = "/opengraph-image";
 
 const OG_TITLE = "ENE-MUEBLES · Mobiliario escolar y de oficina";
 const OG_DESCRIPTION =
-  "Mobiliario institucional para aulas, oficinas e instituciones en Chile. Catálogo 2026, despacho a todo Chile y cotización en 24 h hábiles.";
+  "Mobiliario institucional para aulas, oficinas e instituciones en Chile. Catálogo 2026, despacho desde la Región de Valparaíso hasta la Región de Los Lagos y cotización en 24 h hábiles.";
 
 export const siteMetadata = {
   metadataBase: new URL(SITE_URL),
@@ -30,7 +30,7 @@ export const siteMetadata = {
     template: "%s · ENE-MUEBLES",
   },
   description:
-    "Mobiliario escolar y de oficina certificado para instituciones en Chile. Catálogo, despacho a todo Chile y cotización en 24 h.",
+    "Mobiliario escolar y de oficina certificado para instituciones en Chile. Catálogo, despacho desde la Región de Valparaíso hasta la Región de Los Lagos y cotización en 24 h.",
   openGraph: {
     type: "website",
     locale: "es_CL",
@@ -42,7 +42,7 @@ export const siteMetadata = {
         url: OG_IMAGE_PATH,
         width: 1200,
         height: 630,
-        alt: "ENE Muebles — Mobiliario institucional · Catálogo · Despacho a todo Chile",
+        alt: "ENE Muebles — Mobiliario institucional · Catálogo · Regiones desde Valparaíso hasta Los Lagos",
       },
     ],
   },

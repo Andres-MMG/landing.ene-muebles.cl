@@ -183,14 +183,14 @@ describe('PUT /api/admin/site-setting — validation', () => {
       siteName: 'Ene Muebles',
       rut: '76.123.456-7',
       whatsappDefaultMessage: 'Hola',
-      dispatchCoverage: '  Despacho a todo Chile  ',
+      dispatchCoverage: '  Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos  ',
       addressCity: 'Temuco',
       addressRegion: 'La Araucanía',
     });
     expect(res.status).toBe(200);
     const body = (await putBody({})) as { data?: Record<string, unknown> };
     expect(body.data).toMatchObject({
-      dispatchCoverage: 'Despacho a todo Chile',
+      dispatchCoverage: 'Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos',
       addressCity: 'Temuco',
       addressRegion: 'La Araucanía',
     });

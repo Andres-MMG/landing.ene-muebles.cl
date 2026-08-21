@@ -5,12 +5,13 @@ export const site = {
   brand: "ENE-MUEBLES",
   promise: "Mobiliario resistente para aulas, oficinas e instituciones.",
   // B1 (U6): single static default for dispatch coverage. The live
-  // value lives in the site-setting `dispatchCoverage` field (seed:
-  // "Despacho a todo Chile", pending business confirmation); every
+  // value lives in the site-setting `dispatchCoverage` field; every
   // static fallback string below uses the SAME wording so the site
   // never contradicts itself when the CMS is unreachable.
-  dispatchCoverageFallback: "Despacho a todo Chile",
-  dispatch: "Despacho a todo Chile · Cotización en 24 h · Garantía escrita",
+  dispatchCoverageFallback:
+    "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos",
+  dispatch:
+    "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos · Cotización en 24 h · Garantía escrita",
   catalogAll: "Ver catálogo completo",
   whatsappCta: "Hablar por WhatsApp",
   quoteCta: "Solicitar cotización",
@@ -32,7 +33,8 @@ export const site = {
   footerCatalog: "Catálogo",
   footerContact: "Contacto",
   footerLegal: "Legal",
-  footerCopy: "Proveedor de mobiliario escolar y de oficina en Chile. Despacho a todo Chile.",
+  footerCopy:
+    "Proveedor de mobiliario escolar y de oficina en Chile. Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos.",
 
   nav: [
     { label: "Inicio", href: "/" },
@@ -53,7 +55,7 @@ export const site = {
   missionHeading:
     "Suministrar mobiliario institucional bajo estándares de pliego público.",
   missionBody:
-    "Suministrar mobiliario escolar y de oficina que cumple con los estándares de pliego público, con despacho a todo Chile y respaldo escrito por cada operación.",
+        "Suministrar mobiliario escolar y de oficina que cumple con los estándares de pliego público, con despacho desde la Región de Valparaíso hasta la Región de Los Lagos y respaldo escrito por cada operación.",
   visionLabel: "Visión",
   visionHeading:
     "Ser el proveedor de referencia en mobiliario institucional en Chile.",
@@ -75,7 +77,7 @@ export const site = {
     {
       title: "Cobertura",
       body:
-        "Despacho a todo Chile. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
+        "Despacho desde la Región de Valparaíso hasta la Región de Los Lagos. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
     },
     {
       title: "Atención",

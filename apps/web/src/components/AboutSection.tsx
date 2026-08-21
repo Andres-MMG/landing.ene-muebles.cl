@@ -8,7 +8,7 @@ type AboutSectionProps = {
   categoryCount?: number;
   /**
    * B1 (U6) — dispatch-coverage copy from the site-setting singleton
-   * ("Despacho a todo Chile" seeded by default). Renders in the stats
+   * (regional range seeded by default). Renders in the stats
    * rail instead of the old region-range claim ("V – X").
    */
   dispatchCoverage?: string;

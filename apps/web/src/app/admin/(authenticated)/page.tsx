@@ -6,7 +6,7 @@ import {
   PRODUCT_INDEX_PAGE_SIZE,
   readStrapiProductPage,
 } from "./_lib/productIndex";
-import { listAdminImportBatches } from "@/lib/admin/strapi-admin";
+import { getStrapiAdminToken, listAdminImportBatches } from "@/lib/admin/strapi-admin";
 import type { ImportBatch } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
@@ -53,7 +53,9 @@ type CategoryRow = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
-const TOKEN = process.env.STRAPI_API_TOKEN ?? "";
+// Product images are protected media relations; the admin list must use the
+// same scoped token as uploads and product editing, not the public token.
+const TOKEN = getStrapiAdminToken();
 
 async function listProducts(importBatch?: string): Promise<Product[]> {
   return aggregateProductIndex(async (page) => {

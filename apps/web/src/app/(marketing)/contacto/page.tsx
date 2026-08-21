@@ -1,6 +1,11 @@
-import { getSiteSettings } from "@/lib/strapi";
+import {
+  getContactProductBySlug,
+  getContactProductOptions,
+  getSiteSettings,
+} from "@/lib/strapi";
 import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 import { formatAddress } from "@/lib/address";
+import { normalizeProductSlug } from "@/lib/lead-policy";
 import { site } from "@ene/ui-tokens";
 import { ContactForm } from "@/components/ContactForm";
 
@@ -16,8 +21,20 @@ export const metadata = {
     "Habla con Ene Muebles: WhatsApp, email, teléfono y dirección para cotizar mobiliario escolar y de oficina para tu institución.",
 };
 
-export default async function ContactoPage() {
-  const settings = await getSiteSettings();
+type ContactoPageProps = {
+  searchParams?: Promise<{ product?: string | string[] }>;
+};
+
+export default async function ContactoPage({ searchParams }: ContactoPageProps) {
+  const requestedProduct = (await searchParams)?.product;
+  const requestedSlug = normalizeProductSlug(
+    Array.isArray(requestedProduct) ? requestedProduct[0] : requestedProduct,
+  );
+  const [settings, productOptions, selectedProduct] = await Promise.all([
+    getSiteSettings(),
+    getContactProductOptions(),
+    getContactProductBySlug(requestedSlug),
+  ]);
   // B1 (U7): structured address — the street renders alone when no
   // city/region is configured (both are unconfirmed), and appends
   // ", {city}" / ", {region}" as soon as the client confirms them.
@@ -137,7 +154,10 @@ export default async function ContactoPage() {
                 {site.contactoNote}
               </p>
             </div>
-            <ContactForm />
+            <ContactForm
+              productOptions={productOptions}
+              initialProductSlug={selectedProduct?.slug ?? null}
+            />
           </div>
         </div>
       </section>

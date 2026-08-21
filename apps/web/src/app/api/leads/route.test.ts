@@ -107,6 +107,44 @@ describe("POST /api/leads — validation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it.each(["Región Metropolitana", "Arica y Parinacota", "", "metropolitana"])(
+    "rejects an unsupported or malformed region (%s) before persistence",
+    async (region: string) => {
+      const fetchMock = stubStrapiFetch();
+
+      const res = await callPost({ ...VALID_BODY, region });
+
+      expect(res.status).toBe(400);
+      await expect(res.json()).resolves.toMatchObject({
+        ok: false,
+        errors: { region: "Selecciona una región válida." },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ["Valparaíso", "203.0.113.20"],
+    ["Metropolitana", "203.0.113.21"],
+    ["O'Higgins", "203.0.113.22"],
+    ["Maule", "203.0.113.23"],
+    ["Ñuble", "203.0.113.24"],
+    ["Biobío", "203.0.113.25"],
+    ["La Araucanía", "203.0.113.26"],
+    ["Los Ríos", "203.0.113.27"],
+    ["Los Lagos", "203.0.113.28"],
+  ] as [string, string][]) ("accepts the supported region %s", async (region: string, ip: string) => {
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost(
+      { ...VALID_BODY, region, idempotencyKey: `region-key-${ip}` },
+      ip,
+    );
+
+    expect(res.status).toBe(201);
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
   it("rejects malformed JSON without persisting", async () => {
     const fetchMock = stubStrapiFetch();
     const { POST } = await import("./route");
@@ -184,6 +222,7 @@ describe("POST /api/leads — rate limiting", () => {
     expect(retryAfter).toBeGreaterThanOrEqual(1);
     await expect(res.json()).resolves.toMatchObject({ ok: false });
 
+    // Product lookup is skipped for the null general-inquiry context.
     // 5 accepted submissions × (idempotency GET + create POST) = 10 calls.
     expect(fetchMock).toHaveBeenCalledTimes(10);
   });
@@ -266,6 +305,83 @@ describe("POST /api/leads — persistence", () => {
       status: "new",
       idempotencyKey: "idem-test-0001",
     });
+  });
+
+  it("persists a verified product snapshot and ignores the client label", async () => {
+    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (init?.method === "POST") {
+        return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), { status: 200 });
+      }
+      if (url.includes("/api/products?")) {
+        return new Response(JSON.stringify({ data: [{ name: "Silla Norte", slug: "silla-norte" }] }), { status: 200 });
+      }
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await callPost({
+      ...VALID_BODY,
+      productSlug: "silla-norte",
+      product: "Producto falsificado",
+    });
+
+    expect(res.status).toBe(201);
+    const createCall = fetchMock.mock.calls.find(
+      ([, init]: [unknown, RequestInit?]) => init?.method === "POST",
+    );
+    expect(JSON.parse(String(createCall?.[1]?.body)).data.product).toBe("Silla Norte");
+  });
+
+  it("persists the exact general-inquiry contract without a client product label", async () => {
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost({
+      ...VALID_BODY,
+      product: "Producto falsificado",
+      productSlug: "Pregunta general",
+    });
+
+    expect(res.status).toBe(201);
+    const createCall = fetchMock.mock.calls.find(
+      ([, init]: [unknown, RequestInit?]) => init?.method === "POST",
+    );
+    expect(JSON.parse(String(createCall?.[1]?.body))).toEqual({
+      data: {
+        name: "Ana Pérez",
+        institution: "Colegio San Andrés",
+        email: "ana@colegio.cl",
+        phone: "+56912345678",
+        region: "Metropolitana",
+        message: "Necesitamos cotizar 40 sillas para la sala de clases.",
+        consent: true,
+        consentVersion: "2026-01",
+        source: "contact-form",
+        product: null,
+        status: "new",
+        idempotencyKey: "idem-test-0001",
+      },
+    });
+  });
+
+  it("persists null for stale or tampered product context", async () => {
+    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      if (init?.method === "POST") return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), { status: 200 });
+      return new Response(JSON.stringify({ data: [] }), { status: 200 });
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const res = await callPost({
+      ...VALID_BODY,
+      productSlug: "deleted-product",
+      product: "Do not trust this label",
+    });
+
+    expect(res.status).toBe(201);
+    const createCall = fetchMock.mock.calls.find(
+      ([, init]: [unknown, RequestInit?]) => init?.method === "POST",
+    );
+    expect(JSON.parse(String(createCall?.[1]?.body)).data.product).toBeNull();
   });
 
   it("deduplicates a retried submission via idempotencyKey", async () => {

@@ -309,16 +309,12 @@ export default async function ProductDetailPage({ params }: Props) {
                     <span aria-hidden>→</span>
                   </a>
                 ) : null}
-                {settings.contactEmail ? (
-                  <a
-                    href={`mailto:${settings.contactEmail}?subject=${encodeURIComponent(
-                      `Consulta: ${product.name}`,
-                    )}`}
-                    className="t-label text-ink underline-offset-[6px] hover:text-taupe-text hover:underline tap-target"
-                  >
-                    Enviar correo
-                  </a>
-                ) : null}
+                <a
+                  href={`/contacto?product=${encodeURIComponent(product.slug)}`}
+                  className="t-label text-ink underline-offset-[6px] hover:text-taupe-text hover:underline tap-target"
+                >
+                  Enviar correo
+                </a>
               </div>
             </div>
           </div>

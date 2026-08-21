@@ -53,15 +53,40 @@ describe("ContactForm — rendering", () => {
     expect(html).toContain("tabindex=\"-1\"");
   });
 
-  it("keeps the 16 Chilean regions in the select", () => {
+  it("renders only the nine supported regions", () => {
     const html = renderToStaticMarkup(createElement(ContactForm));
     for (const region of [
-      "Arica y Parinacota",
+      "Valparaíso",
       "Metropolitana",
-      "Magallanes",
+      "O'Higgins",
+      "Maule",
+      "Ñuble",
+      "Biobío",
+      "La Araucanía",
+      "Los Ríos",
+      "Los Lagos",
     ]) {
-      expect(html).toContain(`value="${region}"`);
+      expect(html).toContain(
+        `value="${region.replace("'", "&#x27;")}"`,
+      );
     }
+    expect(html).not.toContain('value="Arica y Parinacota"');
+    expect(html).not.toContain('value="Magallanes"');
+  });
+
+  it("renders general inquiry first and preselects a product context", () => {
+    const html = renderToStaticMarkup(
+      createElement(ContactForm, {
+        productOptions: [
+          { slug: "silla-escolar", name: "Silla escolar" },
+          { slug: "mesa-docente", name: "Mesa docente" },
+        ],
+        initialProductSlug: "mesa-docente",
+      }),
+    );
+    expect(html).toContain('name="productSlug"');
+    expect(html.indexOf("Pregunta general")).toBeLessThan(html.indexOf("Silla escolar"));
+    expect(html).toMatch(/value="mesa-docente"[^>]*selected/);
   });
 });
 
@@ -77,6 +102,7 @@ describe("ContactForm — client behavior (source-level)", () => {
     const source = readFileSync(formPath, "utf8");
     expect(source).toContain("crypto.randomUUID()");
     expect(source).toContain("consentVersion");
+    expect(source).toContain('productSlug: data.get("productSlug")');
   });
 
   it("wires field-level errors with aria-describedby and focuses the first error", () => {

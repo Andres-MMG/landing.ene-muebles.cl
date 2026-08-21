@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { site } from "@ene/ui-tokens";
+import { SUPPORTED_REGIONS } from "@/lib/lead-policy";
+import type { ContactProductOption } from "@/lib/strapi";
 
 /**
  * ContactForm — public lead capture form (lead-capture spec).
@@ -18,25 +20,6 @@ import { site } from "@ene/ui-tokens";
  * agreed to (see /privacidad). The API response shape is
  * `{ ok, errors?: Record<string, string> }` — 201 on success.
  */
-
-const REGIONES = [
-  "Arica y Parinacota",
-  "Tarapacá",
-  "Antofagasta",
-  "Atacama",
-  "Coquimbo",
-  "Valparaíso",
-  "Metropolitana",
-  "O'Higgins",
-  "Maule",
-  "Ñuble",
-  "Biobío",
-  "La Araucanía",
-  "Los Ríos",
-  "Los Lagos",
-  "Aysén",
-  "Magallanes",
-];
 
 const CONSENT_VERSION = "2026-01";
 
@@ -62,7 +45,15 @@ const FIELD_IDS: Record<keyof FieldErrors, string> = {
   form: "lead-form-status",
 };
 
-export function ContactForm() {
+type ContactFormProps = {
+  productOptions?: ContactProductOption[];
+  initialProductSlug?: string | null;
+};
+
+export function ContactForm({
+  productOptions = [],
+  initialProductSlug = null,
+}: ContactFormProps) {
   const [status, setStatus] = useState<Status>({ state: "idle" });
   const [errors, setErrors] = useState<FieldErrors>({});
   const formRef = useRef<HTMLFormElement | null>(null);
@@ -105,6 +96,7 @@ export function ContactForm() {
       email: data.get("email"),
       phone: data.get("phone"),
       region: data.get("region"),
+      productSlug: data.get("productSlug"),
       message: data.get("message"),
       consent: data.get("consent") === "on",
       consentVersion: CONSENT_VERSION,
@@ -252,6 +244,25 @@ export function ContactForm() {
       </div>
 
       <label className="block">
+        <span className={labelClasses}>¿Sobre qué producto nos escribes?</span>
+        <select
+          id="lead-product"
+          name="productSlug"
+          defaultValue={initialProductSlug ?? ""}
+          className="mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper focus:border-taupe focus:outline-none"
+        >
+          <option value="" className="bg-ink text-paper">
+            Pregunta general
+          </option>
+          {productOptions.map((product) => (
+            <option key={product.slug} value={product.slug} className="bg-ink text-paper">
+              {product.name}
+            </option>
+          ))}
+        </select>
+      </label>
+
+      <label className="block">
         <span className={labelClasses}>{site.contactoFieldRegion}</span>
         <select
           id="lead-region"
@@ -262,7 +273,7 @@ export function ContactForm() {
           <option value="" disabled className="bg-ink text-paper">
             Selecciona una región
           </option>
-          {REGIONES.map((region) => (
+          {SUPPORTED_REGIONS.map((region) => (
             <option key={region} value={region} className="bg-ink text-paper">
               {region}
             </option>

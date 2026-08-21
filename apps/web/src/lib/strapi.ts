@@ -1,4 +1,5 @@
 import { site as siteTokens } from "@ene/ui-tokens";
+import { normalizeProductSlug } from "./lead-policy";
 
 /**
  * Strapi v5 client for the public Next.js frontend.
@@ -252,6 +253,12 @@ export type Product = {
   createdAt?: string;
   updatedAt?: string;
   publishedAt?: string | null;
+};
+
+/** Minimal published product shape used by the product-aware contact form. */
+export type ContactProductOption = {
+  slug: string;
+  name: string;
 };
 
 /** Catalog-import (S2b) — provenance enum for `Product.importSource`. */
@@ -925,6 +932,81 @@ export async function getAllProducts(): Promise<Product[]> {
     page += 1;
   }
   return all;
+}
+
+const normalizeContactProductOption = (raw: unknown): ContactProductOption | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const candidate = raw as { slug?: unknown; name?: unknown };
+  const slug = normalizeProductSlug(candidate.slug);
+  const name = typeof candidate.name === "string" ? candidate.name.trim() : "";
+  if (!slug || !name) return null;
+  return { slug, name };
+};
+
+/**
+ * Loads the complete, lightweight selector source for the contact form.
+ * Published and active filters are repeated here rather than relying on the
+ * caller, because this helper is also the server-side attribution boundary.
+ */
+export async function getContactProductOptions(): Promise<ContactProductOption[]> {
+  const all: ContactProductOption[] = [];
+  let page = 1;
+
+  try {
+    while (true) {
+      const params = new URLSearchParams();
+      params.set("status", "published");
+      params.set("filters[active][$eq]", "true");
+      params.set("fields[0]", "name");
+      params.set("fields[1]", "slug");
+      params.set("sort", "name:asc");
+      params.set("pagination[page]", String(page));
+      params.set("pagination[pageSize]", "100");
+
+      const json = await request<CollectionEnvelope<unknown>>(`/api/products?${params.toString()}`, undefined, {
+        tags: [STRAPI_CACHE_TAGS.catalog],
+      });
+      const batch = (json.data ?? [])
+        .map(normalizeContactProductOption)
+        .filter((option): option is ContactProductOption => option !== null);
+      all.push(...batch);
+
+      const total = json.meta?.pagination?.total ?? all.length;
+      if (batch.length === 0 || all.length >= total) break;
+      page += 1;
+    }
+  } catch {
+    return [];
+  }
+
+  return all;
+}
+
+/**
+ * Resolves a transient slug to the current published product snapshot.
+ * Missing, malformed, stale, inactive, unpublished, or unavailable products
+ * intentionally become null so a valid general inquiry can continue.
+ */
+export async function getContactProductBySlug(slug: unknown): Promise<ContactProductOption | null> {
+  const normalizedSlug = normalizeProductSlug(slug);
+  if (!normalizedSlug) return null;
+
+  try {
+    const params = new URLSearchParams();
+    params.set("status", "published");
+    params.set("filters[active][$eq]", "true");
+    params.set("filters[slug][$eq]", normalizedSlug);
+    params.set("fields[0]", "name");
+    params.set("fields[1]", "slug");
+    params.set("pagination[pageSize]", "1");
+
+    const json = await request<CollectionEnvelope<unknown>>(`/api/products?${params.toString()}`, undefined, {
+      tags: [STRAPI_CACHE_TAGS.catalog],
+    });
+    return normalizeContactProductOption(json.data?.[0]);
+  } catch {
+    return null;
+  }
 }
 
 /**

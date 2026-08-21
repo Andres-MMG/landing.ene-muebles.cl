@@ -1,7 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { STRAPI_URL } from "@/lib/strapi";
+import { getContactProductBySlug, STRAPI_URL } from "@/lib/strapi";
 import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import { isSupportedRegion, normalizeProductSlug } from "@/lib/lead-policy";
 import { createRateLimiter } from "./_lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -68,7 +69,12 @@ const LeadSchema = z.object({
     .email("Ingresa un correo válido.")
     .max(200, "El correo es demasiado largo."),
   phone: optionalTrimmed(40),
-  region: optionalTrimmed(80),
+  region: z
+    .string()
+    .trim()
+    .min(1, "Selecciona una región válida.")
+    .max(80, "Selecciona una región válida.")
+    .refine(isSupportedRegion, "Selecciona una región válida."),
   message: z
     .string()
     .trim()
@@ -83,6 +89,8 @@ const LeadSchema = z.object({
   /** Honeypot — accepted by the schema but rejected earlier in the handler. */
   website: z.string().optional(),
   product: optionalTrimmed(200),
+  /** Transient context only; the client-provided product label is ignored. */
+  productSlug: z.string().trim().max(200).optional().nullable(),
   idempotencyKey: z.string().trim().min(8, "Falta la clave de solicitud.").max(64),
 });
 
@@ -248,18 +256,22 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: true }, { status: 201 });
   }
 
+  // Product context is always re-resolved server-side. The submitted `product`
+  // label is deliberately never copied into the Lead snapshot.
+  const product = await getContactProductBySlug(normalizeProductSlug(input.productSlug));
+
   const payload = {
     data: {
       name: input.name,
       institution: input.institution ?? null,
       email: input.email,
       phone: input.phone ?? null,
-      region: input.region ?? null,
+      region: input.region,
       message: input.message,
       consent: input.consent,
       consentVersion: input.consentVersion,
       source: SOURCE_CONTACT_FORM,
-      product: input.product ?? null,
+      product: product?.name ?? null,
       status: "new",
       idempotencyKey: input.idempotencyKey,
     },

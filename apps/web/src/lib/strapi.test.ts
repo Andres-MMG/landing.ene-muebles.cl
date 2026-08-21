@@ -378,6 +378,58 @@ describe("getAllProducts", () => {
   });
 });
 
+describe("contact product helpers", () => {
+  it("returns only lightweight active published options across pages", async () => {
+    mockFetch(200, {
+      data: [
+        { name: "Silla Norte", slug: "silla-norte", price: 999, images: [{ url: "/ignored.jpg" }] },
+      ],
+      meta: { pagination: { total: 2 } },
+    });
+    mockFetch(200, {
+      data: [{ name: "Mesa Sur", slug: "mesa-sur", description: "ignored" }],
+      meta: { pagination: { total: 2 } },
+    });
+
+    const { getContactProductOptions } = await import("./strapi");
+    await expect(getContactProductOptions()).resolves.toEqual([
+      { slug: "silla-norte", name: "Silla Norte" },
+      { slug: "mesa-sur", name: "Mesa Sur" },
+    ]);
+    expect(fetch).toHaveBeenCalledTimes(2);
+    const firstUrl = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string);
+    expect(firstUrl).toMatch(/status=published/);
+    expect(firstUrl).toMatch(/filters\[active\]\[\$eq\]=true/);
+    expect(firstUrl).toMatch(/fields\[0\]=name/);
+    expect(firstUrl).toMatch(/fields\[1\]=slug/);
+    expect(firstUrl).toMatch(/sort=name:asc/);
+    expect(firstUrl).toMatch(/pagination\[pageSize\]=100/);
+  });
+
+  it("stops on an empty page and returns an empty list on fetch failure", async () => {
+    mockFetch(200, { data: [{ name: "Silla", slug: "silla" }], meta: { pagination: { total: 3 } } });
+    mockFetch(200, { data: [] });
+    const { getContactProductOptions } = await import("./strapi");
+    await expect(getContactProductOptions()).resolves.toEqual([{ slug: "silla", name: "Silla" }]);
+
+    vi.resetModules();
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("offline"));
+    const { getContactProductOptions: getFailedOptions } = await import("./strapi");
+    await expect(getFailedOptions()).resolves.toEqual([]);
+  });
+
+  it("resolves only a valid active published slug and falls back to null", async () => {
+    mockFetch(200, { data: [{ name: "Silla Norte", slug: "silla-norte" }] });
+    const { getContactProductBySlug } = await import("./strapi");
+    await expect(getContactProductBySlug("silla-norte")).resolves.toEqual({
+      slug: "silla-norte",
+      name: "Silla Norte",
+    });
+    await expect(getContactProductBySlug("<tampered>")).resolves.toBeNull();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+});
+
 describe("getProductCount", () => {
   it("returns the total from the pagination meta with a minimal payload", async () => {
     mockFetch(200, { data: [], meta: { pagination: { page: 1, pageSize: 1, pageCount: 204, total: 204 } } });

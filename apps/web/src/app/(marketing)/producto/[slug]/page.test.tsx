@@ -328,4 +328,30 @@ describe('producto/[slug] — public price visibility', () => {
     expect(html).toContain('$89.900');
     expect(html).toContain('t-mono mt-4 text-2xl text-ink');
   });
+
+  it('routes the email CTA to the shared form and preserves WhatsApp', async () => {
+    mockStrapi(product(89900));
+    const { default: ProductDetailPage } = await import('./page');
+    const html = renderToStaticMarkup(
+      await ProductDetailPage({ params: Promise.resolve({ slug: 'mesa-institucional' }) }),
+    );
+
+    expect(html).toContain('href="/contacto?product=mesa-institucional"');
+    expect(html).not.toContain('mailto:hola@ene-muebles.cl?subject=');
+    expect(html).toContain('Consultar por WhatsApp');
+  });
+
+  it('encodes the product slug in the contact-form URL', async () => {
+    const encodedProduct = {
+      ...product(89900),
+      slug: 'silla norte/ñ'
+    };
+    mockStrapi(encodedProduct);
+    const { default: ProductDetailPage } = await import('./page');
+    const html = renderToStaticMarkup(
+      await ProductDetailPage({ params: Promise.resolve({ slug: encodedProduct.slug }) }),
+    );
+
+    expect(html).toContain('href="/contacto?product=silla%20norte%2F%C3%B1"');
+  });
 });

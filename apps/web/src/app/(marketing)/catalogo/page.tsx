@@ -9,6 +9,7 @@ import {
   getCategories,
   getProductCount,
   getProducts,
+  getSubcategorySummaries,
   getSiteSettings,
   type Category,
   type Product,
@@ -25,7 +26,7 @@ export const metadata = {
 const PAGE_SIZE = 12;
 
 type Props = {
-  searchParams: Promise<{ page?: string; q?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; subcategory?: string }>;
 };
 
 const parsePage = (raw: string | undefined): number => {
@@ -34,24 +35,31 @@ const parsePage = (raw: string | undefined): number => {
 };
 
 export default async function CatalogoPage({ searchParams }: Props) {
-  const { page: pageParam, q: qParam } = await searchParams;
+  const { page: pageParam, q: qParam, subcategory: subcategoryParam } = await searchParams;
   // Duplicate query params arrive as `string[]` (e.g. `?q=a&q=b`) —
   // a non-string value is not a usable search term.
   const q = typeof qParam === "string" ? qParam.trim() : undefined;
+  const subcategory =
+    typeof subcategoryParam === "string" ? subcategoryParam.trim() : undefined;
   const settings = await getSiteSettings();
 
   let categories: Category[] = [];
   let products: Product[] = [];
   let total = 0;
+  let subcategorySummaries: Array<{ subcategory?: string; count: number }> = [];
   let page = parsePage(typeof pageParam === "string" ? pageParam : undefined);
   // B1 (U5) — live active-product count for the header fallback when
   // the paginated read returns nothing (empty catalog or unreachable
   // CMS). `getProductCount` never throws (0 on failure).
   const productCount = await getProductCount();
   try {
-    [categories, { products, total }] = await Promise.all([
+    [categories, { products, total }, subcategorySummaries] = await Promise.all([
       getCategories(),
-      getProducts({ page, pageSize: PAGE_SIZE, q }),
+      getProducts({ page, pageSize: PAGE_SIZE, q, subcategory }),
+      getSubcategorySummaries({ q }).catch((err) => {
+        console.warn("[catalogo] subcategory summary fetch failed:", err);
+        return [];
+      }),
     ]);
   } catch (err) {
     console.warn("[catalogo] catalog fetch failed:", err);
@@ -63,7 +71,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
   if (total > 0 && products.length === 0) {
     page = Math.ceil(total / PAGE_SIZE);
     try {
-      const result = await getProducts({ page, pageSize: PAGE_SIZE, q });
+      const result = await getProducts({ page, pageSize: PAGE_SIZE, q, subcategory });
       products = result.products;
       total = result.total;
     } catch (err) {
@@ -174,6 +182,8 @@ export default async function CatalogoPage({ searchParams }: Props) {
             <ProductSubcategoryGroups
               products={products}
               whatsappNumber={settings.whatsappNumber}
+              subcategorySummaries={subcategorySummaries}
+              q={q}
             />
             <Pagination
               total={total}
@@ -181,6 +191,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
               pageSize={PAGE_SIZE}
               basePath="/catalogo"
               q={q}
+              subcategory={subcategory}
             />
           </>
         )}

@@ -33,12 +33,14 @@ const getCategories = vi.fn();
 const getProducts = vi.fn();
 const getSiteSettings = vi.fn();
 const getProductCount = vi.fn();
+const getSubcategorySummaries = vi.fn();
 
 vi.mock("@/lib/strapi", () => ({
   getCategories,
   getProducts,
   getSiteSettings,
   getProductCount,
+  getSubcategorySummaries,
 }));
 
 describe("CatalogoPage", () => {
@@ -47,6 +49,7 @@ describe("CatalogoPage", () => {
     getCategories.mockResolvedValue([]);
     getSiteSettings.mockResolvedValue({ whatsappNumber: "+56912345678" });
     getProductCount.mockResolvedValue(20);
+    getSubcategorySummaries.mockResolvedValue([]);
     getProducts.mockResolvedValue({
       products: [
         {
@@ -72,7 +75,12 @@ describe("CatalogoPage", () => {
     expect(html).toContain('data-testid="subcategory-groups"');
     expect(html).toContain('data-testid="pagination"');
     expect(html).toContain("2/13");
-    expect(getProducts).toHaveBeenCalledWith({ page: 2, pageSize: 12, q: undefined });
+    expect(getProducts).toHaveBeenCalledWith({
+      page: 2,
+      pageSize: 12,
+      q: undefined,
+      subcategory: undefined,
+    });
   });
 
   it("promotes the print catalog as the primary export CTA and keeps JSON as secondary", async () => {
@@ -125,5 +133,16 @@ describe("CatalogoPage", () => {
     expect(html).toContain(
       "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos, descuentos por",
     );
+  });
+
+  it("keeps the catalog available when the summary query fails", async () => {
+    getSubcategorySummaries.mockRejectedValue(new Error("summary unavailable"));
+    const { default: CatalogoPage } = await import("./page");
+    const html = renderToStaticMarkup(
+      await CatalogoPage({ searchParams: Promise.resolve({}) }),
+    );
+
+    expect(html).toContain('data-testid="subcategory-groups"');
+    expect(html).toContain("13");
   });
 });

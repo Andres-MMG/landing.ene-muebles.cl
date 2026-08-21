@@ -792,6 +792,7 @@ export type ProductListResult = {
 
 export type ProductListOptions = {
   categorySlug?: string;
+  subcategory?: string;
   page?: number;
   pageSize?: number;
   q?: string;
@@ -815,7 +816,7 @@ export type ProductListOptions = {
  * pagination controls without a second request.
  */
 export async function getProducts(options?: ProductListOptions): Promise<ProductListResult> {
-  const { categorySlug, q } = options ?? {};
+  const { categorySlug, q, subcategory } = options ?? {};
   const page = Math.max(1, Math.floor(options?.page ?? 1));
   const pageSize = options?.pageSize ?? 12;
 
@@ -828,6 +829,9 @@ export async function getProducts(options?: ProductListOptions): Promise<Product
   if (categorySlug) {
     params.set("filters[category][slug][$eq]", categorySlug);
   }
+  if (subcategory) {
+    params.set("filters[subcategory][$eqi]", subcategory);
+  }
   if (q) {
     params.set("filters[name][$containsi]", q);
   }
@@ -838,6 +842,62 @@ export async function getProducts(options?: ProductListOptions): Promise<Product
     products: (json.data ?? []).map((raw) => normalizeProduct(raw, options)),
     total: json.meta?.pagination?.total ?? json.data?.length ?? 0,
   };
+}
+
+export type ProductSubcategorySummary = {
+  subcategory?: string | null;
+};
+
+/**
+ * Fetch only subcategory values for the complete matching catalog result.
+ * This keeps the navigation stable across pagination without downloading
+ * product cards or media a second time.
+ */
+export async function getSubcategorySummaries(options?: {
+  categorySlug?: string;
+  q?: string;
+}): Promise<Array<{ subcategory?: string; count: number }>> {
+  const all: ProductSubcategorySummary[] = [];
+  let page = 1;
+
+  while (true) {
+    const params = new URLSearchParams();
+    params.set("filters[active][$eq]", "true");
+    params.set("fields[0]", "subcategory");
+    params.set("pagination[page]", String(page));
+    params.set("pagination[pageSize]", "100");
+    if (options?.categorySlug) {
+      params.set("filters[category][slug][$eq]", options.categorySlug);
+    }
+    if (options?.q) {
+      params.set("filters[name][$containsi]", options.q);
+    }
+
+    const json = await request<CollectionEnvelope<ProductSubcategorySummary>>(
+      `/api/products?${params.toString()}`,
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalog] },
+    );
+    const batch = json.data ?? [];
+    all.push(...batch);
+    const total = json.meta?.pagination?.total ?? all.length;
+    if (batch.length === 0 || all.length >= total) break;
+    page += 1;
+  }
+
+  const counts = new Map<string, { subcategory?: string; count: number }>();
+  for (const product of all) {
+    const value = product.subcategory?.trim() || undefined;
+    const key = value?.toLocaleLowerCase("es-CL") || "__other__";
+    const current = counts.get(key);
+    if (current) {
+      current.count += 1;
+    } else {
+      counts.set(key, { subcategory: value, count: 1 });
+    }
+  }
+
+  return Array.from(counts.values());
 }
 
 /**

@@ -8,16 +8,19 @@ type PaginationProps = {
   basePath: string;
   /** Preserved on every link so searches survive pagination. */
   q?: string;
+  /** Preserved on every link when a subcategory filter is active. */
+  subcategory?: string;
 };
 
 /**
  * Build the page-1 href without the `page` param (and without `q`
  * when absent) so the URL stays clean for default state.
  */
-const buildHref = (basePath: string, page: number, q?: string): string => {
+const buildHref = (basePath: string, page: number, q?: string, subcategory?: string): string => {
   const params = new URLSearchParams();
   if (page > 1) params.set("page", String(page));
   if (q) params.set("q", q);
+  if (subcategory) params.set("subcategory", subcategory);
   const qs = params.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 };
@@ -50,7 +53,7 @@ const activePill =
  * Pagination — numbered page pills with prev/next for the public
  * catalog lists. Renders nothing when everything fits on one page.
  */
-export function Pagination({ total, page, pageSize, basePath, q }: PaginationProps) {
+export function Pagination({ total, page, pageSize, basePath, q, subcategory }: PaginationProps) {
   const pageCount = Math.ceil(total / pageSize);
   if (pageCount <= 1) return null;
 
@@ -61,7 +64,7 @@ export function Pagination({ total, page, pageSize, basePath, q }: PaginationPro
     >
       {page > 1 ? (
         <Link
-          href={buildHref(basePath, page - 1, q) as never}
+          href={buildHref(basePath, page - 1, q, subcategory) as never}
           className={idlePill}
           aria-label="Página anterior"
         >
@@ -85,7 +88,7 @@ export function Pagination({ total, page, pageSize, basePath, q }: PaginationPro
         ) : (
           <Link
             key={entry}
-            href={buildHref(basePath, entry, q) as never}
+            href={buildHref(basePath, entry, q, subcategory) as never}
             className={idlePill}
             aria-label={`Ir a la página ${entry}`}
           >
@@ -96,7 +99,7 @@ export function Pagination({ total, page, pageSize, basePath, q }: PaginationPro
 
       {page < pageCount ? (
         <Link
-          href={buildHref(basePath, page + 1, q) as never}
+          href={buildHref(basePath, page + 1, q, subcategory) as never}
           className={idlePill}
           aria-label="Página siguiente"
         >

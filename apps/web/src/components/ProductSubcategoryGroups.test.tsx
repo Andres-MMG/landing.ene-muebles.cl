@@ -32,12 +32,28 @@ describe("ProductSubcategoryGroups", () => {
       <ProductSubcategoryGroups products={[product(1, "Sillas"), product(2, "Mesas")]} />
     );
 
-    expect(html).toContain('<nav aria-label="Subcategorías de esta página"');
+    expect(html).toContain('<nav aria-label="Subcategorías del catálogo"');
     expect(html).toContain('href="#subcategory-sillas-1"');
     expect(html).toContain('href="#subcategory-mesas-2"');
     expect(html).toContain('id="subcategory-sillas-1" tabindex="-1"');
     expect(html).toContain('aria-labelledby="subcategory-sillas-1-heading"');
     expect(html).toContain('<h2 id="subcategory-sillas-1-heading"');
+  });
+
+  it("renders complete subcategory summaries as catalog filters", () => {
+    const html = renderToStaticMarkup(
+      <ProductSubcategoryGroups
+        products={[product(1, "Sillas")]}
+        subcategorySummaries={[
+          { subcategory: "Sillas", count: 5 },
+          { subcategory: "Mesas", count: 6 },
+        ]}
+        q="madera"
+      />,
+    );
+
+    expect(html).toContain('href="/catalogo?subcategory=Mesas&amp;q=madera"');
+    expect(html).toContain(">6</span>");
   });
 
   it("keeps uncategorized products in the visible fallback group", () => {
@@ -54,7 +70,7 @@ describe("ProductSubcategoryGroups", () => {
       <ProductSubcategoryGroups products={[product(1), product(2, " ")]} />
     );
 
-    expect(html).not.toContain("Subcategorías de esta página");
+    expect(html).not.toContain("Subcategorías del catálogo");
     expect(html).toContain("Producto 1");
     expect(html).toContain("Producto 2");
   });

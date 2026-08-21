@@ -1,23 +1,37 @@
 import type { Product } from "@/lib/strapi";
-import { groupProductsBySubcategory, hasSubcategoryData } from "@/lib/product-groups";
+import {
+  buildSubcategorySummaries,
+  groupProductsBySubcategory,
+  hasSubcategoryData,
+  type ProductSubcategoryCount,
+} from "@/lib/product-groups";
 import { ProductCard } from "./ProductCard";
 import { SubcategoryNavigation } from "./SubcategoryNavigation";
 
 type ProductSubcategoryGroupsProps = {
   products: Product[];
   whatsappNumber?: string;
+  subcategorySummaries?: ProductSubcategoryCount[];
+  q?: string;
 };
 
 /**
- * A paginated catalog page can only group the products currently shown.
- * The product count and pagination remain owned by the parent page.
+ * Cards stay paginated, while the optional summary list keeps navigation and
+ * counts stable across the complete matching catalog result.
  */
 export function ProductSubcategoryGroups({
   products,
   whatsappNumber,
+  subcategorySummaries,
+  q,
 }: ProductSubcategoryGroupsProps) {
   const groups = groupProductsBySubcategory(products);
-  const supportsGrouping = hasSubcategoryData(groups);
+  const summaryGroups = subcategorySummaries
+    ? buildSubcategorySummaries(subcategorySummaries)
+    : undefined;
+  const supportsGrouping =
+    hasSubcategoryData(groups) ||
+    Boolean(summaryGroups?.some((group) => group.name !== "Otros productos"));
 
   if (!supportsGrouping) {
     return <ProductGrid products={products} whatsappNumber={whatsappNumber} />;
@@ -25,7 +39,10 @@ export function ProductSubcategoryGroups({
 
   return (
     <div className="space-y-16 sm:space-y-20">
-      <SubcategoryNavigation groups={groups} />
+      <SubcategoryNavigation
+        groups={summaryGroups ?? groups}
+        q={q}
+      />
 
       {groups.map((group) => (
         <section

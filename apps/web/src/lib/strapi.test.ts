@@ -270,6 +270,18 @@ describe("getProducts", () => {
     expect(decodeURIComponent(url)).toMatch(/filters\[name\]\[\$containsi\]=mesa/);
   });
 
+  it("adds a case-insensitive subcategory filter when selected", async () => {
+    mockFetch(200, { data: [], meta: { pagination: { total: 0 } } });
+
+    const { getProducts } = await import("./strapi");
+    await getProducts({ subcategory: "Mesas y escritorios" });
+
+    const url = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string;
+    expect(decodeURIComponent(url)).toMatch(
+      /filters\[subcategory\]\[\$eqi\]=Mesas\+y\+escritorios/,
+    );
+  });
+
   it("clamps page to >= 1", async () => {
     mockFetch(200, { data: [], meta: { pagination: { total: 0 } } });
 

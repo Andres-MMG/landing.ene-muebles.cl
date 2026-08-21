@@ -131,7 +131,7 @@ describe("CatalogoPage", () => {
     );
 
     expect(html).toContain(
-      "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos, descuentos por",
+      "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos y pago a 30, 60",
     );
   });
 

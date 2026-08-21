@@ -49,8 +49,7 @@ export function CategoryGrid({ categories }: CategoryGridProps) {
           <div className="lg:col-span-4 lg:col-start-9">
             <p className="t-body text-base text-ink-mute">
               Cada línea agrupa productos con la misma estructura, materiales
-              y plazos de despacho. Cotización por volumen disponible sobre
-              toda la línea.
+              y plazos de despacho.
             </p>
             <Link
               href="/catalogo"

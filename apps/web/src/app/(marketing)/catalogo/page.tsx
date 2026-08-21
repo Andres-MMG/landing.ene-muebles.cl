@@ -115,8 +115,8 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 {/* B1 (U6): coverage reads from the site-setting
                     singleton so /catalogo stops contradicting the
                     hero/footer copy. */}
-                {settings.dispatchCoverage ?? site.dispatchCoverageFallback}, descuentos por
-                volumen y pago a 30, 60 o 90 días para instituciones. Cada producto
+                {settings.dispatchCoverage ?? site.dispatchCoverageFallback} y pago a 30, 60
+                o 90 días para instituciones. Cada producto
                 se entrega con ficha técnica y declaración de materiales.
               </p>
               <div className="mt-6 space-y-6">

@@ -29,7 +29,7 @@ export const site = {
   contactOverline: "Hablemos",
   contactHeading: "Cotiza tu proyecto institucional.",
   contactBody:
-    "Cuéntanos qué necesitas — cantidad, plazos, región — y te enviamos una propuesta con medidas, materiales, plazo de despacho y descuento por volumen.",
+    "Cuéntanos qué necesitas — cantidad, plazos, región — y te enviamos una propuesta con medidas, materiales y plazo de despacho.",
   footerCatalog: "Catálogo",
   footerContact: "Contacto",
   footerLegal: "Legal",
@@ -77,7 +77,7 @@ export const site = {
     {
       title: "Cobertura",
       body:
-        "Despacho desde la Región de Valparaíso hasta la Región de Los Lagos. Cotización válida 30 días. Descuentos por volumen sobre toda la línea.",
+        "Despacho desde la Región de Valparaíso hasta la Región de Los Lagos. Cotización válida 30 días.",
     },
     {
       title: "Atención",

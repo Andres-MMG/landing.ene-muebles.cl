@@ -50,8 +50,7 @@ export function FeaturedProducts({
           <div className="lg:col-span-4 lg:col-start-9">
             <p className="t-body text-base text-ink-mute">
               La selección activa del catálogo. Cada uno se entrega con
-              ficha técnica, plazo de despacho y descuento por volumen
-              sujeto a cantidad.
+              ficha técnica y plazo de despacho.
             </p>
             <a
               href="/catalogo"

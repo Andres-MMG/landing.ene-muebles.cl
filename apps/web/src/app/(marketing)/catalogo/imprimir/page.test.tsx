@@ -16,7 +16,7 @@ vi.mock("@/lib/product-attributes", () => ({
     product.dimensions?.width ? "49 x 65 x 42 cm" : null,
 }));
 
-const product = (id: number, category = "Oficina") => ({
+const product = (id: number, category = "Oficina", subcategory?: string) => ({
   id,
   name: `Producto ${id}`,
   slug: `producto-${id}`,
@@ -24,6 +24,7 @@ const product = (id: number, category = "Oficina") => ({
   price: 0,
   currency: "CLP",
   category: { id: 1, documentId: "c1", name: category, slug: category.toLowerCase() },
+  subcategory,
   dimensions: id === 1 ? { width: 49 } : undefined,
   materials: id === 1 ? ["Melamina 18 mm"] : undefined,
   images:
@@ -68,6 +69,8 @@ describe("CatalogoImprimirPage", () => {
     expect(html).toContain('data-page-number="true"');
     expect(html).toContain('<div class="print-catalog print-document"');
     expect(html).not.toContain("<main");
+    expect(html).toContain('aria-label="ENE MUEBLES"');
+    expect(html).toContain("ENE MUEBLES");
   });
 
   it("uses current CMS facts, large media, accessible fallbacks, and partial-page blank space", async () => {
@@ -86,6 +89,53 @@ describe("CatalogoImprimirPage", () => {
     expect(html).toContain("Sin imagen: Producto 2");
     expect(html).toContain("grid-template-rows: repeat(2, minmax(0, 1fr))");
     expect((html.match(/data-product-slug=/g) ?? []).length).toBe(9);
+  });
+
+  it("groups CMS products by category then optional subcategory without inventing missing names", async () => {
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: false,
+      products: [
+        product(1, "Oficina", "Escritorios"),
+        product(2, "Oficina", "Mesas"),
+        product(3, "Oficina"),
+        product(4, "Escolar", "Sillas"),
+      ],
+    });
+    const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
+
+    expect(html).toContain('data-category-slug="oficina" data-subcategory="Escritorios"');
+    expect(html).toContain('data-category-slug="oficina" data-subcategory="Mesas"');
+    expect(html).toContain('data-category-slug="escolar" data-subcategory="Sillas"');
+    expect(html).toContain("Subcategoría · Escritorios");
+    expect(html).toContain("Oficina · Escritorios");
+    expect(html).not.toContain("Subcategoría · Otros productos");
+    expect(html).toMatch(/data-category-slug="oficina"[^>]*><header[\s\S]*?Producto 3/);
+  });
+
+  it("uses deterministic card regions with bounded text and the full category-header wordmark", async () => {
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: false,
+      products: [
+        {
+          ...product(1, "Oficina", "Escritorios"),
+          name: "Escritorio con un nombre suficientemente largo para dos líneas controladas",
+          description: "Descripción extensa ".repeat(40),
+        },
+      ],
+    });
+    const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
+
+    expect(html).toContain("grid-template-rows: 42mm minmax(0, 1fr)");
+    expect(html).toContain("grid-template-rows: auto auto minmax(0, 1fr)");
+    expect(html).toContain("-webkit-line-clamp: 2");
+    expect(html).toContain("-webkit-line-clamp: 3");
+    expect(html).toContain("print-category-brand");
+    expect(html).toContain("Mobiliario institucional");
+    expect(html).toContain("ENE MUEBLES");
   });
 
   it("renders truthful empty, truncated, and error states", async () => {

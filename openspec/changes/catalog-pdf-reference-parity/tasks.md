@@ -47,6 +47,7 @@ Chain strategy: stacked-to-main
 
 ## Phase 3: Rendered PDF Parity (PR 3)
 
+- [x] 3.0 Apply the user-supplied deployed-output refinement: group current CMS products by category then optional `subcategory`, use the full ENE MUEBLES header wordmark, and enforce compact card text budgets with focused regressions. This is source-level evidence only; production visual validation remains pending.
 - [ ] 3.1 Add `apps/web/e2e/catalog-print-reference.spec.ts` to print representative mapped data in Chromium and assert A4 page boundaries, page-family count, required assets, and no split pages.
 - [ ] 3.2 Compare Chromium PDFs/screenshots against the supplied visual evidence at documented tolerance; save reviewed evidence under `apps/web/test-results/catalog-print-reference/` without committing generated output unless project policy requires it.
 - [ ] 3.3 Apply only comparison-confirmed adjustments to `page.tsx`, `reference-manifest.ts`, and their tests; rerun the visual comparison after each fix.

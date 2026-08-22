@@ -18,7 +18,7 @@ Keep `/catalogo/imprimir` as a request-time Server Component and render browser-
 ```text
 Strapi published/active products
   -> getCatalogSnapshot() [order,name; 60s catalog tag; bounded]
-  -> group current CMS categories and chunk products by eight
+  -> group current CMS categories, then optional product `subcategory` strings, and chunk each subgroup by eight
   -> Cover / Index / CategoryProductPage pages
   -> Chrome print preview / Save as PDF
 ```
@@ -30,8 +30,8 @@ Strapi published/active products
 - `PrintCatalogDocument`: page sequence and no-print toolbar.
 - `PrintCoverPage`: ~56% charcoal / ~44% warm-taupe split, `CATÁLOGO 2026`, editorial wordmark, Spanish brand statement, contact block, and large ENE mark low/right. No mosaic is rendered.
 - `PrintIndexPage`: one white/off-white landscape index with two category columns, alternating ochre/green count bullets, a lower charcoal contact card, and a hairline footer.
-- `PrintCategoryPage`: black header with an ochre left accent, category title, centered white ENE wordmark/subtitle, current page/category count, and a fixed four-column by two-row maximum grid.
-- `PrintProductSlot`: owns image, title, current CMS category label, description, and fallback. A final page with fewer than eight products leaves its unused grid positions blank.
+- `PrintCategoryPage`: black header with an ochre left accent, category eyebrow/title, actual optional CMS subcategory context, centered white ENE MUEBLES wordmark/subtitle, current page/category count, and a fixed four-column by two-row maximum grid. Products without `subcategory` remain in their category and do not receive a fictional label.
+- `PrintProductSlot`: owns a fixed image region, category/subcategory eyebrow, two-line product name, three-line bounded description, and fallback. A final page with fewer than eight products leaves its unused grid positions blank. Specifications are intentionally excluded from this compact print card so dynamic copy cannot overflow the fixed vertical budget.
 
 Use print-scoped CSS constants: `--a4-width: 297mm`, `--a4-height: 210mm`, `--page-bleed: 0mm`, and named millimetre constants derived from the visible reference evidence. Use charcoal near `#292929`, warm taupe near `#B49D7C`, warm off-white near `#F5F1E8`, ochre, muted green, and the existing Hanken Grotesk tokens. The ENE mark remains typographic until an approved served logo asset is available.
 

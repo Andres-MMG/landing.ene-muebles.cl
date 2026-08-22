@@ -5,17 +5,39 @@ const getCatalogSnapshot = vi.fn();
 
 vi.mock("@/lib/strapi", () => ({
   getCatalogSnapshot,
-  formatPrice: (product: { price: number; currency: string }) => `$${product.price}`,
-  hasVerifiedOffer: (product: { price: number; currency: string }) => product.price > 0 && product.currency === "CLP",
-  pickMediaFormat: (media: { url: string; formats?: Record<string, { url: string }> }, preferred: string) =>
-    media.formats?.[preferred]?.url ?? media.url,
+  pickMediaFormat: (
+    media: { url: string; formats?: Record<string, { url: string }> },
+    preferred: string,
+  ) => media.formats?.[preferred]?.url ?? media.url,
 }));
 
 vi.mock("@/lib/product-attributes", () => ({
-  formatDimensions: (product: { dimensions?: { width?: number; source?: string } }) =>
-    product.dimensions?.width ? "49 x 65 x 42 cm" : product.dimensions?.source ? "60 x 40 x 40 cm" : null,
-  hasVerifiedOffer: (product: { price: number; currency: string }) => product.price > 0 && product.currency === "CLP",
+  formatDimensions: (product: { dimensions?: { width?: number } }) =>
+    product.dimensions?.width ? "49 x 65 x 42 cm" : null,
 }));
+
+const product = (id: number, category = "Oficina") => ({
+  id,
+  name: `Producto ${id}`,
+  slug: `producto-${id}`,
+  description: `Descripción vigente del producto ${id}.`,
+  price: 0,
+  currency: "CLP",
+  category: { id: 1, documentId: "c1", name: category, slug: category.toLowerCase() },
+  dimensions: id === 1 ? { width: 49 } : undefined,
+  materials: id === 1 ? ["Melamina 18 mm"] : undefined,
+  images:
+    id === 2
+      ? []
+      : [
+          {
+            id,
+            url: `https://cms.test/${id}.jpg`,
+            alternativeText: `Imagen ${id}`,
+            formats: { large: { url: `https://cms.test/${id}-large.jpg` } },
+          },
+        ],
+});
 
 describe("CatalogoImprimirPage", () => {
   beforeEach(() => {
@@ -23,131 +45,128 @@ describe("CatalogoImprimirPage", () => {
     getCatalogSnapshot.mockResolvedValue({
       fetchedAt: "2026-08-21T12:00:00.000Z",
       truncated: false,
-      products: [
-        {
-          id: 1,
-          name: "Escritorio institucional",
-          slug: "escritorio",
-          description: "Especificación vigente del escritorio institucional.",
-          price: 1000,
-          currency: "CLP",
-          category: { id: 1, documentId: "c1", name: "Oficina", slug: "oficina" },
-          dimensions: { width: 49, height: 65, depth: 42 },
-          materials: ["Melamina 18 mm"],
-          images: [{ id: 10, url: "https://cms.test/desk.jpg", alternativeText: "Escritorio", formats: { medium: { url: "https://cms.test/desk-medium.jpg" } } }],
-        },
-        {
-          id: 2,
-          name: "Silla apilable",
-          slug: "silla",
-          description: "Silla para uso institucional.",
-          price: 0,
-          currency: "CLP",
-          category: { id: 2, documentId: "c2", name: "Escolar", slug: "escolar" },
-          dimensions: { source: "60cm x 40cm x 40cm" },
-          materials: ["Polipropileno"],
-          images: [],
-        },
-        {
-          id: 3,
-          name: "Sin categoría",
-          slug: "sin-categoria",
-          description: "Producto sin categoría asignada.",
-          price: 1000,
-          currency: "USD",
-          category: null,
-          images: [],
-        },
-      ],
+      products: [product(1), product(2), product(3, "Escolar")],
     });
   });
 
-  it("renders a branded cover, index counts, ordered sections, current cards and print hooks", async () => {
+  it("renders fixed landscape cover, one index, category pages and print hooks from one snapshot", async () => {
     const { default: CatalogoImprimirPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
     expect(getCatalogSnapshot).toHaveBeenCalledOnce();
-    expect(html).toContain("print-cover");
-    expect(html).toContain("ENE-MUEBLES");
-    expect(html).toContain("print-index");
-    expect(html).toContain("Oficina");
-    expect(html).toContain("Escolar");
-    expect(html).toContain("Catálogo general");
-    expect(html).toContain("3 productos");
-    expect(html).toContain("Especificación vigente del escritorio institucional.");
-    expect(html).toContain("desk-medium.jpg");
-    expect(html).toContain("Medidas");
-    expect(html).toContain("Melamina 18 mm");
-    expect(html).toContain("Sin imagen: Silla apilable");
-    expect(html).toContain("$1000");
-    expect(html).not.toContain("$0");
-    expect(html).toContain("page-number");
+    expect(html).toContain('data-page-family="cover"');
+    expect(html).toContain('data-page-family="index"');
+    expect(html).toContain('data-page-family="category"');
+    expect(html).toContain("linear-gradient(90deg");
+    expect(html).toContain("A4 landscape");
+    expect(html).toContain("297mm");
+    expect(html).toContain("210mm");
+    expect(html).toContain("break-inside: avoid");
+    expect(html).toContain("repeat(4, minmax(0, 1fr))");
+    expect(html).toContain('href="#categoria-oficina"');
+    expect(html).toContain("print-contact-panel");
     expect(html).toContain('data-page-number="true"');
-    expect(html).toContain("A4 portrait");
-    expect(html).toContain("body:has(.print-document)");
-    expect(html).toContain('aria-labelledby="print-index-title"');
-    expect(html).toContain("La paginación puede variar entre navegadores.");
+    expect(html).toContain('<div class="print-catalog print-document"');
+    expect(html).not.toContain("<main");
   });
 
-  it("shows truthful empty and truncation states", async () => {
-    getCatalogSnapshot.mockResolvedValue({ fetchedAt: "2026-08-21T12:00:00.000Z", truncated: false, products: [] });
+  it("uses current CMS facts, large media, accessible fallbacks, and partial-page blank space", async () => {
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: false,
+      products: Array.from({ length: 9 }, (_, index) => product(index + 1)),
+    });
     const { default: CatalogoImprimirPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
-    expect(html).toContain("El catálogo aún no tiene productos publicados.");
-    expect(html).toContain("No hay productos disponibles para imprimir.");
-    expect(html).not.toContain("Se muestran los primeros");
+    expect(html).toContain("Producto 9");
+    expect(html).toContain("Descripción vigente del producto 1.");
+    expect(html).toContain("1-large.jpg");
+    expect(html).toContain('alt="Imagen 1"');
+    expect(html).toContain("Sin imagen: Producto 2");
+    expect(html).toContain("grid-template-rows: repeat(2, minmax(0, 1fr))");
+    expect((html.match(/data-product-slug=/g) ?? []).length).toBe(9);
+  });
+
+  it("renders truthful empty, truncated, and error states", async () => {
+    const { default: CatalogoImprimirPage } = await import("./page");
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: false,
+      products: [],
+    });
+    expect(renderToStaticMarkup(await CatalogoImprimirPage())).toContain(
+      "No hay productos disponibles para imprimir.",
+    );
 
     getCatalogSnapshot.mockResolvedValue({
       fetchedAt: "2026-08-21T12:00:00.000Z",
       truncated: true,
-      products: [{ id: 1, name: "Producto acotado", slug: "producto-acotado", description: "", price: 0, currency: "CLP", category: null, images: [] }],
+      products: [product(1)],
     });
-    const truncatedHtml = renderToStaticMarkup(await CatalogoImprimirPage());
-    expect(truncatedHtml).toContain("Se muestran los primeros 1 productos disponibles.");
+    expect(renderToStaticMarkup(await CatalogoImprimirPage())).toContain(
+      "Se muestran los primeros 1 productos disponibles.",
+    );
+
+    getCatalogSnapshot.mockRejectedValue(new Error("CMS unavailable"));
+    const errorHtml = renderToStaticMarkup(await CatalogoImprimirPage());
+    expect(errorHtml).toContain("Catálogo no disponible");
+    expect(errorHtml).not.toContain("CMS unavailable");
   });
 
-  it("renders a stable error state when the snapshot fails", async () => {
-    getCatalogSnapshot.mockRejectedValue(new Error("CMS unavailable"));
+  it("keeps a truncation notice inside the first defined index print unit", async () => {
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: true,
+      products: Array.from({ length: 9 }, (_, index) => product(index + 1)),
+    });
     const { default: CatalogoImprimirPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
-    expect(html).toContain("Catálogo no disponible");
-    expect(html).toContain("No pudimos cargar el catálogo en este momento.");
-    expect(html).not.toContain("CMS unavailable");
-    expect(html).toContain("print-document");
+    expect(html).toMatch(/data-page-family="index"[\s\S]*data-catalog-truncated="true"/);
+    expect(html).not.toMatch(/<\/section><p class="print-truncated"/);
+    expect((html.match(/data-page-family="category"/g) ?? []).length).toBe(2);
   });
 
-  it("renders changed CMS product values on a later request instead of stale content", async () => {
+  it("bounds the truncation notice away from the index contact panel", async () => {
+    getCatalogSnapshot.mockResolvedValue({
+      fetchedAt: "2026-08-21T12:00:00.000Z",
+      truncated: true,
+      products: [product(1)],
+    });
     const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
-    getCatalogSnapshot.mockResolvedValueOnce({
+    expect((html.match(/\.print-truncated\s*\{/g) ?? []).length).toBe(1);
+    expect(html).toContain(
+      ".print-truncated { position: absolute; bottom: 18mm; left: 18mm; width: 91mm;",
+    );
+    expect(html).toContain(
+      ".print-contact-panel { position: absolute; right: 18mm; bottom: 18mm; width: 91mm;",
+    );
+  });
+
+  it("paginates category index entries without clipping any category", async () => {
+    const categories = Array.from({ length: 19 }, (_, index) => `Categoría ${index + 1}`);
+    getCatalogSnapshot.mockResolvedValue({
       fetchedAt: "2026-08-21T12:00:00.000Z",
       truncated: false,
-      products: [{ id: 9, name: "Silla anterior", slug: "silla", description: "Descripción anterior", price: 0, currency: "CLP", category: null, images: [] }],
+      products: categories.map((category, index) => product(index + 1, category)),
     });
-    const firstHtml = renderToStaticMarkup(await CatalogoImprimirPage());
-    expect(firstHtml).toContain("Silla anterior");
-
-    getCatalogSnapshot.mockResolvedValueOnce({
-      fetchedAt: "2026-08-21T12:01:00.000Z",
-      truncated: false,
-      products: [{ id: 9, name: "Silla actualizada", slug: "silla", description: "Especificación actual", price: 0, currency: "CLP", category: null, images: [] }],
-    });
-    const currentHtml = renderToStaticMarkup(await CatalogoImprimirPage());
-    expect(currentHtml).toContain("Silla actualizada");
-    expect(currentHtml).toContain("Especificación actual");
-    expect(currentHtml).not.toContain("Silla anterior");
-  });
-
-  it("keeps image alternatives and index targets accessible", async () => {
     const { default: CatalogoImprimirPage } = await import("./page");
     const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
-    expect(html).toContain('alt="Escritorio"');
-    expect(html).toContain('href="#categoria-oficina"');
-    expect(html).toContain('id="categoria-oficina"');
-    expect(html).toContain('aria-labelledby="titulo-oficina"');
-    expect(html).toContain('role="img"');
+    expect((html.match(/data-page-family="index"/g) ?? []).length).toBe(2);
+    expect(html).toContain('data-index-page="1/2"');
+    expect(html).toContain('data-index-page="2/2"');
+    expect(html).toContain('aria-labelledby="print-index-title-1"');
+    expect(html).toContain('aria-labelledby="print-index-title-2"');
+    expect((html.match(/id="print-index-title-1"/g) ?? []).length).toBe(1);
+    expect((html.match(/id="print-index-title-2"/g) ?? []).length).toBe(1);
+    expect((html.match(/id="print-index-title-\d+"/g) ?? []).length).toBe(2);
+    expect(html).not.toContain('id="print-index-title"');
+    for (const category of categories) {
+      expect(html).toContain(category);
+    }
   });
 });

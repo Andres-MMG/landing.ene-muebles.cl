@@ -5,12 +5,13 @@ import {
   hasSubcategoryData,
   type ProductSubcategoryCount,
 } from "@/lib/product-groups";
-import { ProductCard } from "./ProductCard";
+import { ProductCard, type ProductCardActionCopy } from "./ProductCard";
 import { SubcategoryNavigation } from "./SubcategoryNavigation";
 
 type ProductSubcategoryGroupsProps = {
   products: Product[];
   whatsappNumber?: string;
+  actionCopy?: ProductCardActionCopy;
   subcategorySummaries?: ProductSubcategoryCount[];
   q?: string;
 };
@@ -22,6 +23,7 @@ type ProductSubcategoryGroupsProps = {
 export function ProductSubcategoryGroups({
   products,
   whatsappNumber,
+  actionCopy,
   subcategorySummaries,
   q,
 }: ProductSubcategoryGroupsProps) {
@@ -34,15 +36,14 @@ export function ProductSubcategoryGroups({
     Boolean(summaryGroups?.some((group) => group.name !== "Otros productos"));
 
   if (!supportsGrouping) {
-    return <ProductGrid products={products} whatsappNumber={whatsappNumber} />;
+    return (
+      <ProductGrid products={products} whatsappNumber={whatsappNumber} actionCopy={actionCopy} />
+    );
   }
 
   return (
     <div className="space-y-16 sm:space-y-20">
-      <SubcategoryNavigation
-        groups={summaryGroups ?? groups}
-        q={q}
-      />
+      <SubcategoryNavigation groups={summaryGroups ?? groups} q={q} />
 
       {groups.map((group) => (
         <section
@@ -60,19 +61,23 @@ export function ProductSubcategoryGroups({
               {group.products.length} producto{group.products.length === 1 ? "" : "s"}
             </p>
           </header>
-          <ProductGrid products={group.products} whatsappNumber={whatsappNumber} />
+          <ProductGrid
+            products={group.products}
+            whatsappNumber={whatsappNumber}
+            actionCopy={actionCopy}
+          />
         </section>
       ))}
     </div>
   );
 }
 
-function ProductGrid({ products, whatsappNumber }: ProductSubcategoryGroupsProps) {
+function ProductGrid({ products, whatsappNumber, actionCopy }: ProductSubcategoryGroupsProps) {
   return (
     <ul className="grid grid-cols-1 gap-x-6 gap-y-12 sm:grid-cols-2 sm:gap-y-14 lg:grid-cols-3 lg:gap-y-16">
       {products.map((product) => (
         <li key={product.id} className="min-w-0">
-          <ProductCard product={product} whatsappNumber={whatsappNumber} />
+          <ProductCard product={product} whatsappNumber={whatsappNumber} actionCopy={actionCopy} />
         </li>
       ))}
     </ul>

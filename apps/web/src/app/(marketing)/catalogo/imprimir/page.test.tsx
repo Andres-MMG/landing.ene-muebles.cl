@@ -2,9 +2,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getCatalogSnapshot = vi.fn();
+const getCatalogPage = vi.fn();
+const getSiteSettings = vi.fn();
 
 vi.mock("@/lib/strapi", () => ({
   getCatalogSnapshot,
+  getCatalogPage,
+  getSiteSettings,
   pickMediaFormat: (
     media: { url: string; formats?: Record<string, { url: string }> },
     preferred: string,
@@ -48,6 +52,23 @@ describe("CatalogoImprimirPage", () => {
       truncated: false,
       products: [product(1), product(2), product(3, "Escolar")],
     });
+    getCatalogPage.mockResolvedValue({
+      eyebrow: "Catálogo institucional",
+      productCountSuffix: "productos certificados para instituciones.",
+      documentationText: "Cada producto se entrega con ficha técnica y declaración de materiales.",
+      printCtaLabel: "Imprimir PDF",
+      printCoverTitle: "Mobiliario institucional",
+      printCoverBody:
+        "Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la solicitud.",
+      printIndexTitle: "Líneas de producto",
+      printCategorySubtitle: "Mobiliario institucional",
+      printPublishedProductsSuffix: "productos publicados",
+    });
+    getSiteSettings.mockResolvedValue({
+      siteName: "ENE-MUEBLES",
+      contactEmail: "contacto@ene-muebles.cl",
+      contactPhone: "+56 9 9539 5339",
+    });
   });
 
   it("renders fixed landscape cover, one index, category pages and print hooks from one snapshot", async () => {
@@ -55,6 +76,8 @@ describe("CatalogoImprimirPage", () => {
     const html = renderToStaticMarkup(await CatalogoImprimirPage());
 
     expect(getCatalogSnapshot).toHaveBeenCalledOnce();
+    expect(getCatalogPage).toHaveBeenCalledOnce();
+    expect(getSiteSettings).toHaveBeenCalledOnce();
     expect(html).toContain('data-page-family="cover"');
     expect(html).toContain('data-page-family="index"');
     expect(html).toContain('data-page-family="category"');
@@ -73,6 +96,115 @@ describe("CatalogoImprimirPage", () => {
     expect(html).toContain("ENE MUEBLES");
   });
 
+  it("uses administrable print copy and site facts while keeping the product count derived", async () => {
+    getCatalogPage.mockResolvedValue({
+      eyebrow: "Catálogo CMS",
+      productCountSuffix: "productos CMS.",
+      documentationText: "Documentación CMS.",
+      printCtaLabel: "Imprimir CMS",
+      printCoverTitle: "Portada CMS",
+      printCoverBody: "Texto de portada administrable.",
+      printIndexTitle: "Índice administrable",
+      printCategorySubtitle: "Subtítulo administrable",
+      printPublishedProductsSuffix: "unidades publicadas",
+    });
+    getSiteSettings.mockResolvedValue({
+      siteName: "Marca-CMS",
+      contactEmail: "ventas@marca.test",
+      contactPhone: "+56 (9) 1111-2222",
+      address: "Calle Uno 123",
+      addressCity: "Temuco",
+      addressRegion: "La Araucanía",
+      dispatchCoverage: "Cobertura nacional",
+      quoteResponseTimeText: "Cotizamos en 24 h hábiles.",
+      warrantyText: "Garantía escrita de 2 años.",
+    });
+
+    const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
+
+    expect(html).toContain("Portada CMS");
+    expect(html).toContain("Texto de portada administrable.");
+    expect(html).toContain("Índice administrable");
+    expect(html).toContain("Subtítulo administrable");
+    expect(html).toContain("Marca-CMS");
+    expect(html).toContain('aria-label="Marca CMS"');
+    expect(html).toContain('href="mailto:ventas@marca.test"');
+    expect(html).toContain('href="tel:+56911112222"');
+    expect(html).toContain("Calle Uno 123, Temuco, La Araucanía");
+    expect(html).toContain("Cobertura nacional");
+    expect(html).toContain("Cotizamos en 24 h hábiles.");
+    expect(html).toContain("Garantía escrita de 2 años.");
+    expect(html).toContain("3 unidades publicadas");
+    expect(html).not.toContain("Líneas de producto");
+  });
+
+  it("keeps the current printable copy and contact facts when optional CMS reads fail", async () => {
+    getCatalogPage.mockRejectedValue(new Error("catalog-page unavailable"));
+    getSiteSettings.mockRejectedValue(new Error("site-setting unavailable"));
+
+    const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
+
+    expect(html).toContain("Mobiliario institucional");
+    expect(html).toContain(
+      "Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la solicitud.",
+    );
+    expect(html).toContain("Líneas de producto");
+    expect(html).toContain("ENE-MUEBLES");
+    expect(html).toContain("ENE MUEBLES");
+    expect(html).toContain("contacto@ene-muebles.cl");
+    expect(html).toContain("+56 9 9539 5339");
+    expect(html).toContain("Chile");
+    expect(html).toContain("3 productos publicados");
+    expect(html).not.toContain("Catálogo no disponible");
+  });
+
+  it("bounds longest valid configurable copy inside fixed print regions without losing product facts", async () => {
+    const publishedSuffix = "P".repeat(120);
+    getCatalogPage.mockResolvedValue({
+      eyebrow: "E".repeat(120),
+      productCountSuffix: "C".repeat(180),
+      documentationText: "D".repeat(600),
+      printCtaLabel: "L".repeat(80),
+      printCoverTitle: "T".repeat(180),
+      printCoverBody: "B".repeat(600),
+      printIndexTitle: "I".repeat(180),
+      printCategorySubtitle: "S".repeat(180),
+      printPublishedProductsSuffix: publishedSuffix,
+    });
+    getSiteSettings.mockResolvedValue({
+      siteName: "N".repeat(120),
+      contactEmail: "e".repeat(60) + "@example.test",
+      contactPhone: "+" + "56".repeat(100),
+      address: "A".repeat(600),
+      addressCity: "C".repeat(300),
+      addressRegion: "R".repeat(300),
+      dispatchCoverage: "D".repeat(1200),
+      quoteResponseTimeText: "Q".repeat(280),
+      warrantyText: "W".repeat(2000),
+    });
+
+    const { default: CatalogoImprimirPage } = await import("./page");
+    const html = renderToStaticMarkup(await CatalogoImprimirPage());
+
+    expect(html).toContain('class="print-cover-kicker print-bounded-single"');
+    expect(html).toContain('class="print-cover-title print-bounded-lines print-lines-3"');
+    expect(html).toContain('class="print-cover-copy print-bounded-lines print-lines-5"');
+    expect(html).toContain('class="print-cover-address print-bounded-lines print-lines-2"');
+    expect(html).toContain('class="print-index-title print-bounded-lines print-lines-2"');
+    expect(html).toContain('class="print-category-subtitle print-bounded-lines print-lines-2"');
+    expect(
+      (html.match(/class="print-contact-fact print-bounded-lines print-lines-2"/g) ?? []).length,
+    ).toBe(2);
+    expect(html).toContain(
+      ".print-bounded-single { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }",
+    );
+    expect(html).toContain("overflow-wrap: anywhere");
+    expect(html).toContain("max-height: 42mm");
+    expect(html).toContain("3 " + publishedSuffix);
+    expect(html).toContain('data-product-slug="producto-3"');
+  });
   it("uses current CMS facts, large media, accessible fallbacks, and partial-page blank space", async () => {
     getCatalogSnapshot.mockResolvedValue({
       fetchedAt: "2026-08-21T12:00:00.000Z",
@@ -218,5 +350,13 @@ describe("CatalogoImprimirPage", () => {
     for (const category of categories) {
       expect(html).toContain(category);
     }
+  });
+});
+
+describe("print utility metadata", () => {
+  it("is noindex,follow and canonicalizes to the main catalog", async () => {
+    const { metadata } = await import("./page");
+    expect(metadata.robots).toEqual({ index: false, follow: true });
+    expect(metadata.alternates).toEqual({ canonical: "https://ene-muebles.cl/catalogo" });
   });
 });

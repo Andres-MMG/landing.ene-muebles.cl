@@ -1,17 +1,19 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
-import { revalidateTag } from 'next/cache';
-import { getServerSession } from '@/lib/admin/session';
-import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
-import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { revalidateTag } from "next/cache";
+import { requireAdmin, strapiAuthFailure } from "@/lib/admin/require-admin";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import {
+  DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+  HEADER_WHATSAPP_LABEL_MAX_LENGTH,
+  MOBILE_WHATSAPP_LABEL_MAX_LENGTH,
+} from "@/lib/public-navigation";
+import { STRAPI_CACHE_TAGS } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(
-  /\/+$/,
-  ''
-);
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
 
 /**
  * GET /api/admin/site-setting
@@ -52,10 +54,28 @@ const requiredTrimmed = (max: number, label: string) =>
     message: `${label} no debe estar vacío`,
   });
 
-const optionalClearedString = (max: number) =>
+const optionalClearedString = (max: number) => z.union([trimmedString(max), z.null()]).optional();
+
+const optionalFallbackCopy = (max: number) =>
   z
     .union([trimmedString(max), z.null()])
+    .transform((value) => (value === "" ? null : value))
     .optional();
+
+const productMessageTemplate = z
+  .union([trimmedString(1000), z.null()])
+  .transform((value) => (value === "" ? null : value))
+  .superRefine((value, ctx) => {
+    if (value === null) return;
+    const placeholderCount = value.match(/\{productName\}/g)?.length ?? 0;
+    if (placeholderCount !== 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "debe contener exactamente una vez el texto literal {productName}",
+      });
+    }
+  })
+  .optional();
 
 /**
  * Permissive social-link value: a trimmed string ≤280 chars OR `null`.
@@ -74,21 +94,26 @@ const socialLinkString = z
   .max(280)
   .transform((s) => s.trim())
   .refine((s) => !/\s/.test(s), {
-    message: 'no debe contener espacios',
+    message: "no debe contener espacios",
   });
 
-const optionalClearedUrl = z
-  .union([socialLinkString, z.null()])
-  .optional();
+const optionalClearedUrl = z.union([socialLinkString, z.null()]).optional();
 
 const PatchBody = z
   .object({
-    siteName: requiredTrimmed(120, 'Nombre del sitio').optional(),
+    siteName: requiredTrimmed(120, "Nombre del sitio").optional(),
     tagline: optionalClearedString(200),
-    contactEmail: z.union([z.string().email().max(120), z.literal(''), z.null()]).optional(),
+    seoTitle: optionalFallbackCopy(60),
+    seoDescription: optionalFallbackCopy(160),
+    seoShareImageKicker: optionalFallbackCopy(100),
+    seoShareImageTitle: optionalFallbackCopy(120),
+    seoShareImageDescription: optionalFallbackCopy(200),
+    seoShareImageFooter: optionalFallbackCopy(160),
+    seoShareImageAlt: optionalFallbackCopy(200),
+    contactEmail: z.union([z.string().email().max(120), z.literal(""), z.null()]).optional(),
     contactPhone: optionalClearedString(40),
     whatsappNumber: optionalClearedString(40),
-    whatsappDefaultMessage: requiredTrimmed(1000, 'Mensaje predeterminado WhatsApp').optional(),
+    whatsappDefaultMessage: requiredTrimmed(1000, "Mensaje predeterminado WhatsApp").optional(),
     address: optionalClearedString(280),
     // Newer singleton fields (schema: `text`, no maxLength) — sensible
     // caps mirror the ones used for comparable scalar text fields.
@@ -97,7 +122,22 @@ const PatchBody = z
     addressRegion: optionalClearedString(120),
     businessHours: optionalClearedString(280),
     aboutText: optionalClearedString(2000),
-    rut: requiredTrimmed(20, 'RUT').optional(),
+    paymentTermsText: optionalClearedString(2000),
+    warrantyText: optionalClearedString(2000),
+    quoteResponseTimeText: optionalClearedString(280),
+    navigationHomeLabel: optionalFallbackCopy(DESKTOP_NAVIGATION_LABEL_MAX_LENGTH),
+    navigationCatalogLabel: optionalFallbackCopy(DESKTOP_NAVIGATION_LABEL_MAX_LENGTH),
+    navigationAboutLabel: optionalFallbackCopy(DESKTOP_NAVIGATION_LABEL_MAX_LENGTH),
+    navigationContactLabel: optionalFallbackCopy(DESKTOP_NAVIGATION_LABEL_MAX_LENGTH),
+    headerWhatsappLabel: optionalFallbackCopy(HEADER_WHATSAPP_LABEL_MAX_LENGTH),
+    mobileWhatsappLabel: optionalFallbackCopy(MOBILE_WHATSAPP_LABEL_MAX_LENGTH),
+    whatsappProductMessageTemplate: productMessageTemplate,
+    productCardDetailLabel: optionalFallbackCopy(60),
+    productCardWhatsappLabel: optionalFallbackCopy(60),
+    productDetailWhatsappLabel: optionalFallbackCopy(80),
+    productDetailContactLabel: optionalFallbackCopy(80),
+    foundedYear: z.union([z.number().int().min(1800).max(2100), z.null()]).optional(),
+    rut: requiredTrimmed(20, "RUT").optional(),
     socialLinks: z
       .object({
         facebook: optionalClearedUrl,
@@ -111,24 +151,50 @@ const PatchBody = z
   })
   .strict();
 
+function upstreamUnavailable(): NextResponse {
+  return NextResponse.json(
+    { error: "No se pudo conectar con el servidor de contenido." },
+    { status: 502 },
+  );
+}
+
+function invalidUpstreamBody(status: number): NextResponse {
+  return NextResponse.json(
+    { error: "El servidor de contenido devolvió una respuesta inválida." },
+    { status: status >= 400 ? status : 502 },
+  );
+}
+
+async function readUpstreamJson(response: Response): Promise<unknown | undefined> {
+  return response.json().catch(() => undefined);
+}
+
 export async function GET() {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const res = await fetch(`${STRAPI}/api/site-setting?populate=*`, {
-    headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
-    cache: 'no-store',
-  });
-  const data = await res.json().catch(() => null);
-  return NextResponse.json(data ?? { data: null }, { status: res.status });
+  let res: Response;
+  try {
+    res = await fetch(`${STRAPI}/api/site-setting?populate=*&status=draft`, {
+      headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (res.status === 401) return strapiAuthFailure();
+  const data = await readUpstreamJson(res);
+  if (data === undefined) return invalidUpstreamBody(res.status);
+  return NextResponse.json(data, { status: res.status });
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const admin = await requireAdmin();
+  if (!admin) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
   let body: z.infer<typeof PatchBody>;
@@ -145,11 +211,8 @@ export async function PUT(req: NextRequest) {
             message: i.message,
             code: i.code,
           }))
-        : [{ path: [], message: String(err), code: 'unknown' }];
-    return NextResponse.json(
-      { error: 'Datos inválidos', details: { issues } },
-      { status: 400 }
-    );
+        : [{ path: [], message: String(err), code: "unknown" }];
+    return NextResponse.json({ error: "Datos inválidos", details: { issues } }, { status: 400 });
   }
 
   // Build the Strapi `data` payload:
@@ -165,21 +228,21 @@ export async function PUT(req: NextRequest) {
   const data: Record<string, unknown> = {};
   for (const [k, v] of Object.entries(body)) {
     if (v === undefined) continue;
-    if (typeof v === 'string' && v.trim() === '') continue;
+    if (typeof v === "string" && v.trim() === "") continue;
     if (v === null) {
       data[k] = null;
       continue;
     }
-    if (k === 'socialLinks' && v && typeof v === 'object') {
+    if (k === "socialLinks" && v && typeof v === "object") {
       const cleaned: Record<string, string | null> = {};
       for (const [sk, sv] of Object.entries(v as Record<string, unknown>)) {
         if (sv === null) {
           cleaned[sk] = null;
           continue;
         }
-        if (typeof sv === 'string') {
+        if (typeof sv === "string") {
           const trimmed = sv.trim();
-          if (trimmed === '') continue;
+          if (trimmed === "") continue;
           cleaned[sk] = trimmed;
         }
       }
@@ -189,16 +252,24 @@ export async function PUT(req: NextRequest) {
     data[k] = v;
   }
 
-  const res = await fetch(`${STRAPI}/api/site-setting`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${getStrapiAdminToken()}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({ data }),
-    cache: 'no-store',
-  });
-  const json = await res.json().catch(() => null);
+  let res: Response;
+  try {
+    res = await fetch(`${STRAPI}/api/site-setting?status=published`, {
+      method: "PUT",
+      headers: {
+        Authorization: `Bearer ${getStrapiAdminToken()}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data }),
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (res.status === 401) return strapiAuthFailure();
+  const json = await readUpstreamJson(res);
+  if (json === undefined) return invalidUpstreamBody(res.status);
   // ISR milestone: the singleton feeds every public page (brand copy,
   // contacts, dispatch coverage) — purge site-settings-tagged fetches
   // so edits render immediately.

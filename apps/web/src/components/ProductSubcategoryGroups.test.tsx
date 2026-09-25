@@ -29,7 +29,7 @@ describe("ProductSubcategoryGroups", () => {
 
   it("renders landmark navigation and focusable group sections for populated subcategories", () => {
     const html = renderToStaticMarkup(
-      <ProductSubcategoryGroups products={[product(1, "Sillas"), product(2, "Mesas")]} />
+      <ProductSubcategoryGroups products={[product(1, "Sillas"), product(2, "Mesas")]} />,
     );
 
     expect(html).toContain('<nav aria-label="Subcategorías del catálogo"');
@@ -58,7 +58,7 @@ describe("ProductSubcategoryGroups", () => {
 
   it("keeps uncategorized products in the visible fallback group", () => {
     const html = renderToStaticMarkup(
-      <ProductSubcategoryGroups products={[product(1, "Sillas"), product(2)]} />
+      <ProductSubcategoryGroups products={[product(1, "Sillas"), product(2)]} />,
     );
 
     expect(html).toContain("Otros productos");
@@ -67,11 +67,39 @@ describe("ProductSubcategoryGroups", () => {
 
   it("uses the existing flat product list when there is no subcategory data", () => {
     const html = renderToStaticMarkup(
-      <ProductSubcategoryGroups products={[product(1), product(2, " ")]} />
+      <ProductSubcategoryGroups products={[product(1), product(2, " ")]} />,
     );
 
     expect(html).not.toContain("Subcategorías del catálogo");
     expect(html).toContain("Producto 1");
     expect(html).toContain("Producto 2");
+  });
+
+  it("passes product action copy through grouped and flat grids", () => {
+    const actionCopy = {
+      detailLabel: "Ficha agrupada CMS",
+      whatsappLabel: "Cotizar agrupada CMS",
+      whatsappMessageTemplate: "Grupo: {productName}.",
+    };
+    const grouped = renderToStaticMarkup(
+      <ProductSubcategoryGroups
+        products={[product(1, "Sillas")]}
+        whatsappNumber="+56912345678"
+        actionCopy={actionCopy}
+      />,
+    );
+    const flat = renderToStaticMarkup(
+      <ProductSubcategoryGroups
+        products={[product(2)]}
+        whatsappNumber="+56912345678"
+        actionCopy={actionCopy}
+      />,
+    );
+
+    for (const html of [grouped, flat]) {
+      expect(html).toContain("Ficha agrupada CMS");
+      expect(html).toContain("Cotizar agrupada CMS");
+      expect(html).toContain("https://wa.me/56912345678?text=Grupo%3A%20Producto");
+    }
   });
 });

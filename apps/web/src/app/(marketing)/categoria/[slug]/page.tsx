@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { CatalogSearch } from "@/components/CatalogSearch";
@@ -6,10 +7,18 @@ import { ContactCTA } from "@/components/ContactCTA";
 import { Pagination } from "@/components/Pagination";
 import { ProductSubcategoryGroups } from "@/components/ProductSubcategoryGroups";
 import {
+  FALLBACK_SITE_SETTINGS,
   getCategories,
+  getContactCTASection,
   getProducts,
   getSiteSettings,
 } from "@/lib/strapi";
+import {
+  buildSeoMetadata,
+  FALLBACK_ROOT_DESCRIPTION,
+  FALLBACK_SHARE_IMAGE_ALT,
+  resolveSeoText,
+} from "@/lib/seo-metadata";
 
 export const revalidate = 60;
 
@@ -25,15 +34,30 @@ const parsePage = (raw: string | undefined): number => {
   return Math.max(1, Number.isNaN(parsed) ? 1 : parsed);
 };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const categories = await getCategories();
-  const match = categories.find((c) => c.slug === slug);
-  if (!match) return { title: "Línea" };
-  return {
+  const [categories, settings] = await Promise.all([
+    getCategories().catch(() => []),
+    getSiteSettings().catch(() => FALLBACK_SITE_SETTINGS),
+  ]);
+  const match = categories.find((category) => category.slug === slug);
+  if (!match) {
+    return buildSeoMetadata({
+      title: "Línea",
+      description: FALLBACK_ROOT_DESCRIPTION,
+      siteName: settings.siteName,
+      imageAlt: resolveSeoText(settings.seoShareImageAlt) ?? FALLBACK_SHARE_IMAGE_ALT,
+    });
+  }
+  return buildSeoMetadata({
     title: match.name,
-    description: match.description,
-  };
+    description:
+      resolveSeoText(match.description) ??
+      `Productos de la línea ${match.name} para instituciones en Chile.`,
+    path: `/categoria/${match.slug}`,
+    siteName: settings.siteName,
+    imageAlt: resolveSeoText(settings.seoShareImageAlt) ?? FALLBACK_SHARE_IMAGE_ALT,
+  });
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -43,12 +67,13 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   // a non-string value is not a usable search term.
   const q = typeof qParam === "string" ? qParam.trim() : undefined;
   const pageParamValue = typeof pageParam === "string" ? pageParam : undefined;
-  const [settings, categories, result] = await Promise.all([
+  const [settings, categories, result, contactCtaSection] = await Promise.all([
     getSiteSettings(),
     getCategories(),
     // B1 (U2): the search term now flows into the category query so
     // `?q=` on /categoria/[slug] filters within the line.
     getProducts({ categorySlug: slug, page: parsePage(pageParamValue), pageSize: PAGE_SIZE, q }),
+    getContactCTASection(),
   ]);
 
   const current = categories.find((c) => c.slug === slug);
@@ -78,7 +103,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
                 <span className="t-label text-taupe-text">
-                  Línea · {String(categories.findIndex((c) => c.slug === current.slug) + 1).padStart(2, "0")}
+                  Línea ·{" "}
+                  {String(categories.findIndex((c) => c.slug === current.slug) + 1).padStart(
+                    2,
+                    "0",
+                  )}
                 </span>
               </div>
               <h1
@@ -101,9 +130,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
                   make typing unusable. */}
               <CatalogSearch defaultValue={q} />
               <div className="mt-6">
-                <p className="t-overline text-ink-mute">
-                  Filtrar por línea
-                </p>
+                <p className="t-overline text-ink-mute">Filtrar por línea</p>
                 <div className="mt-3">
                   <CategoryFilter categories={categories} activeSlug={current.slug} q={q} />
                 </div>
@@ -138,6 +165,11 @@ export default async function CategoryPage({ params, searchParams }: Props) {
             <ProductSubcategoryGroups
               products={products}
               whatsappNumber={settings.whatsappNumber}
+              actionCopy={{
+                detailLabel: settings.productCardDetailLabel,
+                whatsappLabel: settings.productCardWhatsappLabel,
+                whatsappMessageTemplate: settings.whatsappProductMessageTemplate,
+              }}
             />
             {/* B1 (U2): pagination preserves the search term within the
                 line, exactly like /catalogo. */}
@@ -152,7 +184,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
         )}
       </section>
 
-      <ContactCTA settings={settings} />
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

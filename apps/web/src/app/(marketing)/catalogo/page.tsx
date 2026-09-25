@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CategoryFilter } from "@/components/CategoryFilter";
 import { CatalogSearch } from "@/components/CatalogSearch";
@@ -6,7 +7,10 @@ import { Pagination } from "@/components/Pagination";
 import { ProductSubcategoryGroups } from "@/components/ProductSubcategoryGroups";
 import { site } from "@ene/ui-tokens";
 import {
+  FALLBACK_SITE_SETTINGS,
+  getCatalogPage,
   getCategories,
+  getContactCTASection,
   getProductCount,
   getProducts,
   getSubcategorySummaries,
@@ -14,14 +18,27 @@ import {
   type Category,
   type Product,
 } from "@/lib/strapi";
+import { buildSeoMetadata, FALLBACK_SHARE_IMAGE_ALT, resolveSeoText } from "@/lib/seo-metadata";
 
 export const revalidate = 60;
 
-export const metadata = {
-  title: "Catálogo",
-  description:
-    "Mobiliario escolar y de oficina para instituciones en Chile: escritorios, cajoneras, archivadores, lockers, pupitres, sillas y más.",
-};
+const CATALOG_METADATA_TITLE = "Catálogo";
+const CATALOG_METADATA_DESCRIPTION =
+  "Mobiliario escolar y de oficina para instituciones en Chile: escritorios, cajoneras, archivadores, lockers, pupitres, sillas y más.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [content, settings] = await Promise.all([
+    getCatalogPage(),
+    getSiteSettings().catch(() => FALLBACK_SITE_SETTINGS),
+  ]);
+  return buildSeoMetadata({
+    title: resolveSeoText(content.seoTitle) ?? CATALOG_METADATA_TITLE,
+    description: resolveSeoText(content.seoDescription) ?? CATALOG_METADATA_DESCRIPTION,
+    path: "/catalogo",
+    siteName: settings.siteName,
+    imageAlt: resolveSeoText(settings.seoShareImageAlt) ?? FALLBACK_SHARE_IMAGE_ALT,
+  });
+}
 
 const PAGE_SIZE = 12;
 
@@ -39,9 +56,12 @@ export default async function CatalogoPage({ searchParams }: Props) {
   // Duplicate query params arrive as `string[]` (e.g. `?q=a&q=b`) —
   // a non-string value is not a usable search term.
   const q = typeof qParam === "string" ? qParam.trim() : undefined;
-  const subcategory =
-    typeof subcategoryParam === "string" ? subcategoryParam.trim() : undefined;
-  const settings = await getSiteSettings();
+  const subcategory = typeof subcategoryParam === "string" ? subcategoryParam.trim() : undefined;
+  const [settings, catalogContent, contactCtaSection] = await Promise.all([
+    getSiteSettings(),
+    getCatalogPage(),
+    getContactCTASection(),
+  ]);
 
   let categories: Category[] = [];
   let products: Product[] = [];
@@ -81,6 +101,14 @@ export default async function CatalogoPage({ searchParams }: Props) {
 
   const from = total > 0 ? (page - 1) * PAGE_SIZE + 1 : 0;
   const to = Math.min(page * PAGE_SIZE, total);
+  const displayedProductCount = total > 0 ? total : productCount > 0 ? productCount : 20;
+  const dispatchCoverage = settings.dispatchCoverage ?? site.dispatchCoverageFallback;
+  const paymentTerms = settings.paymentTermsText?.trim();
+  const catalogIntro = paymentTerms
+    ? dispatchCoverage + ". " + paymentTerms + " " + catalogContent.documentationText
+    : dispatchCoverage +
+      " y pago a 30, 60 o 90 días para instituciones. " +
+      catalogContent.documentationText;
 
   return (
     <>
@@ -90,9 +118,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
             <div className="lg:col-span-7">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe-text">
-                  Catálogo institucional
-                </span>
+                <span className="t-label text-taupe-text">{catalogContent.eyebrow}</span>
               </div>
               <h1
                 id="catalogo-heading"
@@ -103,11 +129,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                     empty but the CMS is up, and only then the static
                     "20" placeholder (both reads returned 0, i.e. Strapi
                     unreachable — never render "00" for a live count). */}
-                {total > 0
-                  ? `${total} productos certificados para instituciones.`
-                  : productCount > 0
-                    ? `${productCount} productos certificados para instituciones.`
-                    : "20 productos certificados para instituciones."}
+                {displayedProductCount + " " + catalogContent.productCountSuffix}
               </h1>
             </div>
             <div className="lg:col-span-4 lg:col-start-9">
@@ -115,9 +137,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                 {/* B1 (U6): coverage reads from the site-setting
                     singleton so /catalogo stops contradicting the
                     hero/footer copy. */}
-                {settings.dispatchCoverage ?? site.dispatchCoverageFallback} y pago a 30, 60
-                o 90 días para instituciones. Cada producto
-                se entrega con ficha técnica y declaración de materiales.
+                {catalogIntro}
               </p>
               <div className="mt-6 space-y-6">
                 {/* No `key`: remounting on every `?q=` change would drop
@@ -125,9 +145,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                     its value from `defaultValue` on URL changes. */}
                 <CatalogSearch defaultValue={q} />
                 <div>
-                  <p className="t-overline text-ink-mute">
-                    Filtrar por línea
-                  </p>
+                  <p className="t-overline text-ink-mute">Filtrar por línea</p>
                   <div className="mt-3">
                     <CategoryFilter categories={categories} q={q} />
                   </div>
@@ -137,7 +155,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
                     href={"/catalogo/imprimir" as never}
                     className="tap-target inline-flex items-center gap-3 bg-ink px-5 py-3 text-xs font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-ink"
                   >
-                    Imprimir PDF
+                    {catalogContent.printCtaLabel}
                     <span aria-hidden>→</span>
                   </Link>
                 </div>
@@ -172,6 +190,11 @@ export default async function CatalogoPage({ searchParams }: Props) {
             <ProductSubcategoryGroups
               products={products}
               whatsappNumber={settings.whatsappNumber}
+              actionCopy={{
+                detailLabel: settings.productCardDetailLabel,
+                whatsappLabel: settings.productCardWhatsappLabel,
+                whatsappMessageTemplate: settings.whatsappProductMessageTemplate,
+              }}
               subcategorySummaries={subcategorySummaries}
               q={q}
             />
@@ -187,7 +210,7 @@ export default async function CatalogoPage({ searchParams }: Props) {
         )}
       </section>
 
-      <ContactCTA settings={settings} />
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

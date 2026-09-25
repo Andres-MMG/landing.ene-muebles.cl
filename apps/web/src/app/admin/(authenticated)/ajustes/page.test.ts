@@ -1,13 +1,13 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV };
-  process.env.STRAPI_INTERNAL_URL = 'http://localhost:1337';
-  process.env.STRAPI_API_TOKEN = 'test-token';
-  vi.stubGlobal('fetch', vi.fn());
+  process.env.STRAPI_INTERNAL_URL = "http://localhost:1337";
+  process.env.STRAPI_API_TOKEN = "test-token";
+  vi.stubGlobal("fetch", vi.fn());
 });
 
 afterEach(() => {
@@ -19,8 +19,8 @@ const mockFetch = (status: number, body: unknown) => {
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json' },
-    })
+      headers: { "Content-Type": "application/json" },
+    }),
   );
 };
 
@@ -44,8 +44,8 @@ const mockFetch = (status: number, body: unknown) => {
  * Strapi PUT path is verified by `route.test.ts`; the public read
  * chain is verified by `apps/web/src/lib/strapi.test.ts`.
  */
-describe('Admin /admin/ajustes data-loader — RUT end-to-end propagation', () => {
-  it('returns the Strapi-supplied rut verbatim when the singleton is populated', async () => {
+describe("Admin /admin/ajustes data-loader — RUT end-to-end propagation", () => {
+  it("returns the Strapi-supplied rut verbatim when the singleton is populated", async () => {
     // Strapi v5 singleType GET with `populate=*` returns the flat
     // shape: `{ data: { id, documentId, siteName, rut, ... } }` —
     // there is NO `attributes` wrapper (that's v4). The data-loader
@@ -54,27 +54,42 @@ describe('Admin /admin/ajustes data-loader — RUT end-to-end propagation', () =
     mockFetch(200, {
       data: {
         id: 1,
-        documentId: 'site-setting-1',
-        siteName: 'Ene Muebles',
-        rut: '76.123.456-7',
-        tagline: 'Mobiliario institucional',
-        contactEmail: 'hola@ene-muebles.cl',
-        contactPhone: '+56 2 2898 4421',
-        whatsappNumber: '+56912345678',
-        whatsappDefaultMessage: 'Hola, cotización',
-        address: 'Av. Apoquindo 4000',
-        businessHours: 'Lun a Vie · 09:00–18:00',
-        aboutText: 'Muebles artesanales',
+        documentId: "site-setting-1",
+        siteName: "Ene Muebles",
+        rut: "76.123.456-7",
+        tagline: "Mobiliario institucional",
+        contactEmail: "hola@ene-muebles.cl",
+        contactPhone: "+56 2 2898 4421",
+        whatsappNumber: "+56912345678",
+        whatsappDefaultMessage: "Hola, cotización",
+        address: "Av. Apoquindo 4000",
+        businessHours: "Lun a Vie · 09:00–18:00",
+        aboutText: "Muebles artesanales",
+        paymentTermsText: "Pago contra orden de compra",
+        warrantyText: "Garantía de 12 meses",
+        quoteResponseTimeText: "Respuesta en 2 días hábiles",
+        foundedYear: 1996,
+        navigationHomeLabel: "Portada",
+        navigationCatalogLabel: "Productos",
+        navigationAboutLabel: "La empresa",
+        navigationContactLabel: "Escríbenos",
+        headerWhatsappLabel: "Cotizar",
+        mobileWhatsappLabel: "Cotizar por WhatsApp",
+        whatsappProductMessageTemplate: "Necesito cotizar {productName}.",
+        productCardDetailLabel: "Ver ficha",
+        productCardWhatsappLabel: "Cotizar",
+        productDetailWhatsappLabel: "Cotizar por WhatsApp",
+        productDetailContactLabel: "Contactar",
         socialLinks: {
-          facebook: 'https://facebook.com/enemuebles',
-          instagram: 'https://instagram.com/enemuebles',
+          facebook: "https://facebook.com/enemuebles",
+          instagram: "https://instagram.com/enemuebles",
           tiktok: null,
           linkedin: null,
         },
       },
     });
 
-    const { getSiteSetting } = await import('./page');
+    const { getSiteSetting } = await import("./page");
     const setting = await getSiteSetting();
 
     // The data-loader must surface every scalar field the form reads
@@ -84,39 +99,119 @@ describe('Admin /admin/ajustes data-loader — RUT end-to-end propagation', () =
     // siteName, and the admin form is required-by-domain too.
     expect(setting).not.toBeNull();
     if (!setting) return; // Narrow for the strict-mode type checker.
-    expect(setting.rut).toBe('76.123.456-7');
-    expect(setting.siteName).toBe('Ene Muebles');
-    expect(setting.tagline).toBe('Mobiliario institucional');
-    expect(setting.contactEmail).toBe('hola@ene-muebles.cl');
-    expect(setting.whatsappNumber).toBe('+56912345678');
-    expect(setting.whatsappDefaultMessage).toBe('Hola, cotización');
-    expect(setting.socialLinks?.facebook).toBe('https://facebook.com/enemuebles');
-    expect(setting.socialLinks?.instagram).toBe('https://instagram.com/enemuebles');
+    expect(setting.rut).toBe("76.123.456-7");
+    expect(setting.siteName).toBe("Ene Muebles");
+    expect(setting.tagline).toBe("Mobiliario institucional");
+    expect(setting.contactEmail).toBe("hola@ene-muebles.cl");
+    expect(setting.whatsappNumber).toBe("+56912345678");
+    expect(setting.whatsappDefaultMessage).toBe("Hola, cotización");
+    expect(setting.socialLinks?.facebook).toBe("https://facebook.com/enemuebles");
+    expect(setting.socialLinks?.instagram).toBe("https://instagram.com/enemuebles");
     // Optional keys may stay undefined when Strapi omits them — the
     // admin form renders blank inputs and the form's
     // `buildSubmitPayload` drops empty scalars from the PUT body.
-    expect(setting.businessHours).toBe('Lun a Vie · 09:00–18:00');
+    expect(setting.businessHours).toBe("Lun a Vie · 09:00–18:00");
+    expect(setting.paymentTermsText).toBe("Pago contra orden de compra");
+    expect(setting.warrantyText).toBe("Garantía de 12 meses");
+    expect(setting.quoteResponseTimeText).toBe("Respuesta en 2 días hábiles");
+    expect(setting.foundedYear).toBe(1996);
+    expect(setting.navigationHomeLabel).toBe("Portada");
+    expect(setting.navigationCatalogLabel).toBe("Productos");
+    expect(setting.navigationAboutLabel).toBe("La empresa");
+    expect(setting.navigationContactLabel).toBe("Escríbenos");
+    expect(setting.headerWhatsappLabel).toBe("Cotizar");
+    expect(setting.mobileWhatsappLabel).toBe("Cotizar por WhatsApp");
+    expect(setting.whatsappProductMessageTemplate).toBe("Necesito cotizar {productName}.");
+    expect(setting.productCardDetailLabel).toBe("Ver ficha");
+    expect(setting.productCardWhatsappLabel).toBe("Cotizar");
+    expect(setting.productDetailWhatsappLabel).toBe("Cotizar por WhatsApp");
+    expect(setting.productDetailContactLabel).toBe("Contactar");
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:1337/api/site-setting?populate=*&status=draft",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test-token" },
+        cache: "no-store",
+      }),
+    );
   });
 
-  it('returns null when the singleton has not been seeded yet', async () => {
+  it("returns null when the singleton has not been seeded yet", async () => {
     // Strapi v5 singleType GET responds with `data: null` when the
     // singleton has never been saved. The admin page handles this by
     // passing `null` through to the form, which renders blank inputs.
     // (There is no shared ui-tokens fallback for site-setting because
     // the public read helper requires `siteName` and throws otherwise.)
     mockFetch(200, { data: null });
-    const { getSiteSetting } = await import('./page');
+    const { getSiteSetting } = await import("./page");
     const setting = await getSiteSetting();
     expect(setting).toBeNull();
   });
 
-  it('returns null when the upstream fetch fails', async () => {
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error('ECONNREFUSED')
+  it("returns null for an explicit upstream 404", async () => {
+    mockFetch(404, { error: { message: "Not Found" } });
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).resolves.toBeNull();
+  });
+
+  it("keeps a partial real document as the primary editable value", async () => {
+    mockFetch(200, { data: { siteName: "Nombre parcial" } });
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).resolves.toEqual({ siteName: "Nombre parcial" });
+  });
+
+  it("keeps an empty real document instead of replacing it with absence", async () => {
+    mockFetch(200, { data: {} });
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).resolves.toEqual({});
+  });
+
+  it("omits the Authorization header when no Strapi token is configured", async () => {
+    process.env.STRAPI_API_TOKEN = "   ";
+    delete process.env.STRAPI_ADMIN_TOKEN;
+    mockFetch(200, { data: null });
+
+    const { getSiteSetting } = await import("./page");
+    await getSiteSetting();
+
+    const init = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as
+      | RequestInit
+      | undefined;
+    expect(new Headers(init?.headers).has("authorization")).toBe(false);
+  });
+
+  it("fails closed when the upstream fetch fails", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).rejects.toThrow("ECONNREFUSED");
+  });
+
+  it("fails closed on non-not-found upstream errors", async () => {
+    mockFetch(503, { error: { message: "Unavailable" } });
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).rejects.toThrow("(503)");
+  });
+
+  it("fails closed when Strapi returns malformed JSON", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+      new Response("not-json", { status: 200 }),
     );
-    const { getSiteSetting } = await import('./page');
-    const setting = await getSiteSetting();
-    expect(setting).toBeNull();
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).rejects.toThrow();
+  });
+
+  it.each<[string, unknown]>([
+    ["an envelope without data", { meta: {} }],
+    ["a non-object document", { data: [] }],
+  ])("fails closed when Strapi returns %s", async (_label: string, body: unknown) => {
+    mockFetch(200, body);
+
+    const { getSiteSetting } = await import("./page");
+    await expect(getSiteSetting()).rejects.toThrow(/inválid/iu);
   });
 });
 
@@ -151,22 +246,41 @@ describe('Admin /admin/ajustes data-loader — RUT end-to-end propagation', () =
  *   9. ISR (`revalidate: 60`) keeps the cost low; the new value
  *      reaches the public site on the next request after save.
  */
-describe('Admin /admin/ajustes page — page → form wiring (static check)', () => {
-  it('the page source wires setting?.rut into the form initial prop', async () => {
+describe("Admin /admin/ajustes page — page → form wiring (static check)", () => {
+  it("the page source wires setting?.rut into the form initial prop", async () => {
     // We import the page module and inspect its default export's
     // stringified source. This is a brittle pattern, but it pins the
     // wiring contract at the file level so a refactor that drops
     // `setting?.rut` from the form props breaks the test loudly
     // instead of silently producing blank inputs.
-    const fs = await import('node:fs/promises');
-    const path = await import('node:path');
-    const pagePath = path.join(__dirname, 'page.tsx');
-    const source = await fs.readFile(pagePath, 'utf8');
-    expect(source).toContain('initial={');
+    const fs = await import("node:fs/promises");
+    const path = await import("node:path");
+    const pagePath = path.join(__dirname, "page.tsx");
+    const source = await fs.readFile(pagePath, "utf8");
+    expect(source).toContain("initial={");
     // The wiring must use the data-loader output (`setting?.rut`),
     // not a hardcoded empty string. This is the exact contract Bug 2
     // relies on: a saved RUT round-trips to the form's `initial.rut`.
     expect(source).toMatch(/rut:\s*setting\?\.rut/);
     expect(source).toMatch(/siteName:\s*setting\?\.siteName/);
+    expect(source).toMatch(/paymentTermsText:\s*setting\?\.paymentTermsText/);
+    expect(source).toMatch(/warrantyText:\s*setting\?\.warrantyText/);
+    expect(source).toMatch(/quoteResponseTimeText:\s*setting\?\.quoteResponseTimeText/);
+    expect(source).toMatch(/foundedYear:\s*setting\?\.foundedYear/);
+    for (const field of [
+      "navigationHomeLabel",
+      "navigationCatalogLabel",
+      "navigationAboutLabel",
+      "navigationContactLabel",
+      "headerWhatsappLabel",
+      "mobileWhatsappLabel",
+      "whatsappProductMessageTemplate",
+      "productCardDetailLabel",
+      "productCardWhatsappLabel",
+      "productDetailWhatsappLabel",
+      "productDetailContactLabel",
+    ]) {
+      expect(source).toMatch(new RegExp(`${field}:\\s*setting\\?\\.${field}\\s*\\?\\?\\s*["']{2}`));
+    }
   });
 });

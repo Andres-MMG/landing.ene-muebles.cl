@@ -1,23 +1,107 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { site as siteTokens } from "@ene/ui-tokens";
-import { getCatalogSnapshot, pickMediaFormat, type Product } from "@/lib/strapi";
+import { formatAddress } from "@/lib/address";
+import {
+  getCatalogPage,
+  getCatalogSnapshot,
+  getSiteSettings,
+  pickMediaFormat,
+  type CatalogPage,
+  type Product,
+  type SiteSetting,
+} from "@/lib/strapi";
 import { PrintButton } from "./PrintButton";
+import { buildSeoMetadata } from "@/lib/seo-metadata";
 import { PRODUCTS_PER_REFERENCE_PAGE, REFERENCE_MANIFEST } from "./reference-manifest";
 
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Catálogo para imprimir",
-  description: "Catálogo imprimible de mobiliario escolar y de oficina de ENE-MUEBLES.",
+export const metadata: Metadata = {
+  ...buildSeoMetadata({
+    title: "Catálogo para imprimir",
+    description: "Catálogo imprimible de mobiliario escolar y de oficina de ENE-MUEBLES.",
+    path: "/catalogo",
+  }),
+  robots: { index: false, follow: true },
 };
 
 const DESCRIPTION_LIMIT = 220;
-const CONTACT_EMAIL = "contacto@ene-muebles.cl";
-const CONTACT_PHONE = "+56 9 9539 5339";
 const CATEGORIES_PER_INDEX_PAGE = 18;
+
+const PRINT_CONTENT_FALLBACK = Object.freeze({
+  eyebrow: "Catálogo institucional",
+  productCountSuffix: "productos certificados para instituciones.",
+  documentationText: "Cada producto se entrega con ficha técnica y declaración de materiales.",
+  printCtaLabel: "Imprimir PDF",
+  printCoverTitle: "Mobiliario institucional",
+  printCoverBody:
+    "Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la solicitud.",
+  printIndexTitle: "Líneas de producto",
+  printCategorySubtitle: "Mobiliario institucional",
+  printPublishedProductsSuffix: "productos publicados",
+}) satisfies CatalogPage;
+
+const PRINT_SITE_FALLBACK = Object.freeze({
+  siteName: siteTokens.brand,
+  contactEmail: "contacto@ene-muebles.cl",
+  contactPhone: "+56 9 9539 5339",
+}) satisfies SiteSetting;
+
+const PRINT_ADDRESS_FALLBACK = "Chile";
 
 type ProductSubgroup = { name?: string; key: string; items: Product[] };
 type ProductGroup = { name: string; slug: string; subgroups: ProductSubgroup[] };
+type PrintContact = {
+  siteName: string;
+  wordmark: string;
+  email: string;
+  phone: string;
+  telHref: string | null;
+  address: string;
+  coverage?: string;
+  quoteResponseTime?: string;
+  warranty?: string;
+};
+
+function optionalText(value: string | undefined): string | undefined {
+  return value?.trim() || undefined;
+}
+
+function buildTelHref(phone: string): string | null {
+  const digits = phone.replace(/\D/g, "");
+  if (!digits) return null;
+  const prefix = phone.trim().startsWith("+") ? "+" : "";
+  return "tel:" + prefix + digits;
+}
+
+function resolvePrintContact(settings: SiteSetting): PrintContact {
+  const siteName = settings.siteName?.trim() || PRINT_SITE_FALLBACK.siteName;
+  const email = optionalText(settings.contactEmail) || PRINT_SITE_FALLBACK.contactEmail;
+  const phone = optionalText(settings.contactPhone) || PRINT_SITE_FALLBACK.contactPhone;
+
+  return {
+    siteName,
+    wordmark: siteName.replace(/-/g, " ").replace(/\s+/g, " ").trim(),
+    email,
+    phone,
+    telHref: buildTelHref(phone),
+    address: formatAddress(settings) || PRINT_ADDRESS_FALLBACK,
+    coverage: optionalText(settings.dispatchCoverage),
+    quoteResponseTime: optionalText(settings.quoteResponseTimeText),
+    warranty: optionalText(settings.warrantyText),
+  };
+}
+
+function PhoneContact({ contact, className }: { contact: PrintContact; className?: string }) {
+  return contact.telHref ? (
+    <a href={contact.telHref} className={className}>
+      {contact.phone}
+    </a>
+  ) : (
+    <span className={className}>{contact.phone}</span>
+  );
+}
 
 function trimDescription(value: string | undefined): string | null {
   const description = value?.trim();
@@ -72,18 +156,27 @@ function chunkIndexGroups(groups: ProductGroup[]): ProductGroup[][] {
   );
 }
 
-function CatalogFooter({ pageLabel }: { pageLabel: string }) {
+function CatalogFooter({ pageLabel, contact }: { pageLabel: string; contact: PrintContact }) {
   return (
     <footer className="print-page-footer" aria-label="Pie de página">
-      <span>
-        {CONTACT_EMAIL} · {CONTACT_PHONE}
+      <span className="print-footer-contact print-bounded-single">
+        {contact.email} · {contact.phone}
+        {contact.coverage ? " · " + contact.coverage : null}
       </span>
       <span data-page-number="true">{pageLabel}</span>
     </footer>
   );
 }
 
-function PrintCoverPage({ printedAt }: { printedAt: string }) {
+function PrintCoverPage({
+  printedAt,
+  content,
+  contact,
+}: {
+  printedAt: string;
+  content: CatalogPage;
+  contact: PrintContact;
+}) {
   return (
     <header
       className="print-page print-cover"
@@ -91,21 +184,26 @@ function PrintCoverPage({ printedAt }: { printedAt: string }) {
       data-page-family="cover"
     >
       <div className="print-cover-content">
-        <p className="print-cover-kicker">{siteTokens.brand}</p>
+        <p className="print-cover-kicker print-bounded-single">{contact.siteName}</p>
         <p className="print-cover-catalog">CATÁLOGO</p>
-        <h1 id="print-title">Mobiliario institucional</h1>
-        <p className="print-cover-copy">
-          Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la
-          solicitud.
+        <h1 id="print-title" className="print-cover-title print-bounded-lines print-lines-3">
+          {content.printCoverTitle}
+        </h1>
+        <p className="print-cover-copy print-bounded-lines print-lines-5">
+          {content.printCoverBody}
         </p>
         <address className="print-cover-contact">
-          <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-          <a href="tel:+56995395339">{CONTACT_PHONE}</a>
-          <span>Chile</span>
+          <a href={"mailto:" + contact.email} className="print-bounded-single">
+            {contact.email}
+          </a>
+          <PhoneContact contact={contact} className="print-bounded-single" />
+          <span className="print-cover-address print-bounded-lines print-lines-2">
+            {contact.address}
+          </span>
         </address>
       </div>
-      <p className="print-cover-mark" aria-label="ENE MUEBLES">
-        ENE MUEBLES
+      <p className="print-cover-mark print-bounded-single" aria-label={contact.wordmark}>
+        {contact.wordmark}
       </p>
       <p className="print-cover-updated">Actualizado {printedAt}</p>
     </header>
@@ -118,12 +216,16 @@ function PrintIndexPage({
   isTruncated,
   pageNumber,
   pageCount,
+  content,
+  contact,
 }: {
   groups: ProductGroup[];
   totalProducts: number;
   isTruncated: boolean;
   pageNumber: number;
   pageCount: number;
+  content: CatalogPage;
+  contact: PrintContact;
 }) {
   const splitAt = Math.ceil(groups.length / 2);
   const columns = [groups.slice(0, splitAt), groups.slice(splitAt)];
@@ -141,10 +243,12 @@ function PrintIndexPage({
           <p className="print-section-label">
             ÍNDICE{pageCount > 1 ? ` · ${pageNumber}/${pageCount}` : ""}
           </p>
-          <h2 id={titleId}>Líneas de producto</h2>
+          <h2 id={titleId} className="print-index-title print-bounded-lines print-lines-2">
+            {content.printIndexTitle}
+          </h2>
         </div>
-        <p className="print-index-wordmark" aria-label="ENE MUEBLES">
-          ENE MUEBLES
+        <p className="print-index-wordmark print-bounded-single" aria-label={contact.wordmark}>
+          {contact.wordmark}
         </p>
       </header>
       {groups.length > 0 ? (
@@ -184,13 +288,27 @@ function PrintIndexPage({
           límite de carga configurado.
         </p>
       ) : null}
-      <aside className="print-contact-panel" aria-label="Contacto ENE-MUEBLES">
-        <p>ENE-MUEBLES</p>
-        <a href={`mailto:${CONTACT_EMAIL}`}>{CONTACT_EMAIL}</a>
-        <a href="tel:+56995395339">{CONTACT_PHONE}</a>
-        <span>{totalProducts} productos publicados</span>
+      <aside className="print-contact-panel" aria-label={"Contacto " + contact.siteName}>
+        <p className="print-contact-site-name print-bounded-single">{contact.siteName}</p>
+        <a href={"mailto:" + contact.email} className="print-bounded-single">
+          {contact.email}
+        </a>
+        <PhoneContact contact={contact} className="print-bounded-single" />
+        <span className="print-contact-product-count print-bounded-single">
+          {totalProducts} {content.printPublishedProductsSuffix}
+        </span>
+        {contact.quoteResponseTime ? (
+          <span className="print-contact-fact print-bounded-lines print-lines-2">
+            {contact.quoteResponseTime}
+          </span>
+        ) : null}
+        {contact.warranty ? (
+          <span className="print-contact-fact print-bounded-lines print-lines-2">
+            {contact.warranty}
+          </span>
+        ) : null}
       </aside>
-      <CatalogFooter pageLabel="Índice" />
+      <CatalogFooter pageLabel="Índice" contact={contact} />
     </section>
   );
 }
@@ -234,6 +352,8 @@ function PrintCategoryPage({
   pageNumber,
   pageCount,
   isFirstCategoryPage,
+  content,
+  contact,
 }: {
   group: ProductGroup;
   subgroup: ProductSubgroup;
@@ -241,6 +361,8 @@ function PrintCategoryPage({
   pageNumber: number;
   pageCount: number;
   isFirstCategoryPage: boolean;
+  content: CatalogPage;
+  contact: PrintContact;
 }) {
   return (
     <section
@@ -259,9 +381,11 @@ function PrintCategoryPage({
             <p className="print-category-context">Subcategoría · {subgroup.name}</p>
           ) : null}
         </div>
-        <div className="print-category-brand" aria-label="ENE MUEBLES">
-          <p className="print-category-wordmark">ENE MUEBLES</p>
-          <p className="print-category-subtitle">Mobiliario institucional</p>
+        <div className="print-category-brand" aria-label={contact.wordmark}>
+          <p className="print-category-wordmark print-bounded-single">{contact.wordmark}</p>
+          <p className="print-category-subtitle print-bounded-lines print-lines-2">
+            {content.printCategorySubtitle}
+          </p>
         </div>
         <p className="print-category-progress">
           {pageNumber} / {pageCount}
@@ -272,7 +396,7 @@ function PrintCategoryPage({
           <ProductPrintSlot key={product.id} product={product} />
         ))}
       </div>
-      <CatalogFooter pageLabel={`Página ${pageNumber}`} />
+      <CatalogFooter pageLabel={"Página " + pageNumber} contact={contact} />
     </section>
   );
 }
@@ -290,12 +414,20 @@ function PrintErrorState() {
 
 export default async function CatalogoImprimirPage() {
   let snapshot: Awaited<ReturnType<typeof getCatalogSnapshot>>;
+  let content: CatalogPage;
+  let settings: SiteSetting;
+
   try {
-    snapshot = await getCatalogSnapshot();
+    [snapshot, content, settings] = await Promise.all([
+      getCatalogSnapshot(),
+      getCatalogPage().catch(() => PRINT_CONTENT_FALLBACK),
+      getSiteSettings().catch(() => PRINT_SITE_FALLBACK),
+    ]);
   } catch {
     return <PrintErrorState />;
   }
 
+  const contact = resolvePrintContact(settings);
   const groups = groupByCategoryAndSubcategory(snapshot.products);
   const printedAt = new Intl.DateTimeFormat("es-CL", {
     day: "2-digit",
@@ -330,7 +462,7 @@ export default async function CatalogoImprimirPage() {
         className="print-catalog print-document"
         data-reference-version={REFERENCE_MANIFEST.version}
       >
-        <PrintCoverPage printedAt={printedAt} />
+        <PrintCoverPage printedAt={printedAt} content={content} contact={contact} />
         {indexPages.map((indexGroups, index) => (
           <PrintIndexPage
             key={`index-${index}`}
@@ -339,6 +471,8 @@ export default async function CatalogoImprimirPage() {
             isTruncated={snapshot.truncated && index === 0}
             pageNumber={index + 1}
             pageCount={indexPages.length}
+            content={content}
+            contact={contact}
           />
         ))}
         {categoryPages.map(({ group, subgroup, products, isFirstCategoryPage }, index) => (
@@ -350,6 +484,8 @@ export default async function CatalogoImprimirPage() {
             pageNumber={index + 1}
             pageCount={categoryPages.length}
             isFirstCategoryPage={isFirstCategoryPage}
+            content={content}
+            contact={contact}
           />
         ))}
         {groups.length === 0 ? (
@@ -376,12 +512,37 @@ const PRINT_STYLES = `
   /* Fixed content budgets keep dynamic CMS descriptions intentional rather than clipped. */
   .print-cover-mark { font-size: 29pt; letter-spacing: -.055em; white-space: nowrap; }
   .print-index-wordmark { font-size: 14pt; letter-spacing: -.055em; white-space: nowrap; }
-  .print-category-header { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); }
+  .print-category-header { grid-template-columns: minmax(0, 1fr) minmax(42mm, 70mm) minmax(0, 1fr); }
   .print-category-title { min-width: 0; }
   .print-category-context { margin: 2mm 0 0; color: #dcd8d2; font-size: 7pt; line-height: 1.2; }
-  .print-category-brand { min-width: 42mm; text-align: center; }
+  .print-category-brand { width: 70mm; min-width: 0; max-width: 70mm; overflow: hidden; text-align: center; }
   .print-category-wordmark { font-size: 14pt; letter-spacing: -.055em; line-height: 1; white-space: nowrap; }
-  .print-category-subtitle { margin: 1.5mm 0 0; color: #dcd8d2; font-size: 6.5pt; line-height: 1; letter-spacing: .08em; text-transform: uppercase; white-space: nowrap; }
+  .print-category-subtitle { max-height: 6mm; margin: 1.5mm 0 0; color: #dcd8d2; font-size: 6.5pt; line-height: 1; letter-spacing: .08em; text-transform: uppercase; white-space: normal; }
+  /* Configurable CMS copy stays inside deterministic A4 regions. */
+  .print-bounded-single { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .print-bounded-lines { display: -webkit-box; min-width: 0; overflow: hidden; overflow-wrap: anywhere; word-break: break-word; -webkit-box-orient: vertical; }
+  .print-lines-2 { -webkit-line-clamp: 2; }
+  .print-lines-3 { -webkit-line-clamp: 3; }
+  .print-lines-5 { -webkit-line-clamp: 5; }
+  .print-cover-content { min-width: 0; max-width: 136mm; }
+  .print-cover-kicker { max-width: 105mm; }
+  .print-cover-title { max-height: 31mm; }
+  .print-cover-copy { max-height: 28mm; }
+  .print-cover-contact { max-width: 105mm; overflow: hidden; }
+  .print-cover-contact > * { max-width: 105mm; }
+  .print-cover-address { max-height: 8mm; }
+  .print-cover-mark { max-width: 105mm; text-align: right; }
+  .print-index-header { gap: 12mm; }
+  .print-index-header > div { min-width: 0; max-width: 150mm; }
+  .print-index-title { max-height: 20mm; }
+  .print-index-wordmark { flex: 0 1 80mm; max-width: 80mm; text-align: right; }
+  .print-contact-panel { max-height: 42mm; overflow: hidden; gap: 1mm 5mm; grid-auto-rows: min-content; }
+  .print-contact-panel > * { min-width: 0; }
+  .print-contact-site-name, .print-contact-product-count, .print-contact-fact { grid-column: 1 / -1; }
+  .print-contact-fact.print-lines-2 { max-height: 7mm; }
+  .print-page-footer { min-width: 0; }
+  .print-footer-contact { flex: 1 1 auto; }
+  .print-page-footer [data-page-number="true"] { flex: 0 0 auto; }
   .print-product-slot { display: grid; grid-template-rows: 42mm minmax(0, 1fr); min-height: 0; border-top-width: 1mm; }
   .print-product-media { height: auto; min-height: 0; }
   .print-product-body { display: grid; grid-template-rows: auto auto minmax(0, 1fr); min-height: 0; overflow: hidden; padding: 3mm 2.5mm 2.5mm; }

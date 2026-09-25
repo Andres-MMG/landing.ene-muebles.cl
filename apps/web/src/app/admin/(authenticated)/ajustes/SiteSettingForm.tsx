@@ -2,10 +2,22 @@
 
 import { useState, useTransition } from "react";
 import { adminPut } from "@/lib/admin/client";
+import {
+  DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+  HEADER_WHATSAPP_LABEL_MAX_LENGTH,
+  MOBILE_WHATSAPP_LABEL_MAX_LENGTH,
+} from "@/lib/public-navigation";
 
 type Values = {
   siteName: string;
   tagline: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoShareImageKicker?: string;
+  seoShareImageTitle?: string;
+  seoShareImageDescription?: string;
+  seoShareImageFooter?: string;
+  seoShareImageAlt?: string;
   rut: string;
   contactEmail: string;
   contactPhone: string;
@@ -17,6 +29,21 @@ type Values = {
   addressRegion: string;
   businessHours: string;
   aboutText: string;
+  paymentTermsText: string;
+  warrantyText: string;
+  quoteResponseTimeText: string;
+  navigationHomeLabel: string;
+  navigationCatalogLabel: string;
+  navigationAboutLabel: string;
+  navigationContactLabel: string;
+  headerWhatsappLabel: string;
+  mobileWhatsappLabel: string;
+  whatsappProductMessageTemplate: string;
+  productCardDetailLabel: string;
+  productCardWhatsappLabel: string;
+  productDetailWhatsappLabel: string;
+  productDetailContactLabel: string;
+  foundedYear: string;
   socialInstagram: string;
   socialFacebook: string;
   socialLinkedIn: string;
@@ -28,9 +55,11 @@ type FieldKey = keyof Values;
 type FieldDef = {
   key: FieldKey;
   label: string;
-  type: "text" | "email" | "tel" | "url" | "textarea";
+  type: "text" | "email" | "tel" | "url" | "number" | "textarea";
   placeholder?: string;
   maxLength?: number;
+  min?: number;
+  max?: number;
   rows?: number;
   required?: boolean;
   span?: "half" | "full";
@@ -80,6 +109,62 @@ const FIELDS: FieldDef[] = [
     span: "half",
   },
   {
+    key: "seoTitle",
+    label: "Título SEO global",
+    type: "text",
+    maxLength: 60,
+    span: "half",
+    help: "Opcional. Se usa como respaldo SEO de la portada.",
+  },
+  {
+    key: "seoDescription",
+    label: "Descripción SEO global",
+    type: "textarea",
+    rows: 3,
+    maxLength: 160,
+    span: "full",
+    help: "Opcional. Se usa como respaldo SEO de la portada.",
+  },
+  {
+    key: "seoShareImageKicker",
+    label: "Imagen social · etiqueta superior",
+    type: "text",
+    maxLength: 100,
+    span: "full",
+    help: "Opcional. Al quedar vacío se usa el texto predeterminado.",
+  },
+  {
+    key: "seoShareImageTitle",
+    label: "Imagen social · título",
+    type: "text",
+    maxLength: 120,
+    span: "full",
+  },
+  {
+    key: "seoShareImageDescription",
+    label: "Imagen social · descripción",
+    type: "textarea",
+    rows: 3,
+    maxLength: 200,
+    span: "full",
+  },
+  {
+    key: "seoShareImageFooter",
+    label: "Imagen social · pie",
+    type: "text",
+    maxLength: 160,
+    span: "full",
+  },
+  {
+    key: "seoShareImageAlt",
+    label: "Imagen social · texto alternativo",
+    type: "textarea",
+    rows: 2,
+    maxLength: 200,
+    span: "full",
+    help: "Describe la imagen para accesibilidad y vista previa social.",
+  },
+  {
     key: "rut",
     label: "RUT",
     type: "text",
@@ -120,6 +205,96 @@ const FIELDS: FieldDef[] = [
     maxLength: 1000,
     required: true,
     span: "full",
+  },
+  {
+    key: "navigationHomeLabel",
+    label: "Navegación · Inicio",
+    type: "text",
+    placeholder: "Inicio",
+    maxLength: DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "navigationCatalogLabel",
+    label: "Navegación · Catálogo",
+    type: "text",
+    placeholder: "Catálogo",
+    maxLength: DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "navigationAboutLabel",
+    label: "Navegación · Nosotros",
+    type: "text",
+    placeholder: "Nosotros",
+    maxLength: DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "navigationContactLabel",
+    label: "Navegación · Contacto",
+    type: "text",
+    placeholder: "Contacto",
+    maxLength: DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "headerWhatsappLabel",
+    label: "WhatsApp del encabezado",
+    type: "text",
+    placeholder: "WhatsApp",
+    maxLength: HEADER_WHATSAPP_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "mobileWhatsappLabel",
+    label: "WhatsApp del menú móvil",
+    type: "text",
+    placeholder: "Hablar por WhatsApp",
+    maxLength: MOBILE_WHATSAPP_LABEL_MAX_LENGTH,
+    span: "half",
+  },
+  {
+    key: "whatsappProductMessageTemplate",
+    label: "Plantilla de WhatsApp para productos",
+    type: "textarea",
+    rows: 3,
+    placeholder: "Hola, quisiera cotizar {productName}.",
+    maxLength: 1000,
+    span: "full",
+    help: "Debe contener exactamente una vez el texto literal {productName}.",
+  },
+  {
+    key: "productCardDetailLabel",
+    label: "Tarjeta de producto · detalle",
+    type: "text",
+    placeholder: "Ver ficha",
+    maxLength: 60,
+    span: "half",
+  },
+  {
+    key: "productCardWhatsappLabel",
+    label: "Tarjeta de producto · WhatsApp",
+    type: "text",
+    placeholder: "Cotizar",
+    maxLength: 60,
+    span: "half",
+  },
+  {
+    key: "productDetailWhatsappLabel",
+    label: "Detalle de producto · WhatsApp",
+    type: "text",
+    placeholder: "Cotizar por WhatsApp",
+    maxLength: 80,
+    span: "half",
+  },
+  {
+    key: "productDetailContactLabel",
+    label: "Detalle de producto · contacto",
+    type: "text",
+    placeholder: "Contactar",
+    maxLength: 80,
+    span: "half",
   },
   {
     key: "address",
@@ -171,6 +346,43 @@ const FIELDS: FieldDef[] = [
     span: "full",
   },
   {
+    key: "paymentTermsText",
+    label: "Condiciones de pago",
+    type: "textarea",
+    rows: 3,
+    placeholder: "Indique las condiciones de pago aplicables.",
+    maxLength: 2000,
+    span: "full",
+  },
+  {
+    key: "warrantyText",
+    label: "Garantía",
+    type: "textarea",
+    rows: 3,
+    placeholder: "Indique la cobertura y vigencia de la garantía.",
+    maxLength: 2000,
+    span: "full",
+  },
+  {
+    key: "quoteResponseTimeText",
+    label: "Plazo de respuesta a cotizaciones",
+    type: "textarea",
+    rows: 2,
+    placeholder: "Indique el plazo habitual de respuesta.",
+    maxLength: 280,
+    span: "full",
+  },
+  {
+    key: "foundedYear",
+    label: "Año de fundación",
+    type: "number",
+    placeholder: "1996",
+    min: 1800,
+    max: 2100,
+    span: "half",
+    help: "Se usa para calcular automáticamente los años de trayectoria.",
+  },
+  {
     key: "socialInstagram",
     label: "Instagram",
     type: "url",
@@ -203,6 +415,27 @@ const FIELDS: FieldDef[] = [
     help: "Pega la URL completa o escribe solo el usuario (ej. enemuebles).",
   },
 ];
+
+const FALLBACK_COPY_KEYS = [
+  "seoTitle",
+  "seoDescription",
+  "seoShareImageKicker",
+  "seoShareImageTitle",
+  "seoShareImageDescription",
+  "seoShareImageFooter",
+  "seoShareImageAlt",
+  "navigationHomeLabel",
+  "navigationCatalogLabel",
+  "navigationAboutLabel",
+  "navigationContactLabel",
+  "headerWhatsappLabel",
+  "mobileWhatsappLabel",
+  "whatsappProductMessageTemplate",
+  "productCardDetailLabel",
+  "productCardWhatsappLabel",
+  "productDetailWhatsappLabel",
+  "productDetailContactLabel",
+] as const satisfies readonly FieldKey[];
 
 /**
  * Strapi v5 returns errors in `{ error: { status, name, message, details } }`
@@ -306,10 +539,12 @@ function buildSocialLinks(values: Values): Record<string, string | null> {
 
 /**
  * Build the JSON body sent to `PUT /api/admin/site-setting`. Required
- * fields are always sent (trimmed). Optional scalars are omitted when
- * blank so we don't accidentally wipe a saved value the admin didn't
- * intend to touch; non-blank optionals are sent as the trimmed value.
- * Social links are always sent (null when blank) — see the comment on
+ * fields are always sent (trimmed). Pre-existing optional scalars are
+ * omitted when blank to preserve saved values. The three commercial
+ * terms and global navigation/product-action fields are always sent:
+ * trimmed strings when nonblank, null when blank so an administrator
+ * can restore the public fallback. Social links are always
+ * sent (null when blank) — see the comment on
  * `buildSocialLinks` for the rationale.
  *
  * Exported so the matching payload test can exercise the form's
@@ -331,6 +566,13 @@ export function buildSubmitPayload(values: Values): Record<string, unknown> {
   if (values.addressRegion.trim()) payload.addressRegion = values.addressRegion.trim();
   if (values.businessHours.trim()) payload.businessHours = values.businessHours.trim();
   if (values.aboutText.trim()) payload.aboutText = values.aboutText.trim();
+  payload.paymentTermsText = values.paymentTermsText.trim() || null;
+  payload.warrantyText = values.warrantyText.trim() || null;
+  payload.quoteResponseTimeText = values.quoteResponseTimeText.trim() || null;
+  for (const key of FALLBACK_COPY_KEYS) {
+    payload[key] = (values[key] ?? "").trim() || null;
+  }
+  payload.foundedYear = values.foundedYear.trim() ? Number(values.foundedYear.trim()) : null;
   payload.socialLinks = buildSocialLinks(values);
   return payload;
 }
@@ -401,7 +643,7 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
               </span>
               {field.type === "textarea" ? (
                 <textarea
-                  value={values[field.key]}
+                  value={values[field.key] ?? ""}
                   onChange={(e) => update(field.key, e.target.value)}
                   rows={field.rows ?? 3}
                   maxLength={field.maxLength}
@@ -412,9 +654,12 @@ export function SiteSettingForm({ initial }: { initial: Values }) {
               ) : (
                 <input
                   type={field.type}
-                  value={values[field.key]}
+                  value={values[field.key] ?? ""}
                   onChange={(e) => update(field.key, e.target.value)}
                   maxLength={field.maxLength}
+                  min={field.min}
+                  max={field.max}
+                  step={field.type === "number" ? 1 : undefined}
                   required={field.required}
                   className={inputClass}
                   placeholder={field.placeholder}

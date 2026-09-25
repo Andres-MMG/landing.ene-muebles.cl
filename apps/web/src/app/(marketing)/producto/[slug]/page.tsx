@@ -1,8 +1,15 @@
+import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ContactCTA } from "@/components/ContactCTA";
-import { ProductCard } from "@/components/ProductCard";
+import {
+  ProductCard,
+  PRODUCT_ACTION_LABEL_FALLBACKS,
+  resolveProductActionLabel,
+} from "@/components/ProductCard";
 import { ProductGallery } from "@/components/ProductGallery";
 import {
+  FALLBACK_SITE_SETTINGS,
+  getContactCTASection,
   getProductBySlug,
   getProducts,
   getSiteSettings,
@@ -11,12 +18,19 @@ import {
 import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 import {
   THEME_COLOR,
-  buildJsonLdAdditionalProperty,
   buildMetaDescription,
   buildProductJsonLd,
   buildSpecsStrip,
   parseDimensions,
 } from "@/lib/product-attributes";
+import { safeJsonLd } from "@/lib/json-ld";
+import { resolveSiteOrigin } from "@/lib/site-origin";
+import {
+  buildSeoMetadata,
+  FALLBACK_ROOT_DESCRIPTION,
+  FALLBACK_SHARE_IMAGE_ALT,
+  resolveSeoText,
+} from "@/lib/seo-metadata";
 
 export const revalidate = 60;
 
@@ -24,80 +38,52 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const product = await getProductBySlug(slug);
-  if (!product) return { title: "Producto" };
+  const [product, settings] = await Promise.all([
+    getProductBySlug(slug).catch(() => null),
+    getSiteSettings().catch(() => FALLBACK_SITE_SETTINGS),
+  ]);
+  if (!product) {
+    return buildSeoMetadata({
+      title: "Producto",
+      description: FALLBACK_ROOT_DESCRIPTION,
+      siteName: settings.siteName,
+      imageAlt: resolveSeoText(settings.seoShareImageAlt) ?? FALLBACK_SHARE_IMAGE_ALT,
+    });
+  }
 
-  const SITE_URL =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
-    "https://ene-muebles.cl";
-  const canonical = `${SITE_URL}/producto/${product.slug}`;
+  const description =
+    buildMetaDescription(product) ?? product.shortDescription ?? product.description;
+  const socialDescription =
+    buildMetaDescription(product, 200) ?? product.shortDescription ?? product.description;
+  const cover = product.images?.[0];
 
-  const coverUrl = product.images?.[0]?.url;
-  const ogImages = coverUrl
-    ? [
-        {
-          url: coverUrl.startsWith("http") ? coverUrl : `${SITE_URL}${coverUrl}`,
-          width: 1200,
-          height: 630,
-          alt: product.images?.[0]?.alternativeText || product.name,
-        },
-      ]
-    : [];
-
-  // Catalog-import (S4) — meta description now weaves the
-  // catalog-import attributes (subcategory, color, material, usage)
-  // into the existing shortDescription when present. Capped at 280
-  // chars for the regular `<meta name="description">` and 200 chars
-  // for the OG variant. `buildMetaDescription` returns null when
-  // nothing is available so we can fall back to the legacy
-  // `shortDescription || description` shape.
-  const metaDescription =
-    buildMetaDescription(product) ??
-    product.shortDescription ??
-    product.description;
-  const ogDescription =
-    buildMetaDescription(product, 200) ??
-    product.shortDescription ??
-    product.description;
-
-  return {
+  return buildSeoMetadata({
     title: product.name,
-    description: metaDescription,
-    alternates: { canonical },
-    openGraph: {
-      title: `${product.name} · ENE-MUEBLES`,
-      description: ogDescription,
-      url: canonical,
-      siteName: "ENE-MUEBLES",
-      locale: "es_CL",
-      type: "website",
-      images: ogImages,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title: product.name,
-      description: ogDescription,
-      images: ogImages.map((i) => i.url),
-    },
+    description,
+    socialDescription,
+    path: `/producto/${product.slug}`,
+    siteName: settings.siteName,
+    imageUrl: cover?.url,
+    imageAlt:
+      resolveSeoText(cover?.alternativeText, product.name, settings.seoShareImageAlt) ??
+      FALLBACK_SHARE_IMAGE_ALT,
     other: {
-      ...(product.externalId
-        ? { "product:retailer_item_id": product.externalId }
-        : {}),
+      ...(product.externalId ? { "product:retailer_item_id": product.externalId } : {}),
       "theme-color": THEME_COLOR,
     },
-  };
+  });
 }
 
-const fmtDim = (n: number | undefined, unit: string) =>
-  n ? `${n} ${unit}` : null;
+const fmtDim = (n: number | undefined, unit: string) => (n ? `${n} ${unit}` : null);
 
 export default async function ProductDetailPage({ params }: Props) {
   const { slug } = await params;
-  const [settings, product] = await Promise.all([
+  const [settings, product, contactCtaSection] = await Promise.all([
     getSiteSettings(),
     getProductBySlug(slug),
+    getContactCTASection(),
   ]);
 
   if (!product) notFound();
@@ -114,25 +100,23 @@ export default async function ProductDetailPage({ params }: Props) {
   // when no verified number is configured (email CTA remains).
   const whatsappHref =
     buildWhatsAppHandoff(settings, { product: { name: product.name } })?.href ?? null;
+  const whatsappLabel = resolveProductActionLabel(
+    settings.productDetailWhatsappLabel,
+    PRODUCT_ACTION_LABEL_FALLBACKS.detailWhatsapp,
+  );
+  const contactLabel = resolveProductActionLabel(
+    settings.productDetailContactLabel,
+    PRODUCT_ACTION_LABEL_FALLBACKS.detailContact,
+  );
 
   // JSON-LD structured data. Helps Google display rich snippets
-  // (price, availability, image) directly in search results. Built
+  // (verified price and image) directly in search results. Built
   // once on the server and inlined as a <script> tag.
-  const SITE_URL =
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
-    "https://ene-muebles.cl";
+  const siteOrigin = resolveSiteOrigin();
 
-  // Catalog-import (S4) — `buildProductJsonLd` is strictly additive:
-  // every previously-existing field is preserved verbatim, and the
-  // catalog-import fields surface as `additionalProperty` entries
-  // only when populated. See `product-attributes.ts`.
-  const productJsonLd = buildProductJsonLd(product, SITE_URL);
-  // Smoke check — keeps the additionalProperty branch alive even if
-  // the helper inlines the property block. Cheap O(1) assertion.
-  const additional = buildJsonLdAdditionalProperty(product);
-  if (additional.length > 0) {
-    productJsonLd.additionalProperty = additional;
-  }
+  // Catalog-import fields surface once as `additionalProperty` entries.
+  // Availability remains omitted until a verified inventory source exists.
+  const productJsonLd = buildProductJsonLd(product, siteOrigin, settings.siteName);
 
   // Catalog-import (S4) — pre-compute the visual specs strip that
   // appears under the price. The helper returns an empty array when
@@ -157,7 +141,7 @@ export default async function ProductDetailPage({ params }: Props) {
         type="application/ld+json"
         // Safe: the payload is built from a typed object, no untrusted
         // user input is interpolated.
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: safeJsonLd(productJsonLd) }}
       />
       {/* Catalog-import (S4) — sr-only aside so screen readers and AEO
           engines can see the transparency metadata (observation notes +
@@ -172,19 +156,14 @@ export default async function ProductDetailPage({ params }: Props) {
         <section aria-labelledby="producto-heading" className="bg-paper">
           <div className="mx-auto grid w-full max-w-[1440px] grid-cols-1 gap-12 px-6 pt-16 pb-16 sm:px-10 sm:pt-20 lg:grid-cols-12 lg:gap-16 lg:px-16 lg:pt-24 lg:pb-24">
             <div className="lg:col-span-7">
-              <ProductGallery
-                images={product.images ?? []}
-                productName={product.name}
-              />
+              <ProductGallery images={product.images ?? []} productName={product.name} />
             </div>
 
             <div className="lg:col-span-5 flex flex-col">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
                 <span className="t-label text-taupe-text">
-                  {product.category?.name
-                    ? `Línea ${product.category.name}`
-                    : "Catálogo"}
+                  {product.category?.name ? `Línea ${product.category.name}` : "Catálogo"}
                 </span>
               </div>
               <h1
@@ -209,20 +188,14 @@ export default async function ProductDetailPage({ params }: Props) {
                 >
                   {specsStrip.map((entry) => (
                     <div key={entry.label}>
-                      <dt className="t-overline text-ink-mute">
-                        {entry.label}
-                      </dt>
-                      <dd className="mt-1.5 t-mono text-sm text-ink">
-                        {entry.value}
-                      </dd>
+                      <dt className="t-overline text-ink-mute">{entry.label}</dt>
+                      <dd className="mt-1.5 t-mono text-sm text-ink">{entry.value}</dd>
                     </div>
                   ))}
                 </dl>
               ) : null}
               {product.shortDescription ? (
-                <p className="t-body mt-8 text-lg text-ink">
-                  {product.shortDescription}
-                </p>
+                <p className="t-body mt-8 text-lg text-ink">{product.shortDescription}</p>
               ) : null}
 
               <div className="mt-8 space-y-5 text-pretty text-base leading-[1.7] text-ink-mute">
@@ -238,9 +211,7 @@ export default async function ProductDetailPage({ params }: Props) {
                 <dl className="mt-10 grid grid-cols-2 gap-x-6 gap-y-4 border-t border-ink-line pt-6">
                   {fmtDim(parsedDimensions?.width, "cm") ? (
                     <div>
-                      <dt className="t-overline text-ink-mute">
-                        Ancho
-                      </dt>
+                      <dt className="t-overline text-ink-mute">Ancho</dt>
                       <dd className="mt-2 t-mono text-base text-ink">
                         {fmtDim(parsedDimensions?.width, "cm")}
                       </dd>
@@ -248,9 +219,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {fmtDim(parsedDimensions?.height, "cm") ? (
                     <div>
-                      <dt className="t-overline text-ink-mute">
-                        Altura
-                      </dt>
+                      <dt className="t-overline text-ink-mute">Altura</dt>
                       <dd className="mt-2 t-mono text-base text-ink">
                         {fmtDim(parsedDimensions?.height, "cm")}
                       </dd>
@@ -258,9 +227,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {fmtDim(parsedDimensions?.depth, "cm") ? (
                     <div>
-                      <dt className="t-overline text-ink-mute">
-                        Profundidad
-                      </dt>
+                      <dt className="t-overline text-ink-mute">Profundidad</dt>
                       <dd className="mt-2 t-mono text-base text-ink">
                         {fmtDim(parsedDimensions?.depth, "cm")}
                       </dd>
@@ -268,12 +235,8 @@ export default async function ProductDetailPage({ params }: Props) {
                   ) : null}
                   {weightValue ? (
                     <div>
-                      <dt className="t-overline text-ink-mute">
-                        Peso
-                      </dt>
-                      <dd className="mt-2 t-mono text-base text-ink">
-                        {weightValue}
-                      </dd>
+                      <dt className="t-overline text-ink-mute">Peso</dt>
+                      <dd className="mt-2 t-mono text-base text-ink">{weightValue}</dd>
                     </div>
                   ) : null}
                 </dl>
@@ -281,9 +244,7 @@ export default async function ProductDetailPage({ params }: Props) {
 
               {Array.isArray(product.materials) && product.materials.length > 0 ? (
                 <div className="mt-8 border-t border-ink-line pt-6">
-                  <p className="t-overline text-ink-mute">
-                    Materialidad
-                  </p>
+                  <p className="t-overline text-ink-mute">Materialidad</p>
                   <ul className="mt-3 flex flex-wrap gap-2">
                     {product.materials.map((material) => (
                       <li
@@ -305,7 +266,7 @@ export default async function ProductDetailPage({ params }: Props) {
                     rel="noopener noreferrer"
                     className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
                   >
-                    Consultar por WhatsApp
+                    {whatsappLabel}
                     <span aria-hidden>→</span>
                   </a>
                 ) : null}
@@ -313,7 +274,7 @@ export default async function ProductDetailPage({ params }: Props) {
                   href={`/contacto?product=${encodeURIComponent(product.slug)}`}
                   className="t-label text-ink underline-offset-[6px] hover:text-taupe-text hover:underline tap-target"
                 >
-                  Enviar correo
+                  {contactLabel}
                 </a>
               </div>
             </div>
@@ -323,9 +284,7 @@ export default async function ProductDetailPage({ params }: Props) {
         {related.length > 0 ? (
           <section className="mx-auto w-full max-w-[1440px] px-6 pt-16 pb-20 sm:px-10 sm:pt-20 sm:pb-24 lg:px-16 lg:pt-24 lg:pb-28">
             <header className="border-b border-ink-line pb-8">
-              <p className="t-overline text-ink-mute">
-                Más de la línea
-              </p>
+              <p className="t-overline text-ink-mute">Más de la línea</p>
               <h2 className="t-h2 mt-3 text-[clamp(1.5rem,1rem+1.5vw,2.25rem)] text-ink">
                 {product.category?.name || "esta categoría"}
               </h2>
@@ -336,6 +295,11 @@ export default async function ProductDetailPage({ params }: Props) {
                   <ProductCard
                     product={p}
                     whatsappNumber={settings.whatsappNumber}
+                    actionCopy={{
+                      detailLabel: settings.productCardDetailLabel,
+                      whatsappLabel: settings.productCardWhatsappLabel,
+                      whatsappMessageTemplate: settings.whatsappProductMessageTemplate,
+                    }}
                   />
                 </li>
               ))}
@@ -344,7 +308,7 @@ export default async function ProductDetailPage({ params }: Props) {
         ) : null}
       </article>
 
-      <ContactCTA settings={settings} />
+      <ContactCTA settings={settings} section={contactCtaSection} />
     </>
   );
 }

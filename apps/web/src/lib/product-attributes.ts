@@ -1,4 +1,5 @@
-import type { Product } from './strapi';
+import type { Product } from "./strapi";
+import { absoluteSiteUrl } from "./site-origin";
 
 /**
  * Catalog-import (S4) — pure helpers that turn a `Product` into the
@@ -27,7 +28,7 @@ function trimToLength(text: string, max: number): string {
   if (text.length <= max) return text;
   const slice = text.slice(0, max);
   // Drop a trailing partial word so we never expose half a token.
-  return slice.replace(/\s+\S*$/, '').trimEnd();
+  return slice.replace(/\s+\S*$/, "").trimEnd();
 }
 
 /**
@@ -39,13 +40,13 @@ function trimToLength(text: string, max: number): string {
 export function buildMetaDescription(
   product: Pick<
     Product,
-    | 'shortDescription'
-    | 'subcategory'
-    | 'observableColor'
-    | 'observableMaterial'
-    | 'usageEnvironment'
+    | "shortDescription"
+    | "subcategory"
+    | "observableColor"
+    | "observableMaterial"
+    | "usageEnvironment"
   >,
-  max: number = META_DESCRIPTION_MAX
+  max: number = META_DESCRIPTION_MAX,
 ): string | null {
   const parts: string[] = [];
   const short = product.shortDescription?.trim();
@@ -54,15 +55,14 @@ export function buildMetaDescription(
   if (product.observableColor?.trim()) parts.push(`Color: ${product.observableColor.trim()}`);
   if (product.observableMaterial?.trim())
     parts.push(`Material: ${product.observableMaterial.trim()}`);
-  if (product.usageEnvironment?.trim())
-    parts.push(`Uso: ${product.usageEnvironment.trim()}`);
+  if (product.usageEnvironment?.trim()) parts.push(`Uso: ${product.usageEnvironment.trim()}`);
   if (parts.length === 0) return null;
-  return trimToLength(parts.join(' · '), max);
+  return trimToLength(parts.join(" · "), max);
 }
 
 /** `theme-color` meta tag value. Picks a neutral ink tone that matches
  *  the public site's paper-on-ink palette. */
-export const THEME_COLOR = '#1a1a1a';
+export const THEME_COLOR = "#1a1a1a";
 
 /**
  * Build the array of schema.org `PropertyValue` entries the Product
@@ -71,7 +71,7 @@ export const THEME_COLOR = '#1a1a1a';
  * instead of shipping an empty `additionalProperty`.
  */
 export type JsonLdProperty = {
-  '@type': 'PropertyValue';
+  "@type": "PropertyValue";
   name: string;
   value: string | number;
 };
@@ -79,46 +79,46 @@ export type JsonLdProperty = {
 export function buildJsonLdAdditionalProperty(
   product: Pick<
     Product,
-    | 'productType'
-    | 'subcategory'
-    | 'usageEnvironment'
-    | 'observableColor'
-    | 'observableMaterial'
-    | 'catalogPage'
-  >
+    | "productType"
+    | "subcategory"
+    | "usageEnvironment"
+    | "observableColor"
+    | "observableMaterial"
+    | "catalogPage"
+  >,
 ): JsonLdProperty[] {
   const out: JsonLdProperty[] = [];
   if (product.productType?.trim()) {
-    out.push({ '@type': 'PropertyValue', name: 'productType', value: product.productType.trim() });
+    out.push({ "@type": "PropertyValue", name: "productType", value: product.productType.trim() });
   }
   if (product.subcategory?.trim()) {
-    out.push({ '@type': 'PropertyValue', name: 'subcategory', value: product.subcategory.trim() });
+    out.push({ "@type": "PropertyValue", name: "subcategory", value: product.subcategory.trim() });
   }
   if (product.usageEnvironment?.trim()) {
     out.push({
-      '@type': 'PropertyValue',
-      name: 'usageEnvironment',
+      "@type": "PropertyValue",
+      name: "usageEnvironment",
       value: product.usageEnvironment.trim(),
     });
   }
   if (product.observableColor?.trim()) {
     out.push({
-      '@type': 'PropertyValue',
-      name: 'observableColor',
+      "@type": "PropertyValue",
+      name: "observableColor",
       value: product.observableColor.trim(),
     });
   }
   if (product.observableMaterial?.trim()) {
     out.push({
-      '@type': 'PropertyValue',
-      name: 'observableMaterial',
+      "@type": "PropertyValue",
+      name: "observableMaterial",
       value: product.observableMaterial.trim(),
     });
   }
-  if (typeof product.catalogPage === 'number' && product.catalogPage > 0) {
+  if (typeof product.catalogPage === "number" && product.catalogPage > 0) {
     out.push({
-      '@type': 'PropertyValue',
-      name: 'catalogPage',
+      "@type": "PropertyValue",
+      name: "catalogPage",
       value: product.catalogPage,
     });
   }
@@ -159,7 +159,11 @@ export function parseDimensions(
       structured.height = dimensions.height;
     if (typeof dimensions.depth === "number" && dimensions.depth > 0)
       structured.depth = dimensions.depth;
-    if (structured.width !== undefined || structured.height !== undefined || structured.depth !== undefined) {
+    if (
+      structured.width !== undefined ||
+      structured.height !== undefined ||
+      structured.depth !== undefined
+    ) {
       return structured;
     }
     // Fall through to the raw source string when the structured shape
@@ -183,9 +187,7 @@ export function parseDimensions(
  * when the product has no parseable dimensions so callers can skip
  * the row entirely.
  */
-export function formatDimensions(
-  product: Pick<Product, "dimensions">,
-): string | null {
+export function formatDimensions(product: Pick<Product, "dimensions">): string | null {
   const parsed = parseDimensions(product.dimensions);
   if (!parsed) return null;
   const parts = [parsed.width, parsed.height, parsed.depth]
@@ -210,29 +212,28 @@ export type SpecStripEntry = { label: string; value: string };
 export function buildSpecsStrip(
   product: Pick<
     Product,
-    | 'productType'
-    | 'subcategory'
-    | 'observableColor'
-    | 'observableMaterial'
-    | 'usageEnvironment'
-    | 'dimensions'
-  >
+    | "productType"
+    | "subcategory"
+    | "observableColor"
+    | "observableMaterial"
+    | "usageEnvironment"
+    | "dimensions"
+  >,
 ): SpecStripEntry[] {
   const out: SpecStripEntry[] = [];
-  if (product.productType?.trim())
-    out.push({ label: 'Qué es', value: product.productType.trim() });
+  if (product.productType?.trim()) out.push({ label: "Qué es", value: product.productType.trim() });
   // B1 (T5) — measurements join the strip ahead of the descriptive
   // fields; they are the institutional sell for institutional buyers.
   const dimensions = formatDimensions(product);
-  if (dimensions) out.push({ label: 'Medidas', value: dimensions });
+  if (dimensions) out.push({ label: "Medidas", value: dimensions });
   if (product.subcategory?.trim())
-    out.push({ label: 'Subcategoría', value: product.subcategory.trim() });
+    out.push({ label: "Subcategoría", value: product.subcategory.trim() });
   if (product.observableColor?.trim())
-    out.push({ label: 'Color', value: product.observableColor.trim() });
+    out.push({ label: "Color", value: product.observableColor.trim() });
   if (product.observableMaterial?.trim())
-    out.push({ label: 'Material', value: product.observableMaterial.trim() });
+    out.push({ label: "Material", value: product.observableMaterial.trim() });
   if (product.usageEnvironment?.trim())
-    out.push({ label: 'Uso', value: product.usageEnvironment.trim() });
+    out.push({ label: "Uso", value: product.usageEnvironment.trim() });
   return out;
 }
 
@@ -245,25 +246,23 @@ export function buildSpecsStrip(
  * type system — see `apps/web/src/app/sitemap.ts`).
  */
 export function buildSitemapImageTitle(
-  product: Pick<
-    Product,
-    'name' | 'productType' | 'subcategory' | 'observableColor'
-  >
+  product: Pick<Product, "name" | "productType" | "subcategory" | "observableColor">,
 ): string {
   const parts: string[] = [];
   if (product.productType?.trim()) parts.push(product.productType.trim());
   if (product.subcategory?.trim()) parts.push(product.subcategory.trim());
   if (product.observableColor?.trim()) parts.push(product.observableColor.trim());
-  return parts.length > 0 ? parts.join(' · ') : product.name;
+  return parts.length > 0 ? parts.join(" · ") : product.name;
 }
 
 /**
  * Build the `Product` JSON-LD payload that ships to the public page.
- * Strictly additive: every previously-existing field is preserved
- * verbatim; the catalog-import fields are appended as `additionalProperty`.
+ * Catalog-import fields are appended once as `additionalProperty`.
+ * Inventory availability is intentionally omitted because no verified
+ * inventory source exists.
  *
  * B2/U12 — `offers` is emitted ONLY when the product carries a
- * VERIFIED offer (see `hasVerifiedOffer`): a finite price > 0 with CLP
+ * verified price offer (see `hasVerifiedOffer`): a finite price > 0 with CLP
  * currency. Zero/empty/NaN prices are hidden by the UI, so the
  * structured data must not contradict the visible page (seo-geo-aeo
  * spec). `aggregateRating` and `Review` are NEVER emitted. Callers
@@ -279,48 +278,41 @@ export const PRODUCT_CURRENCY_DEFAULT = "CLP";
  * (case-insensitive; missing/empty currency defaults to CLP exactly
  * like `formatPrice` in `lib/strapi.ts`).
  */
-export function hasVerifiedOffer(
-  product: Pick<Product, "price" | "currency">
-): boolean {
-  if (
-    typeof product.price !== "number" ||
-    !Number.isFinite(product.price) ||
-    product.price <= 0
-  ) {
+export function hasVerifiedOffer(product: Pick<Product, "price" | "currency">): boolean {
+  if (typeof product.price !== "number" || !Number.isFinite(product.price) || product.price <= 0) {
     return false;
   }
-  const currency =
-    product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT;
+  const currency = product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT;
   return currency === PRODUCT_CURRENCY_DEFAULT;
 }
 
 export function buildProductJsonLd(
   product: Product,
-  siteUrl: string
+  siteOrigin: string,
+  siteName = "ENE-MUEBLES",
 ): Record<string, unknown> {
   const base: Record<string, unknown> = {
-    '@context': 'https://schema.org/',
-    '@type': 'Product',
+    "@context": "https://schema.org/",
+    "@type": "Product",
     name: product.name,
     description: product.shortDescription || product.description,
-    image: product.images?.map((i) =>
-      i.url.startsWith('http') ? i.url : `${siteUrl}${i.url}`
-    ),
     category: product.category?.name,
-    brand: { '@type': 'Brand', name: 'ENE-MUEBLES' },
+    brand: { "@type": "Brand", name: siteName.trim() || "ENE-MUEBLES" },
   };
+  const images = product.images?.map((image) =>
+    image.url.startsWith("http") ? image.url : absoluteSiteUrl(image.url, siteOrigin),
+  );
+  if (images && images.length > 0) base.image = images;
   // B2/U12 — omit offers (and with them availability) unless the price
   // is verified and visible. Matches the UI: `price > 0` gates the
   // rendered price on both the card and the product page.
   if (hasVerifiedOffer(product)) {
     base.offers = {
-      '@type': 'Offer',
-      url: `${siteUrl}/producto/${product.slug}`,
+      "@type": "Offer",
+      url: absoluteSiteUrl(`/producto/${product.slug}`, siteOrigin),
       price: product.price,
-      priceCurrency:
-        product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT,
-      availability: 'https://schema.org/InStock',
-      seller: { '@type': 'Organization', name: 'ENE-MUEBLES' },
+      priceCurrency: product.currency?.trim().toUpperCase() || PRODUCT_CURRENCY_DEFAULT,
+      seller: { "@type": "Organization", name: siteName.trim() || "ENE-MUEBLES" },
     };
   }
   const additional = buildJsonLdAdditionalProperty(product);

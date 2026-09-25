@@ -15,7 +15,7 @@ type HeroProps = {
    * as a bottom-of-the-chain fallback for environments where the
    * singleton has not been seeded yet.
    */
-  section?: HeroSection;
+  section: HeroSection;
   /**
    * B2 batch 2 fix: opt-out for the hero's secondary CTA. The home
    * page already has a near-the-end WhatsApp CTA in the dark
@@ -37,11 +37,7 @@ type HeroProps = {
  * one-liner that consolidates the proof points.
  */
 
-const HERO_GALLERY = [
-  "/images/4.webp",
-  "/images/6.webp",
-  "/images/3_1.webp",
-];
+const HERO_GALLERY = ["/images/4.webp", "/images/6.webp", "/images/3_1.webp"];
 
 export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -52,16 +48,17 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
     }, 5000);
     return () => clearInterval(timer);
   }, []);
-  const eyebrow = section?.eyebrow ?? `${site.brand} · Proveedor institucional`;
-  const headline = section?.title?.trim() || settings.tagline?.trim() || site.promise;
-  const subtitle =
-    section?.subtitle ??
-    "Sillas, escritorios, estanterías y mesones para colegios, universidades, municipalidades y oficinas. Melamina 18 mm, cantos PVC termosellados, estructura reforzada. Catálogo certificado, despacho desde la Región de Valparaíso hasta la Región de Los Lagos y garantía escrita.";
-  const primaryLabel = section?.primaryCtaLabel ?? site.catalogAll;
-  const primaryHref = section?.primaryCtaHref ?? "/catalogo";
-  const secondaryLabel = section?.secondaryCtaLabel ?? site.quoteCta;
-  const secondaryHref = section?.secondaryCtaHref ?? "#contacto";
-  const image = section?.image ?? settings.heroImage ?? null;
+  const eyebrow = section.eyebrow ?? "";
+  const headline = section.title?.trim() || settings.tagline?.trim() || "";
+  const subtitle = section.subtitle ?? "";
+  const primaryLabel = section.primaryCtaLabel ?? "";
+  const primaryHref = section.primaryCtaHref ?? "/catalogo";
+  const secondaryLabel = section.secondaryCtaLabel ?? "";
+  const secondaryHref = section.secondaryCtaHref ?? "#contacto";
+  const image = section.image ?? settings.heroImage ?? null;
+  const imageCaption = section.imageCaption ?? "";
+  const galleryCaption = section.galleryCaption ?? "";
+  const railSecondaryText = section.railSecondaryText ?? "";
   const hasPhoto = Boolean(image?.url);
 
   return (
@@ -114,14 +111,14 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
               <figure className="img-zoom relative aspect-[4/5] w-full overflow-hidden">
                 <Image
                   src={image!.url}
-                  alt={image!.alternativeText || site.brand}
+                  alt={image!.alternativeText || settings.siteName}
                   fill
                   sizes="(min-width: 1024px) 40vw, 100vw"
                   priority
                   className="object-cover"
                 />
                 <figcaption className="t-overline absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-paper">
-                  <span>Catálogo 2026</span>
+                  <span>{imageCaption}</span>
                   <span className="opacity-60">F.05</span>
                 </figcaption>
               </figure>
@@ -131,7 +128,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                   <Image
                     key={src}
                     src={src}
-                    alt={`${site.brand} instalaciones ${idx + 1}`}
+                    alt={settings.siteName + " instalaciones " + (idx + 1)}
                     fill
                     className={`object-cover transition-opacity duration-1000 ${
                       idx === currentImageIndex ? "opacity-100" : "opacity-0"
@@ -140,7 +137,7 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                   />
                 ))}
                 <div className="t-overline absolute inset-x-0 bottom-0 flex items-center justify-between bg-ink/85 px-4 py-2 text-paper">
-                  <span>Nuestras instalaciones</span>
+                  <span>{galleryCaption}</span>
                   <span className="opacity-60">
                     {currentImageIndex + 1} / {HERO_GALLERY.length}
                   </span>
@@ -159,9 +156,9 @@ export function Hero({ settings, section, omitSecondaryCta = false }: HeroProps)
                 static token only renders when the CMS is unreachable. */}
             {settings.dispatchCoverage ?? site.dispatch}
           </span>
-          <span className="t-overline ml-auto text-ink-mute">
-            Fabricación y distribución
-          </span>
+          {railSecondaryText ? (
+            <span className="t-overline ml-auto text-ink-mute">{railSecondaryText}</span>
+          ) : null}
         </div>
       </div>
     </section>

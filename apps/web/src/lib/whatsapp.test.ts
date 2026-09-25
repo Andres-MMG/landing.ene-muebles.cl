@@ -4,8 +4,51 @@ import {
   buildProductMessage,
   normalizeWhatsAppNumber,
   DEFAULT_WHATSAPP_MESSAGE,
+  DEFAULT_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE,
 } from "./whatsapp";
 
+describe("buildProductMessage", () => {
+  it("uses a valid product template with exactly one literal placeholder", () => {
+    expect(
+      buildProductMessage(
+        "Silla escolar",
+        "Necesito cotizar {productName} para mi establecimiento.",
+      ),
+    ).toBe("Necesito cotizar Silla escolar para mi establecimiento.");
+  });
+
+  it("inserts replacement-like product names literally", () => {
+    expect(buildProductMessage("$& 100% {productName}", "Consulta por {productName}.")).toBe(
+      "Consulta por $& 100% {productName}.",
+    );
+  });
+
+  it.each([
+    ["blank", "   "],
+    ["missing placeholder", "Necesito cotizar este producto."],
+    ["duplicate placeholder", "{productName} y {productName}"],
+    ["malformed non-string value", 42],
+  ])("uses the exact fallback for a %s template", (_label: string, template: unknown) => {
+    expect(buildProductMessage("Mesa", template)).toBe(
+      "Hola, me gustaría cotizar Mesa para mi institución.",
+    );
+  });
+
+  it("accepts 1000 characters and rejects 1001", () => {
+    const token = "{productName}";
+    const valid = `${"a".repeat(1000 - token.length)}${token}`;
+    const tooLong = `a${valid}`;
+    const whitespacePaddedTooLong = `${valid} `;
+
+    expect(buildProductMessage("Mesa", valid)).toBe(`${"a".repeat(1000 - token.length)}Mesa`);
+    expect(buildProductMessage("Mesa", tooLong)).toBe(
+      DEFAULT_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE.replace(token, "Mesa"),
+    );
+    expect(buildProductMessage("Mesa", whitespacePaddedTooLong)).toBe(
+      DEFAULT_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE.replace(token, "Mesa"),
+    );
+  });
+});
 describe("normalizeWhatsAppNumber", () => {
   it("strips + and keeps a number that already has the 56 prefix", () => {
     expect(normalizeWhatsAppNumber("+56912345678")).toBe("56912345678");
@@ -54,6 +97,17 @@ describe("buildWhatsAppHandoff", () => {
     expect(handoff!.message).not.toContain("mensaje genérico");
   });
 
+  it("falls back safely when a direct CMS product template is malformed", () => {
+    const handoff = buildWhatsAppHandoff(
+      {
+        whatsappNumber: "+56912345678",
+        whatsappProductMessageTemplate: "{productName} / {productName}",
+      },
+      { product: { name: "Mesa" } },
+    );
+
+    expect(handoff!.message).toBe("Hola, me gustaría cotizar Mesa para mi institución.");
+  });
   it("uses the configured generic message when no product context is given", () => {
     const handoff = buildWhatsAppHandoff({
       whatsappNumber: "+56912345678",
@@ -102,6 +156,21 @@ describe("buildWhatsAppHandoff", () => {
     expect(handoff!.href).toContain("%20");
   });
 
+  it("encodes a custom product template exactly once after literal insertion", () => {
+    const handoff = buildWhatsAppHandoff(
+      {
+        whatsappNumber: "56912345678",
+        whatsappProductMessageTemplate: "Cotizar {productName} & despacho.",
+      },
+      { product: { name: "Mesa 100% escolar" } },
+    );
+
+    expect(handoff!.message).toBe("Cotizar Mesa 100% escolar & despacho.");
+    expect(handoff!.href).toBe(
+      `https://wa.me/56912345678?text=${encodeURIComponent(handoff!.message)}`,
+    );
+    expect(decodeURIComponent(handoff!.href.split("?text=")[1]!)).toBe(handoff!.message);
+  });
   it("never includes price, stock, or visitor data in the message", () => {
     const handoff = buildWhatsAppHandoff(
       { whatsappNumber: "56912345678" },
@@ -114,26 +183,16 @@ describe("buildWhatsAppHandoff", () => {
   });
 
   it("returns null when the number is missing", () => {
-    expect(
-      buildWhatsAppHandoff({ whatsappDefaultMessage: "Hola" }),
-    ).toBeNull();
+    expect(buildWhatsAppHandoff({ whatsappDefaultMessage: "Hola" })).toBeNull();
   });
 
   it("returns null when the number is invalid (fallback policy)", () => {
-    expect(
-      buildWhatsAppHandoff({ whatsappNumber: "not-a-number" }),
-    ).toBeNull();
-    expect(
-      buildWhatsAppHandoff({ whatsappNumber: "123" }),
-    ).toBeNull();
+    expect(buildWhatsAppHandoff({ whatsappNumber: "not-a-number" })).toBeNull();
+    expect(buildWhatsAppHandoff({ whatsappNumber: "123" })).toBeNull();
   });
 
   it("rejects injected characters instead of building a broken link", () => {
-    expect(
-      buildWhatsAppHandoff({ whatsappNumber: "+56 9 a1b2c3d4e5" }),
-    ).not.toBeNull();
-    expect(
-      buildWhatsAppHandoff({ whatsappNumber: "https://evil.example" }),
-    ).toBeNull();
+    expect(buildWhatsAppHandoff({ whatsappNumber: "+56 9 a1b2c3d4e5" })).not.toBeNull();
+    expect(buildWhatsAppHandoff({ whatsappNumber: "https://evil.example" })).toBeNull();
   });
 });

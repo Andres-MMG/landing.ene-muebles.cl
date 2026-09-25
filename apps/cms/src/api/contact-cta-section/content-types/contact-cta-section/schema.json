@@ -12,6 +12,10 @@
   },
   "pluginOptions": {},
   "attributes": {
+    "eyebrow": {
+      "type": "string",
+      "maxLength": 80
+    },
     "title": {
       "type": "string",
       "required": true,
@@ -31,6 +35,10 @@
     "buttonHref": {
       "type": "string",
       "maxLength": 300
+    },
+    "emailLabel": {
+      "type": "string",
+      "maxLength": 60
     }
   }
 }

@@ -1,0 +1,21 @@
+{
+  "collectionName": "components_legal_sections",
+  "info": {
+    "displayName": "Legal section",
+    "description": "A fixed-route legal section with plain-text paragraphs."
+  },
+  "options": {},
+  "attributes": {
+    "heading": {
+      "type": "string",
+      "required": true,
+      "maxLength": 160
+    },
+    "paragraphs": {
+      "type": "component",
+      "repeatable": true,
+      "required": true,
+      "component": "legal.paragraph"
+    }
+  }
+}

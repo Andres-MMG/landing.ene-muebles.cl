@@ -22,6 +22,41 @@
       "type": "string",
       "maxLength": 200
     },
+    "seoTitle": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "seoDescription": {
+      "type": "text",
+      "required": false,
+      "maxLength": 160
+    },
+    "seoShareImageKicker": {
+      "type": "string",
+      "required": false,
+      "maxLength": 100
+    },
+    "seoShareImageTitle": {
+      "type": "string",
+      "required": false,
+      "maxLength": 120
+    },
+    "seoShareImageDescription": {
+      "type": "text",
+      "required": false,
+      "maxLength": 200
+    },
+    "seoShareImageFooter": {
+      "type": "string",
+      "required": false,
+      "maxLength": 160
+    },
+    "seoShareImageAlt": {
+      "type": "text",
+      "required": false,
+      "maxLength": 200
+    },
     "contactEmail": {
       "type": "email"
     },
@@ -60,6 +95,27 @@
     "aboutText": {
       "type": "text"
     },
+    "paymentTermsText": {
+      "type": "text",
+      "required": false,
+      "maxLength": 2000
+    },
+    "warrantyText": {
+      "type": "text",
+      "required": false,
+      "maxLength": 2000
+    },
+    "quoteResponseTimeText": {
+      "type": "text",
+      "required": false,
+      "maxLength": 280
+    },
+    "foundedYear": {
+      "type": "integer",
+      "required": false,
+      "min": 1800,
+      "max": 2100
+    },
     "rut": {
       "type": "string",
       "required": true,
@@ -70,9 +126,62 @@
       "type": "media",
       "multiple": false,
       "required": false,
-      "allowedTypes": [
-        "images"
-      ]
+      "allowedTypes": ["images"]
+    },
+    "navigationHomeLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 24
+    },
+    "navigationCatalogLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 24
+    },
+    "navigationAboutLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 24
+    },
+    "navigationContactLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 24
+    },
+    "headerWhatsappLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 24
+    },
+    "mobileWhatsappLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 80
+    },
+    "whatsappProductMessageTemplate": {
+      "type": "text",
+      "required": false,
+      "maxLength": 1000
+    },
+    "productCardDetailLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "productCardWhatsappLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "productDetailWhatsappLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 80
+    },
+    "productDetailContactLabel": {
+      "type": "string",
+      "required": false,
+      "maxLength": 80
     }
   }
 }

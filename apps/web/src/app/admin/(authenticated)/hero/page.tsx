@@ -1,15 +1,15 @@
-import { HeroSectionForm } from './HeroSectionForm';
-import { resolveSection, sectionFallbacks } from '@/lib/strapi';
+import { HeroSectionForm } from "./HeroSectionForm";
+import { resolveSection, sectionFallbacks } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const metadata = {
-  title: 'Hero · Ene Muebles',
+  title: "Hero · Ene Muebles",
   robots: { index: false, follow: false },
 };
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
-const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
+const TOKEN = process.env.STRAPI_API_TOKEN ?? "";
 
 type HeroResponse = {
   data: HeroShape | null;
@@ -23,6 +23,9 @@ type HeroShape = {
   primaryCtaHref?: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  imageCaption?: string;
+  galleryCaption?: string;
+  railSecondaryText?: string;
 };
 
 /**
@@ -36,7 +39,7 @@ export async function getHeroSection(): Promise<HeroShape> {
   try {
     const res = await fetch(`${STRAPI}/api/hero-section?populate=*`, {
       headers: { Authorization: `Bearer ${TOKEN}` },
-      cache: 'no-store',
+      cache: "no-store",
     });
     if (!res.ok) return sectionFallbacks.hero();
     const json = (await res.json().catch(() => null)) as HeroResponse | null;
@@ -66,21 +69,24 @@ export default async function AdminHeroPage() {
         </p>
         <h1 className="t-display mt-3 text-4xl text-ink">Hero de la portada</h1>
         <p className="t-mono mt-3 text-sm text-ink-mute">
-          Eyebrow, título, bajada y los dos botones (CTA principal + secundario).
-          Afecta solo a la página de inicio.
+          Eyebrow, título, bajada y los dos botones (CTA principal + secundario). Afecta solo a la
+          página de inicio.
         </p>
       </div>
 
       <div className="mt-10 rounded-sm border border-ink-line bg-paper-pure p-6 sm:p-10">
         <HeroSectionForm
           initial={{
-            eyebrow: setting.eyebrow ?? '',
-            title: setting.title ?? '',
-            subtitle: setting.subtitle ?? '',
-            primaryCtaLabel: setting.primaryCtaLabel ?? '',
-            primaryCtaHref: setting.primaryCtaHref ?? '',
-            secondaryCtaLabel: setting.secondaryCtaLabel ?? '',
-            secondaryCtaHref: setting.secondaryCtaHref ?? '',
+            eyebrow: setting.eyebrow ?? "",
+            title: setting.title ?? "",
+            subtitle: setting.subtitle ?? "",
+            primaryCtaLabel: setting.primaryCtaLabel ?? "",
+            primaryCtaHref: setting.primaryCtaHref ?? "",
+            secondaryCtaLabel: setting.secondaryCtaLabel ?? "",
+            secondaryCtaHref: setting.secondaryCtaHref ?? "",
+            imageCaption: setting.imageCaption ?? "",
+            galleryCaption: setting.galleryCaption ?? "",
+            railSecondaryText: setting.railSecondaryText ?? "",
           }}
         />
       </div>

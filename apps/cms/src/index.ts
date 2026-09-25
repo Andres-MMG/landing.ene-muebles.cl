@@ -40,10 +40,11 @@
 
 import type { Core } from "@strapi/strapi";
 import bcrypt from "bcryptjs";
+import { ensureLegalPages, registerLegalPageMiddleware } from "./legal-pages";
 
 const PUBLIC_OPERATIONS = ["find", "findOne"] as const;
 
-const SCOPED_TYPES = [
+export const SCOPED_TYPES = [
   "api::product.product",
   "api::category.category",
   "api::site-setting.site-setting",
@@ -53,8 +54,12 @@ const SCOPED_TYPES = [
   // so they intentionally stay out of EDITOR_CONTENT_TYPES below.
   "api::about-section.about-section",
   "api::hero-section.hero-section",
+  "api::home-page.home-page",
+  "api::catalog-page.catalog-page",
+  "api::contact-page.contact-page",
   "api::contact-cta-section.contact-cta-section",
   "api::footer-block.footer-block",
+  "api::legal-page.legal-page",
   // S2: catalog-import — auto-created by the bulk import endpoint and
   // read by the public catalog to filter products by subcategory.
   "api::subcategory.subcategory",
@@ -75,6 +80,9 @@ type SingletonSeed = {
     | "api::site-setting.site-setting"
     | "api::footer-block.footer-block"
     | "api::hero-section.hero-section"
+    | "api::home-page.home-page"
+    | "api::catalog-page.catalog-page"
+    | "api::contact-page.contact-page"
     | "api::about-section.about-section"
     | "api::contact-cta-section.contact-cta-section";
   data: Record<string, unknown>;
@@ -89,8 +97,7 @@ export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
       rut: PENDING_RUT_SENTINEL,
       // B1 (U6): dispatch-coverage copy, single source of truth for the
       // hero rail, catalog, and stats rows.
-      dispatchCoverage:
-        "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos",
+      dispatchCoverage: "Regiones: desde la Región de Valparaíso hasta la Región de Los Lagos",
       // B1 (U7): the city is intentionally left empty — the client has
       // not confirmed the commune; renderers append it only when set.
     },
@@ -99,6 +106,20 @@ export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
     uid: "api::footer-block.footer-block",
     data: {
       copyrightText: `© ${new Date().getFullYear()} Ene Muebles`,
+      productCountSuffix: "productos certificados para instituciones",
+      catalogHeading: "Catálogo",
+      contactHeading: "Contacto",
+      legalHeading: "Legal",
+      socialHeading: "Redes",
+      catalogCtaLabel: "Ver catálogo",
+      officeLineLabel: "Línea oficina",
+      schoolLineLabel: "Línea escolar",
+      aboutLinkLabel: "Sobre nosotros",
+      termsLinkLabel: "Términos y condiciones",
+      privacyLinkLabel: "Política de privacidad",
+      rutLabel: "RUT",
+      catalogStampLabel: "Catálogo institucional",
+      writtenBackingLabel: "Respaldo escrito",
     },
   },
   {
@@ -108,6 +129,73 @@ export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
       title: "Mobiliario para instituciones.",
       primaryCtaLabel: "Ver catálogo",
       primaryCtaHref: "/catalogo",
+      imageCaption: "Catálogo 2026",
+      galleryCaption: "Nuestras instalaciones",
+      railSecondaryText: "Fabricación y distribución",
+    },
+  },
+  {
+    uid: "api::home-page.home-page",
+    data: {
+      catalogEyebrow: "Líneas de producto",
+      catalogTitle: "El catálogo se divide en dos líneas de fabricación.",
+      catalogBody:
+        "Cada línea agrupa productos con la misma estructura, materiales y plazos de despacho.",
+      catalogCtaLabel: "Ver catálogo completo",
+      featuredEyebrow: "Selección",
+      featuredTitle: "Productos en catálogo activo.",
+      featuredBody:
+        "La selección activa del catálogo. Cada uno se entrega con ficha técnica y plazo de despacho.",
+      featuredCtaLabel: "Ver catálogo completo",
+    },
+  },
+  {
+    uid: "api::catalog-page.catalog-page",
+    data: {
+      eyebrow: "Catálogo institucional",
+      productCountSuffix: "productos certificados para instituciones.",
+      documentationText: "Cada producto se entrega con ficha técnica y declaración de materiales.",
+      printCtaLabel: "Imprimir PDF",
+      printCoverTitle: "Mobiliario institucional",
+      printCoverBody:
+        "Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la solicitud.",
+      printIndexTitle: "Líneas de producto",
+      printCategorySubtitle: "Mobiliario institucional",
+      printPublishedProductsSuffix: "productos publicados",
+    },
+  },
+  {
+    uid: "api::contact-page.contact-page",
+    data: {
+      heroEyebrow: "Hablemos",
+      heroTitle: "Hablemos de tu proyecto.",
+      heroBody:
+        "Ponte en contacto con nosotros. Cotizamos tu pedido en 24 horas hábiles, con ficha técnica, declaración de materiales y plazo de despacho por escrito.",
+      whatsappCtaLabel: "Hablar por WhatsApp",
+      emailCtaLabel: "Correo",
+      alternateContactEyebrow: "Si prefieres",
+      phoneContactLabel: "Teléfono",
+      whatsappContactLabel: "WhatsApp",
+      businessHoursLabel: "Horario",
+      addressLabel: "Dirección",
+      formEyebrow: "Formulario",
+      formTitle: "Envíanos tu requerimiento.",
+      formBody:
+        "También puede escribirnos directamente a contacto@ene-muebles.cl o llamarnos al +569 9539 5339.",
+      nameFieldLabel: "Nombre",
+      institutionFieldLabel: "Institución o empresa",
+      emailFieldLabel: "Correo",
+      phoneFieldLabel: "Teléfono",
+      productFieldLabel: "¿Sobre qué producto nos escribes?",
+      generalInquiryLabel: "Pregunta general",
+      regionFieldLabel: "Región",
+      regionPlaceholder: "Selecciona una región",
+      messageFieldLabel: "Cuéntanos qué necesitas",
+      consentBeforeLink: "Acepto la",
+      consentPrivacyLinkLabel: "política de privacidad",
+      consentAfterLink: "y autorizo el uso de mis datos para recibir la cotización solicitada.",
+      responseTimeText: "Respondemos en 24 h hábiles",
+      submitLabel: "Enviar mensaje",
     },
   },
   {
@@ -120,8 +208,10 @@ export const PUBLIC_SINGLETON_SEEDS: readonly SingletonSeed[] = [
   {
     uid: "api::contact-cta-section.contact-cta-section",
     data: {
+      eyebrow: "Hablemos",
       title: "Contáctanos",
       buttonLabel: "Contactar",
+      emailLabel: "Correo",
     },
   },
 ] as const;
@@ -458,7 +548,9 @@ export default {
    * Runs before the application is initialized.
    * Register custom plugins, fields, or middlewares here.
    */
-  register() {},
+  register({ strapi }: { strapi: Core.Strapi }) {
+    registerLegalPageMiddleware(strapi);
+  },
 
   /**
    * Runs before the application starts. Idempotent — safe to run
@@ -476,6 +568,8 @@ export default {
     }
 
     await ensurePublicSingletons(strapi);
+
+    await ensureLegalPages(strapi);
 
     const editorRoleId = await ensureEditorRole(strapi);
 

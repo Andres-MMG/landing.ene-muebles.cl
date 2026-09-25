@@ -23,6 +23,7 @@
 export type WhatsAppHandoffSettings = {
   whatsappNumber?: string;
   whatsappDefaultMessage?: string;
+  whatsappProductMessageTemplate?: string;
 };
 
 export type WhatsAppHandoffOptions = {
@@ -47,9 +48,45 @@ export type WhatsAppHandoff = {
 export const DEFAULT_WHATSAPP_MESSAGE =
   "Hola, me gustaría una cotización de mobiliario institucional.";
 
-/** Per-product prefilled copy (professional Chilean Spanish, no price/stock data). */
-export const buildProductMessage = (productName: string): string =>
-  `Hola, me gustaría cotizar ${productName} para mi institución.`;
+export const PRODUCT_NAME_PLACEHOLDER = "{productName}";
+export const MAX_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE_LENGTH = 1000;
+export const DEFAULT_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE =
+  "Hola, me gustaría cotizar {productName} para mi institución.";
+
+const validProductMessageTemplate = (template: unknown): string | null => {
+  if (typeof template !== "string") return null;
+
+  const trimmed = template.trim();
+  if (trimmed.length === 0 || template.length > MAX_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE_LENGTH) {
+    return null;
+  }
+
+  const firstPlaceholder = trimmed.indexOf(PRODUCT_NAME_PLACEHOLDER);
+  if (firstPlaceholder < 0 || firstPlaceholder !== trimmed.lastIndexOf(PRODUCT_NAME_PLACEHOLDER)) {
+    return null;
+  }
+
+  return trimmed;
+};
+
+const insertProductName = (template: string, productName: string): string => {
+  const placeholderIndex = template.indexOf(PRODUCT_NAME_PLACEHOLDER);
+  return (
+    template.slice(0, placeholderIndex) +
+    productName +
+    template.slice(placeholderIndex + PRODUCT_NAME_PLACEHOLDER.length)
+  );
+};
+
+/**
+ * Per-product prefilled copy. Direct CMS values are validated again at
+ * render time because they can bypass the authenticated admin proxy.
+ */
+export const buildProductMessage = (productName: string, template?: unknown): string =>
+  insertProductName(
+    validProductMessageTemplate(template) ?? DEFAULT_WHATSAPP_PRODUCT_MESSAGE_TEMPLATE,
+    productName,
+  );
 
 /**
  * Normalize an operator-supplied WhatsApp number to digits-only
@@ -57,9 +94,7 @@ export const buildProductMessage = (productName: string): string =>
  * values (unsupported characters, wrong length) so callers can apply
  * the fallback policy instead of emitting a broken link.
  */
-export function normalizeWhatsAppNumber(
-  input: string | undefined | null,
-): string | null {
+export function normalizeWhatsAppNumber(input: string | undefined | null): string | null {
   if (!input) return null;
   const digits = input.replace(/[^\d]/g, "");
   if (digits.length === 0) return null;
@@ -82,10 +117,10 @@ export function buildWhatsAppHandoff(
   if (!number) return null;
 
   const message = options.product
-    ? buildProductMessage(options.product.name)
-    : (settings.whatsappDefaultMessage?.trim() ||
-        options.fallbackMessage?.trim() ||
-        DEFAULT_WHATSAPP_MESSAGE);
+    ? buildProductMessage(options.product.name, settings.whatsappProductMessageTemplate)
+    : settings.whatsappDefaultMessage?.trim() ||
+      options.fallbackMessage?.trim() ||
+      DEFAULT_WHATSAPP_MESSAGE;
 
   const href = `https://wa.me/${number}?text=${encodeURIComponent(message)}`;
   return { href, message };

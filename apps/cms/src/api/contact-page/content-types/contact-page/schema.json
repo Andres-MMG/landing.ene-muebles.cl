@@ -1,0 +1,45 @@
+{
+  "kind": "singleType",
+  "collectionName": "contact_pages",
+  "info": {
+    "singularName": "contact-page",
+    "pluralName": "contact-pages",
+    "displayName": "Contact Page",
+    "description": "Singleton editorial copy for the public contact page and lead form."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "seoTitle": { "type": "string", "required": false, "maxLength": 60 },
+    "seoDescription": { "type": "text", "required": false, "maxLength": 160 },
+    "heroEyebrow": { "type": "string", "required": true, "maxLength": 80 },
+    "heroTitle": { "type": "string", "required": true, "maxLength": 180 },
+    "heroBody": { "type": "text", "required": true, "maxLength": 600 },
+    "whatsappCtaLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "emailCtaLabel": { "type": "string", "required": true, "maxLength": 60 },
+    "alternateContactEyebrow": { "type": "string", "required": true, "maxLength": 80 },
+    "phoneContactLabel": { "type": "string", "required": true, "maxLength": 60 },
+    "whatsappContactLabel": { "type": "string", "required": true, "maxLength": 60 },
+    "businessHoursLabel": { "type": "string", "required": true, "maxLength": 60 },
+    "addressLabel": { "type": "string", "required": true, "maxLength": 60 },
+    "formEyebrow": { "type": "string", "required": true, "maxLength": 80 },
+    "formTitle": { "type": "string", "required": true, "maxLength": 180 },
+    "formBody": { "type": "text", "required": true, "maxLength": 600 },
+    "nameFieldLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "institutionFieldLabel": { "type": "string", "required": true, "maxLength": 120 },
+    "emailFieldLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "phoneFieldLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "productFieldLabel": { "type": "string", "required": true, "maxLength": 180 },
+    "generalInquiryLabel": { "type": "string", "required": true, "maxLength": 120 },
+    "regionFieldLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "regionPlaceholder": { "type": "string", "required": true, "maxLength": 120 },
+    "messageFieldLabel": { "type": "string", "required": true, "maxLength": 180 },
+    "consentBeforeLink": { "type": "string", "required": true, "maxLength": 120 },
+    "consentPrivacyLinkLabel": { "type": "string", "required": true, "maxLength": 120 },
+    "consentAfterLink": { "type": "text", "required": true, "maxLength": 300 },
+    "responseTimeText": { "type": "string", "required": true, "maxLength": 160 },
+    "submitLabel": { "type": "string", "required": true, "maxLength": 80 }
+  }
+}

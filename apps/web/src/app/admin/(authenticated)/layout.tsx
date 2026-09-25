@@ -1,12 +1,12 @@
-import Link from 'next/link';
-import { redirect } from 'next/navigation';
-import { getServerSession } from '@/lib/admin/session';
-import { findAdminUserByDocumentId } from '@/lib/admin/strapi-admin';
-import { AdminHeader } from '@/components/AdminHeader';
-import { Breadcrumb } from './productos/Breadcrumb';
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { getServerSession } from "@/lib/admin/session";
+import { findAdminUserByDocumentId } from "@/lib/admin/strapi-admin";
+import { AdminHeader } from "@/components/AdminHeader";
+import { Breadcrumb } from "./productos/Breadcrumb";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 type NavItem = {
   href: string;
@@ -14,23 +14,27 @@ type NavItem = {
 };
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/admin/productos', label: 'Productos' },
-  { href: '/admin/productos/nuevo', label: '+ Nuevo producto' },
-  { href: '/admin/productos/importar', label: 'Importar (Excel)' },
-  { href: '/admin/categorias', label: 'Categorías' },
-  { href: '/admin/importaciones', label: 'Historial Excel' },
+  { href: "/admin/productos", label: "Productos" },
+  { href: "/admin/productos/nuevo", label: "+ Nuevo producto" },
+  { href: "/admin/productos/importar", label: "Importar (Excel)" },
+  { href: "/admin/categorias", label: "Categorías" },
+  { href: "/admin/importaciones", label: "Historial Excel" },
   // Leads inbox: contact-form submissions the admin marks as managed
   // (new → notified) or removes from the panel.
-  { href: '/admin/leads', label: 'Leads' },
+  { href: "/admin/leads", label: "Leads" },
   // Batch 2: marketing-section editors. Order mirrors the visual order
   // on the public page (hero first, then about, then contact CTA,
   // then footer) so the sidebar reads top-to-bottom in the same
   // rhythm as the consumer-facing site.
-  { href: '/admin/hero', label: 'Hero' },
-  { href: '/admin/about', label: 'Nosotros (about)' },
-  { href: '/admin/contacto-cta', label: 'Contacto CTA' },
-  { href: '/admin/footer', label: 'Footer' },
-  { href: '/admin/ajustes', label: 'Ajustes' },
+  { href: "/admin/inicio", label: "Inicio" },
+  { href: "/admin/pagina-catalogo", label: "Página catálogo" },
+  { href: "/admin/pagina-contacto", label: "Página contacto" },
+  { href: "/admin/legal", label: "Páginas legales" },
+  { href: "/admin/hero", label: "Hero" },
+  { href: "/admin/about", label: "Nosotros (about)" },
+  { href: "/admin/contacto-cta", label: "Contacto CTA" },
+  { href: "/admin/footer", label: "Footer" },
+  { href: "/admin/ajustes", label: "Ajustes" },
 ];
 
 /**
@@ -49,25 +53,21 @@ const NAV_ITEMS: NavItem[] = [
  * their own inner content wrapper (the `mx-auto w-full max-w-[1440px]`
  * container used today).
  */
-export default async function AdminLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   // Defense in depth: middleware also redirects unauthenticated users,
   // but server layouts run on every render and a redirect here is the
   // last line before the React tree mounts.
   const session = await getServerSession();
   if (!session) {
-    redirect('/admin/login' as never);
+    redirect("/admin/login" as never);
   }
   const user = await findAdminUserByDocumentId(session.sub);
   if (!user || !user.active) {
-    redirect('/admin/login' as never);
+    redirect("/admin/login" as never);
   }
 
   const sidebarLinkClass =
-    't-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60';
+    "t-mono block px-4 py-2 text-[11px] uppercase tracking-[0.22em] text-ink hover:bg-cream-soft/60";
 
   return (
     <div className="min-h-screen bg-paper text-ink">
@@ -93,10 +93,7 @@ export default async function AdminLayout({
             <ul className="flex flex-col gap-1">
               {NAV_ITEMS.map((item) => (
                 <li key={item.href}>
-                  <Link
-                    href={item.href as never}
-                    className={sidebarLinkClass}
-                  >
+                  <Link href={item.href as never} className={sidebarLinkClass}>
                     {item.label}
                   </Link>
                 </li>

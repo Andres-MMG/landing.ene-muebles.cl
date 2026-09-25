@@ -1,70 +1,71 @@
-import type { AboutSection } from "@/lib/strapi";
+import type { AboutSection as AboutSectionModel } from "@/lib/strapi";
 import { site } from "@ene/ui-tokens";
+
+type AboutStatsCopy = {
+  productCountLabel?: string;
+  productLineCountLabel?: string;
+  coverageLabel?: string;
+  warrantyLabel?: string;
+};
+
+type AboutSectionContent = AboutSectionModel & AboutStatsCopy;
 
 type AboutSectionProps = {
   aboutText?: string;
   siteName: string;
   productCount?: number;
   categoryCount?: number;
-  /**
-   * B1 (U6) — dispatch-coverage copy from the site-setting singleton
-   * (regional range seeded by default). Renders in the stats
-   * rail instead of the old region-range claim ("V – X").
-   */
   dispatchCoverage?: string;
-  /**
-   * Batch 2: when provided, eyebrow/title/intro come from the Strapi
-   * `about-section` singleton (which already returns a typed fallback
-   * when Strapi is unreachable). The legacy `aboutText` prop is kept
-   * as a final fallback so older callers that only have site-setting
-   * data still render correctly.
-   */
-  section?: AboutSection;
+  warrantyText?: string;
+  section?: AboutSectionContent;
 };
 
-/**
- * About — ink-drenched conviction block.
- *
- * Tables turned: this is the dark interlude that breaks the page rhythm.
- * One bold heading, then the long-form body, then a thin mono rail with
- * the verifiable proof points. No stats hardcoded as filler — the counts
- * come from the catalog so they stay honest.
- */
+const DEFAULT_PRODUCT_COUNT_LABEL = "Productos en catálogo";
+const DEFAULT_PRODUCT_LINE_COUNT_LABEL = "Líneas de producto";
+const DEFAULT_COVERAGE_LABEL = "Cobertura";
+const DEFAULT_WARRANTY_LABEL = "Garantía";
+const DEFAULT_WARRANTY_TEXT = "1 año";
+const COMPACT_STAT_MAX_LENGTH = 160;
+
+export function compactStatText(
+  value: string | null | undefined,
+  fallback: string,
+  maxLength = COMPACT_STAT_MAX_LENGTH,
+): string {
+  const normalized = value?.replace(/\s+/g, " ").trim() || fallback;
+  if (normalized.length <= maxLength) return normalized;
+  return normalized.slice(0, Math.max(0, maxLength - 1)).trimEnd() + "…";
+}
+
 export function AboutSection({
   aboutText,
   siteName,
   productCount,
   categoryCount,
   dispatchCoverage,
+  warrantyText,
   section,
 }: AboutSectionProps) {
   const eyebrow = section?.eyebrow ?? site.aboutOverline;
   const title = section?.title ?? site.aboutHeading;
   const intro = section?.intro ?? null;
   const body = section?.body ?? aboutText ?? null;
-  // B2 batch 2 fix: render the section when ANY meaningful content is
-  // available, not only when the body is set. The editor may have
-  // intentionally cleared the body while keeping the header copy; we
-  // do not want the entire dark block to disappear silently. When the
-  // body is empty but the header exists, we still render the header
-  // with a graceful "no body" mono line so the design rhythm stays.
   const hasHeader = Boolean(eyebrow || title || intro);
+
   if (!body && !intro && !title && !eyebrow) return null;
   if (!body && !hasHeader) return null;
 
+  const coverage = compactStatText(dispatchCoverage, site.dispatchCoverageFallback);
+  const warranty = compactStatText(warrantyText, DEFAULT_WARRANTY_TEXT);
+
   return (
-    <section
-      aria-labelledby="about-heading"
-      className="relative bg-ink text-paper"
-    >
+    <section aria-labelledby="about-heading" className="relative bg-ink text-paper">
       <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 sm:pt-28 sm:pb-24 lg:px-16 lg:pt-36 lg:pb-28">
         <header className="grid grid-cols-1 gap-10 border-b border-paper-line-on-ink pb-12 lg:grid-cols-12 lg:gap-12 lg:pb-16">
           <div className="lg:col-span-5">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe">
-                {eyebrow}
-              </span>
+              <span className="t-label text-taupe">{eyebrow}</span>
             </div>
             <h2
               id="about-heading"
@@ -94,9 +95,7 @@ export function AboutSection({
                   ))}
               </div>
             ) : (
-              <p className="t-overline text-paper-mute-on-ink">
-                Contenido en preparación.
-              </p>
+              <p className="t-overline text-paper-mute-on-ink">Contenido en preparación.</p>
             )}
           </div>
           <aside className="lg:col-span-4 lg:col-start-9">
@@ -104,7 +103,7 @@ export function AboutSection({
               {productCount !== undefined ? (
                 <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
                   <dt className="t-overline text-paper-mute-on-ink">
-                    Productos en catálogo
+                    {section?.productCountLabel ?? DEFAULT_PRODUCT_COUNT_LABEL}
                   </dt>
                   <dd className="t-mono text-2xl text-paper">
                     {String(productCount).padStart(2, "0")}
@@ -114,29 +113,34 @@ export function AboutSection({
               {categoryCount !== undefined ? (
                 <div className="flex items-baseline justify-between border-b border-paper-line-on-ink py-4">
                   <dt className="t-overline text-paper-mute-on-ink">
-                    Líneas de producto
+                    {section?.productLineCountLabel ?? DEFAULT_PRODUCT_LINE_COUNT_LABEL}
                   </dt>
                   <dd className="t-mono text-2xl text-paper">
                     {String(categoryCount).padStart(2, "0")}
                   </dd>
                 </div>
               ) : null}
-              {/* B1 (U6): the region-range claim ("V – X") is gone; the
-                  row reads the site-setting coverage field with the
-                  static token as fallback. */}
               <div className="flex items-baseline justify-between gap-4 border-b border-paper-line-on-ink py-4">
                 <dt className="t-overline text-paper-mute-on-ink">
-                  Cobertura
+                  {section?.coverageLabel ?? DEFAULT_COVERAGE_LABEL}
                 </dt>
-                <dd className="t-mono text-right text-lg text-paper">
-                  {dispatchCoverage ?? site.dispatchCoverageFallback}
+                <dd
+                  className="t-mono max-w-[22ch] break-words text-right text-sm leading-snug text-paper"
+                  title={dispatchCoverage?.trim() || undefined}
+                >
+                  {coverage}
                 </dd>
               </div>
-              <div className="flex items-baseline justify-between py-4">
+              <div className="flex items-baseline justify-between gap-4 py-4">
                 <dt className="t-overline text-paper-mute-on-ink">
-                  Garantía
+                  {section?.warrantyLabel ?? DEFAULT_WARRANTY_LABEL}
                 </dt>
-                <dd className="t-mono text-2xl text-paper">1 año</dd>
+                <dd
+                  className="t-mono max-w-[22ch] break-words text-right text-sm leading-snug text-paper"
+                  title={warrantyText?.trim() || undefined}
+                >
+                  {warranty}
+                </dd>
               </div>
             </dl>
           </aside>
@@ -146,28 +150,20 @@ export function AboutSection({
   );
 }
 
-/**
- * Stripped-down version for non-home pages (e.g. /catalogo) — same ink
- * surface, no stats rail.
- */
 export function AboutSectionCompact({
   aboutText,
   siteName,
   section,
 }: Pick<AboutSectionProps, "aboutText" | "siteName"> & {
-  section?: AboutSection;
+  section?: AboutSectionContent;
 }) {
   const eyebrow = section?.eyebrow ?? site.aboutOverline;
   const title = section?.title ?? site.aboutHeading;
   const body = section?.body ?? aboutText ?? null;
-  // B2 batch 2 fix: same as the full AboutSection — render when the
-  // header copy is populated even if the body was intentionally cleared.
   if (!body && !title && !eyebrow) return null;
+
   return (
-    <section
-      aria-labelledby="about-compact-heading"
-      className="bg-ink text-paper"
-    >
+    <section aria-labelledby="about-compact-heading" className="bg-ink text-paper">
       <div className="mx-auto w-full max-w-[1440px] px-6 py-20 sm:px-10 sm:py-24 lg:px-16 lg:py-28">
         <header className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
           <div className="lg:col-span-4">
@@ -193,13 +189,9 @@ export function AboutSectionCompact({
                   ))}
               </div>
             ) : (
-              <p className="t-overline text-paper-mute-on-ink">
-                Contenido en preparación.
-              </p>
+              <p className="t-overline text-paper-mute-on-ink">Contenido en preparación.</p>
             )}
-            <p className="t-overline mt-8 text-paper-mute-on-ink">
-              {siteName}
-            </p>
+            <p className="t-overline mt-8 text-paper-mute-on-ink">{siteName}</p>
           </div>
         </header>
       </div>

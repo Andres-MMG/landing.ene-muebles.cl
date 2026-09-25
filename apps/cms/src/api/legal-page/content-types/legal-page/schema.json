@@ -1,0 +1,41 @@
+{
+  "kind": "collectionType",
+  "collectionName": "legal_pages",
+  "info": {
+    "singularName": "legal-page",
+    "pluralName": "legal-pages",
+    "displayName": "Legal Page",
+    "description": "Fixed Terms and Privacy documents edited only through the custom admin."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {
+    "content-manager": { "visible": false },
+    "content-type-builder": { "visible": false }
+  },
+  "attributes": {
+    "code": {
+      "type": "enumeration",
+      "enum": ["terms", "privacy"],
+      "required": true,
+      "unique": true,
+      "configurable": false
+    },
+    "metadataTitle": { "type": "string", "required": false, "maxLength": 60 },
+    "metadataDescription": { "type": "text", "required": false, "maxLength": 160 },
+    "eyebrow": { "type": "string", "required": true, "maxLength": 80 },
+    "title": { "type": "string", "required": true, "maxLength": 180 },
+    "intro": { "type": "text", "required": true, "maxLength": 800 },
+    "tocLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "updatedLabel": { "type": "string", "required": true, "maxLength": 80 },
+    "effectiveDate": { "type": "date", "required": true },
+    "version": { "type": "string", "required": true, "maxLength": 40 },
+    "sections": {
+      "type": "component",
+      "repeatable": true,
+      "required": true,
+      "component": "legal.section"
+    }
+  }
+}

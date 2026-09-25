@@ -1,15 +1,19 @@
 import { randomUUID } from "node:crypto";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import aboutSectionSchema from "./api/about-section/content-types/about-section/schema.json";
+import catalogPageSchema from "./api/catalog-page/content-types/catalog-page/schema.json";
 import contactCtaSectionSchema from "./api/contact-cta-section/content-types/contact-cta-section/schema.json";
+import contactPageSchema from "./api/contact-page/content-types/contact-page/schema.json";
 import footerBlockSchema from "./api/footer-block/content-types/footer-block/schema.json";
 import heroSectionSchema from "./api/hero-section/content-types/hero-section/schema.json";
+import homePageSchema from "./api/home-page/content-types/home-page/schema.json";
 import siteSettingSchema from "./api/site-setting/content-types/site-setting/schema.json";
 import {
   ensureBootstrapSuperAdmin,
   ensureClientUser,
   ensurePublicSingletons,
   PUBLIC_SINGLETON_SEEDS,
+  SCOPED_TYPES,
 } from "./index";
 
 type ExistingDocument = { publishedAt: string | null };
@@ -117,6 +121,9 @@ describe("public singleton bootstrap", () => {
       "api::site-setting.site-setting": siteSettingSchema,
       "api::footer-block.footer-block": footerBlockSchema,
       "api::hero-section.hero-section": heroSectionSchema,
+      "api::home-page.home-page": homePageSchema,
+      "api::catalog-page.catalog-page": catalogPageSchema,
+      "api::contact-page.contact-page": contactPageSchema,
       "api::about-section.about-section": aboutSectionSchema,
       "api::contact-cta-section.contact-cta-section": contactCtaSectionSchema,
     } as const;
@@ -132,6 +139,233 @@ describe("public singleton bootstrap", () => {
         expect((seed.data[field] as string).trim()).not.toBe("");
       }
     }
+  });
+
+  it("models the homepage editorial copy as explicit required fields", () => {
+    expect(homePageSchema.kind).toBe("singleType");
+    expect(homePageSchema.options.draftAndPublish).toBe(true);
+    expect(Object.keys(homePageSchema.attributes)).toEqual(
+      expect.arrayContaining([
+        "catalogEyebrow",
+        "catalogTitle",
+        "catalogBody",
+        "catalogCtaLabel",
+        "featuredEyebrow",
+        "featuredTitle",
+        "featuredBody",
+        "featuredCtaLabel",
+      ]),
+    );
+    expect(
+      Object.entries(homePageSchema.attributes)
+        .filter(([, field]) => field.required)
+        .map(([name]) => name),
+    ).toEqual([
+      "catalogEyebrow",
+      "catalogTitle",
+      "catalogBody",
+      "catalogCtaLabel",
+      "featuredEyebrow",
+      "featuredTitle",
+      "featuredBody",
+      "featuredCtaLabel",
+    ]);
+    expect(homePageSchema.attributes.seoTitle.required).toBe(false);
+    expect(homePageSchema.attributes.seoDescription.required).toBe(false);
+  });
+
+  it("models catalog and printable-catalog copy as explicit required fields", () => {
+    expect(catalogPageSchema.kind).toBe("singleType");
+    expect(catalogPageSchema.options.draftAndPublish).toBe(true);
+    expect(Object.keys(catalogPageSchema.attributes)).toEqual(
+      expect.arrayContaining([
+        "eyebrow",
+        "productCountSuffix",
+        "documentationText",
+        "printCtaLabel",
+        "printCoverTitle",
+        "printCoverBody",
+        "printIndexTitle",
+        "printCategorySubtitle",
+        "printPublishedProductsSuffix",
+      ]),
+    );
+    expect(
+      Object.entries(catalogPageSchema.attributes)
+        .filter(([, field]) => field.required)
+        .map(([name]) => name),
+    ).toEqual([
+      "eyebrow",
+      "productCountSuffix",
+      "documentationText",
+      "printCtaLabel",
+      "printCoverTitle",
+      "printCoverBody",
+      "printIndexTitle",
+      "printCategorySubtitle",
+      "printPublishedProductsSuffix",
+    ]);
+    expect(catalogPageSchema.attributes.seoTitle.required).toBe(false);
+    expect(catalogPageSchema.attributes.seoDescription.required).toBe(false);
+  });
+
+  it("models all contact-page copy as required bounded fields and scopes it publicly", () => {
+    const expectedFields = [
+      "heroEyebrow",
+      "heroTitle",
+      "heroBody",
+      "whatsappCtaLabel",
+      "emailCtaLabel",
+      "alternateContactEyebrow",
+      "phoneContactLabel",
+      "whatsappContactLabel",
+      "businessHoursLabel",
+      "addressLabel",
+      "formEyebrow",
+      "formTitle",
+      "formBody",
+      "nameFieldLabel",
+      "institutionFieldLabel",
+      "emailFieldLabel",
+      "phoneFieldLabel",
+      "productFieldLabel",
+      "generalInquiryLabel",
+      "regionFieldLabel",
+      "regionPlaceholder",
+      "messageFieldLabel",
+      "consentBeforeLink",
+      "consentPrivacyLinkLabel",
+      "consentAfterLink",
+      "responseTimeText",
+      "submitLabel",
+    ];
+
+    expect(contactPageSchema.kind).toBe("singleType");
+    expect(contactPageSchema.options.draftAndPublish).toBe(true);
+    expect(
+      Object.entries(contactPageSchema.attributes)
+        .filter(([, field]) => field.required)
+        .map(([name]) => name),
+    ).toEqual(expectedFields);
+    expect(contactPageSchema.attributes.seoTitle.required).toBe(false);
+    expect(contactPageSchema.attributes.seoDescription.required).toBe(false);
+    expect(
+      Object.values(contactPageSchema.attributes).every(
+        (field) => typeof field.maxLength === "number",
+      ),
+    ).toBe(true);
+    expect(SCOPED_TYPES).toContain("api::contact-page.contact-page");
+  });
+
+  it("keeps the new About and shared Contact CTA copy explicit without making it required", () => {
+    expect(aboutSectionSchema.attributes).toEqual(
+      expect.objectContaining({
+        pageEyebrow: expect.objectContaining({ type: "string" }),
+        pageTitle: expect.objectContaining({ type: "string" }),
+        yearsInBusinessLabel: expect.objectContaining({ type: "string" }),
+        productCountLabel: expect.objectContaining({ type: "string" }),
+        productLineCountLabel: expect.objectContaining({ type: "string" }),
+        coverageLabel: expect.objectContaining({ type: "string" }),
+        warrantyLabel: expect.objectContaining({ type: "string" }),
+        projectCtaTitle: expect.objectContaining({ type: "string" }),
+        projectCtaBody: expect.objectContaining({ type: "text" }),
+        projectCtaLabel: expect.objectContaining({ type: "string" }),
+        values: expect.objectContaining({ type: "json" }),
+      }),
+    );
+    expect(contactCtaSectionSchema.attributes).toEqual(
+      expect.objectContaining({
+        eyebrow: expect.objectContaining({ type: "string" }),
+        emailLabel: expect.objectContaining({ type: "string" }),
+      }),
+    );
+  });
+
+  it("adds CTA microcopy only to the create-only seed for an absent document", () => {
+    const seed = PUBLIC_SINGLETON_SEEDS.find(
+      ({ uid }) => uid === "api::contact-cta-section.contact-cta-section",
+    );
+    expect(seed?.data).toEqual(
+      expect.objectContaining({ eyebrow: "Hablemos", emailLabel: "Correo" }),
+    );
+  });
+
+  it("keeps reusable commercial facts explicit in Site Setting", () => {
+    expect(siteSettingSchema.attributes).toEqual(
+      expect.objectContaining({
+        paymentTermsText: expect.objectContaining({ type: "text" }),
+        warrantyText: expect.objectContaining({ type: "text" }),
+        quoteResponseTimeText: expect.objectContaining({ type: "text" }),
+        foundedYear: expect.objectContaining({ type: "integer", min: 1800, max: 2100 }),
+      }),
+    );
+  });
+  it("models optional global navigation and product-action copy without seeding it", () => {
+    expect(siteSettingSchema.attributes).toEqual(
+      expect.objectContaining({
+        navigationHomeLabel: { type: "string", required: false, maxLength: 24 },
+        navigationCatalogLabel: { type: "string", required: false, maxLength: 24 },
+        navigationAboutLabel: { type: "string", required: false, maxLength: 24 },
+        navigationContactLabel: { type: "string", required: false, maxLength: 24 },
+        headerWhatsappLabel: { type: "string", required: false, maxLength: 24 },
+        mobileWhatsappLabel: { type: "string", required: false, maxLength: 80 },
+        whatsappProductMessageTemplate: { type: "text", required: false, maxLength: 1000 },
+        productCardDetailLabel: { type: "string", required: false, maxLength: 60 },
+        productCardWhatsappLabel: { type: "string", required: false, maxLength: 60 },
+        productDetailWhatsappLabel: { type: "string", required: false, maxLength: 80 },
+        productDetailContactLabel: { type: "string", required: false, maxLength: 80 },
+      }),
+    );
+
+    const siteSettingSeed = PUBLIC_SINGLETON_SEEDS.find(
+      ({ uid }) => uid === "api::site-setting.site-setting",
+    );
+    expect(siteSettingSeed?.data).not.toEqual(
+      expect.objectContaining({
+        navigationHomeLabel: expect.anything(),
+        whatsappProductMessageTemplate: expect.anything(),
+      }),
+    );
+  });
+
+  it("models and create-only seeds all optional Footer labels", () => {
+    const defaults = {
+      productCountSuffix: "productos certificados para instituciones",
+      catalogHeading: "Catálogo",
+      contactHeading: "Contacto",
+      legalHeading: "Legal",
+      socialHeading: "Redes",
+      catalogCtaLabel: "Ver catálogo",
+      officeLineLabel: "Línea oficina",
+      schoolLineLabel: "Línea escolar",
+      aboutLinkLabel: "Sobre nosotros",
+      termsLinkLabel: "Términos y condiciones",
+      privacyLinkLabel: "Política de privacidad",
+      rutLabel: "RUT",
+      catalogStampLabel: "Catálogo institucional",
+      writtenBackingLabel: "Respaldo escrito",
+    };
+
+    for (const field of Object.keys(defaults)) {
+      const attribute =
+        footerBlockSchema.attributes[field as keyof typeof footerBlockSchema.attributes];
+      expect(attribute.required).not.toBe(true);
+    }
+
+    const footerSeed = PUBLIC_SINGLETON_SEEDS.find(
+      ({ uid }) => uid === "api::footer-block.footer-block",
+    );
+    expect(footerSeed?.data).toEqual(expect.objectContaining(defaults));
+  });
+
+  it("keeps hero-owned captions and proof-rail copy explicit", () => {
+    expect(heroSectionSchema.attributes).toEqual(
+      expect.objectContaining({
+        imageCaption: expect.objectContaining({ type: "string" }),
+        galleryCaption: expect.objectContaining({ type: "string" }),
+        railSecondaryText: expect.objectContaining({ type: "string" }),
+      }),
+    );
   });
 });
 

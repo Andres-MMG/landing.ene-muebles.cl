@@ -12,6 +12,16 @@
   },
   "pluginOptions": {},
   "attributes": {
+    "seoTitle": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "seoDescription": {
+      "type": "text",
+      "required": false,
+      "maxLength": 160
+    },
     "eyebrow": {
       "type": "string",
       "required": true,
@@ -31,6 +41,46 @@
     "body": {
       "type": "text",
       "maxLength": 4000
+    },
+    "pageEyebrow": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "pageTitle": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "yearsInBusinessLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "productCountLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "productLineCountLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "coverageLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "warrantyLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "projectCtaTitle": {
+      "type": "string",
+      "maxLength": 200
+    },
+    "projectCtaBody": {
+      "type": "text",
+      "maxLength": 600
+    },
+    "projectCtaLabel": {
+      "type": "string",
+      "maxLength": 80
     },
     "missionLabel": {
       "type": "string",
@@ -71,9 +121,7 @@
       "type": "media",
       "multiple": false,
       "required": false,
-      "allowedTypes": [
-        "images"
-      ]
+      "allowedTypes": ["images"]
     }
   }
 }

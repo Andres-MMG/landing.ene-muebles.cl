@@ -25,6 +25,62 @@
     "legalSnippet": {
       "type": "string",
       "maxLength": 300
+    },
+    "productCountSuffix": {
+      "type": "string",
+      "maxLength": 160
+    },
+    "catalogHeading": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "contactHeading": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "legalHeading": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "socialHeading": {
+      "type": "string",
+      "maxLength": 60
+    },
+    "catalogCtaLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "officeLineLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "schoolLineLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "aboutLinkLabel": {
+      "type": "string",
+      "maxLength": 80
+    },
+    "termsLinkLabel": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "privacyLinkLabel": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "rutLabel": {
+      "type": "string",
+      "maxLength": 30
+    },
+    "catalogStampLabel": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "writtenBackingLabel": {
+      "type": "string",
+      "maxLength": 120
     }
   }
 }

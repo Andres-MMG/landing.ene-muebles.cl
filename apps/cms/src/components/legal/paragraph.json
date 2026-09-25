@@ -1,0 +1,15 @@
+{
+  "collectionName": "components_legal_paragraphs",
+  "info": {
+    "displayName": "Legal paragraph",
+    "description": "One plain-text paragraph in a legal section."
+  },
+  "options": {},
+  "attributes": {
+    "text": {
+      "type": "text",
+      "required": true,
+      "maxLength": 1200
+    }
+  }
+}

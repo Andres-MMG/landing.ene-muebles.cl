@@ -33,6 +33,21 @@ describe("getSiteSettings", () => {
         tagline: "Muebles artesanales",
         contactEmail: "contacto@ene-muebles.cl",
         whatsappNumber: "+56912345678",
+        paymentTermsText: "Pago institucional a 30 días.",
+        warrantyText: "Garantía de 1 año.",
+        quoteResponseTimeText: "Cotización en 24 h hábiles.",
+        foundedYear: 1996,
+        navigationHomeLabel: "Portada",
+        navigationCatalogLabel: "Productos",
+        navigationAboutLabel: "La empresa",
+        navigationContactLabel: "Escríbenos",
+        headerWhatsappLabel: "Cotizar",
+        mobileWhatsappLabel: "Cotizar por WhatsApp",
+        whatsappProductMessageTemplate: "Necesito cotizar {productName}.",
+        productCardDetailLabel: "Ver ficha",
+        productCardWhatsappLabel: "Cotizar",
+        productDetailWhatsappLabel: "Cotizar por WhatsApp",
+        productDetailContactLabel: "Contactar",
       },
     });
 
@@ -42,7 +57,69 @@ describe("getSiteSettings", () => {
     expect(settings.siteName).toBe("Ene Muebles");
     expect(settings.tagline).toBe("Muebles artesanales");
     expect(settings.contactEmail).toBe("contacto@ene-muebles.cl");
+    expect(settings.paymentTermsText).toBe("Pago institucional a 30 días.");
+    expect(settings.warrantyText).toBe("Garantía de 1 año.");
+    expect(settings.quoteResponseTimeText).toBe("Cotización en 24 h hábiles.");
+    expect(settings.foundedYear).toBe(1996);
+    expect(settings.navigationHomeLabel).toBe("Portada");
+    expect(settings.navigationCatalogLabel).toBe("Productos");
+    expect(settings.navigationAboutLabel).toBe("La empresa");
+    expect(settings.navigationContactLabel).toBe("Escríbenos");
+    expect(settings.headerWhatsappLabel).toBe("Cotizar");
+    expect(settings.mobileWhatsappLabel).toBe("Cotizar por WhatsApp");
+    expect(settings.whatsappProductMessageTemplate).toBe("Necesito cotizar {productName}.");
+    expect(settings.productCardDetailLabel).toBe("Ver ficha");
+    expect(settings.productCardWhatsappLabel).toBe("Cotizar");
+    expect(settings.productDetailWhatsappLabel).toBe("Cotizar por WhatsApp");
+    expect(settings.productDetailContactLabel).toBe("Contactar");
     expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects a founded year outside the supported integer range", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        foundedYear: 1799,
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed foundedYear/);
+  });
+
+  it("rejects malformed global navigation and product-action copy", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        navigationHomeLabel: 42,
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+
+    await expect(getSiteSettings()).rejects.toThrow(/malformed navigationHomeLabel/);
+  });
+
+  it("drops legacy over-limit desktop labels so the navigation resolver uses its fallback", async () => {
+    mockFetch(200, {
+      data: {
+        id: 1,
+        siteName: "Ene Muebles",
+        navigationHomeLabel: "x".repeat(25),
+        headerWhatsappLabel: "y".repeat(25),
+        mobileWhatsappLabel: "m".repeat(80),
+      },
+    });
+
+    const { getSiteSettings } = await import("./strapi");
+    const settings = await getSiteSettings();
+
+    expect(settings.navigationHomeLabel).toBeUndefined();
+    expect(settings.headerWhatsappLabel).toBeUndefined();
+    expect(settings.mobileWhatsappLabel).toBe("m".repeat(80));
   });
 
   it("omits cleared social links while preserving populated handles", async () => {
@@ -232,6 +309,50 @@ describe("getCategories", () => {
   });
 });
 
+describe("getCategoryCount", () => {
+  it("returns the active published category total from pagination metadata", async () => {
+    mockFetch(200, {
+      data: [{ id: 1, documentId: "category-1" }],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 42, total: 42 } },
+    });
+
+    const { getCategoryCount } = await import("./strapi");
+    await expect(getCategoryCount()).resolves.toBe(42);
+
+    const [url, init] = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0] as [
+      string,
+      RequestInit & { next?: { tags?: string[] } },
+    ];
+    const decoded = decodeURIComponent(url);
+    expect(decoded).toMatch(/status=published/);
+    expect(decoded).toMatch(/filters\[active\]\[\$eq\]=true/);
+    expect(decoded).toMatch(/fields\[0\]=documentId/);
+    expect(decoded).toMatch(/pagination\[pageSize\]=1/);
+    expect(init.next?.tags).toContain("catalog");
+  });
+
+  it("falls back to the returned row count when pagination total is absent or invalid", async () => {
+    mockFetch(200, { data: [{ documentId: "one" }] });
+    const { getCategoryCount } = await import("./strapi");
+    await expect(getCategoryCount()).resolves.toBe(1);
+
+    vi.resetModules();
+    mockFetch(200, {
+      data: [{ documentId: "one" }],
+      meta: { pagination: { total: -3 } },
+    });
+    const { getCategoryCount: getInvalidTotalCount } = await import("./strapi");
+    await expect(getInvalidTotalCount()).resolves.toBe(1);
+  });
+
+  it("returns zero when Strapi is unreachable", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const { getCategoryCount } = await import("./strapi");
+    await expect(getCategoryCount()).resolves.toBe(0);
+  });
+});
+
 describe("getProducts", () => {
   it("builds the correct query string with category filter", async () => {
     mockFetch(200, {
@@ -364,9 +485,7 @@ describe("getAllProducts", () => {
 
   it("stops after a single page when all entries fit", async () => {
     mockFetch(200, {
-      data: [
-        { id: 1, name: "Único", slug: "unico", description: "d", price: 0, currency: "CLP" },
-      ],
+      data: [{ id: 1, name: "Único", slug: "unico", description: "d", price: 0, currency: "CLP" }],
       meta: { pagination: { total: 1 } },
     });
 
@@ -408,7 +527,9 @@ describe("getCatalogSnapshot", () => {
       meta: { pagination: { total: 1 } },
     });
 
-    const { getCatalogSnapshot, CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT } = await import("./strapi");
+    const { getCatalogSnapshot, CATALOG_SNAPSHOT_MAX_IMAGES_PER_PRODUCT } = await import(
+      "./strapi"
+    );
     const snapshot = await getCatalogSnapshot();
 
     expect(snapshot.products).toHaveLength(1);
@@ -417,7 +538,9 @@ describe("getCatalogSnapshot", () => {
     expect(snapshot.truncated).toBe(false);
     expect(snapshot.fetchedAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/);
 
-    const url = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string);
+    const url = decodeURIComponent(
+      (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string,
+    );
     expect(url).toMatch(/status=published/);
     expect(url).toMatch(/filters\[active\]\[\$eq\]=true/);
     expect(url).toMatch(/pagination\[pageSize\]=100/);
@@ -443,7 +566,9 @@ describe("getCatalogSnapshot", () => {
     expect(snapshot.products).toHaveLength(CATALOG_SNAPSHOT_MAX_PRODUCTS);
     expect(snapshot.truncated).toBe(true);
     expect(fetch).toHaveBeenCalledTimes(2);
-    const secondUrl = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as string);
+    const secondUrl = decodeURIComponent(
+      (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[1]?.[0] as string,
+    );
     expect(secondUrl).toMatch(/pagination\[page\]=2/);
   });
 
@@ -456,7 +581,11 @@ describe("getCatalogSnapshot", () => {
           category: { ...product(1).category, active: false },
           images: [
             { id: 99, url: "not-a-public-url", formats: { thumbnail: { url: "" } } },
-            { id: 100, url: "/uploads/current.jpg", formats: { medium: { url: "/uploads/current-medium.jpg" } } },
+            {
+              id: 100,
+              url: "/uploads/current.jpg",
+              formats: { medium: { url: "/uploads/current-medium.jpg" } },
+            },
           ],
         },
       ],
@@ -469,7 +598,9 @@ describe("getCatalogSnapshot", () => {
     expect(snapshot.products[0]?.name).toBe("Producto vigente");
     expect(snapshot.products[0]?.category).toBeNull();
     expect(snapshot.products[0]?.images).toHaveLength(1);
-    expect(snapshot.products[0]?.images?.[0]?.url).toBe("http://localhost:1337/uploads/current.jpg");
+    expect(snapshot.products[0]?.images?.[0]?.url).toBe(
+      "http://localhost:1337/uploads/current.jpg",
+    );
     expect(fetch).toHaveBeenCalledTimes(1);
     expect((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1]?.next).toEqual({
       revalidate: 60,
@@ -517,7 +648,9 @@ describe("contact product helpers", () => {
       { slug: "mesa-sur", name: "Mesa Sur" },
     ]);
     expect(fetch).toHaveBeenCalledTimes(2);
-    const firstUrl = decodeURIComponent((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string);
+    const firstUrl = decodeURIComponent(
+      (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0] as string,
+    );
     expect(firstUrl).toMatch(/status=published/);
     expect(firstUrl).toMatch(/filters\[active\]\[\$eq\]=true/);
     expect(firstUrl).toMatch(/fields\[0\]=name/);
@@ -527,7 +660,10 @@ describe("contact product helpers", () => {
   });
 
   it("stops on an empty page and returns an empty list on fetch failure", async () => {
-    mockFetch(200, { data: [{ name: "Silla", slug: "silla" }], meta: { pagination: { total: 3 } } });
+    mockFetch(200, {
+      data: [{ name: "Silla", slug: "silla" }],
+      meta: { pagination: { total: 3 } },
+    });
     mockFetch(200, { data: [] });
     const { getContactProductOptions } = await import("./strapi");
     await expect(getContactProductOptions()).resolves.toEqual([{ slug: "silla", name: "Silla" }]);
@@ -552,7 +688,10 @@ describe("contact product helpers", () => {
 
 describe("getProductCount", () => {
   it("returns the total from the pagination meta with a minimal payload", async () => {
-    mockFetch(200, { data: [], meta: { pagination: { page: 1, pageSize: 1, pageCount: 204, total: 204 } } });
+    mockFetch(200, {
+      data: [],
+      meta: { pagination: { page: 1, pageSize: 1, pageCount: 204, total: 204 } },
+    });
 
     const { getProductCount } = await import("./strapi");
     const count = await getProductCount();
@@ -606,6 +745,47 @@ describe("getProductBySlug", () => {
     const product = await getProductBySlug("sofa-oslo");
     expect(product?.name).toBe("Sofá Oslo");
   });
+
+  it("requests exactly one active published row for the exact slug", async () => {
+    mockFetch(200, { data: [] });
+    const { getProductBySlug } = await import("./strapi");
+
+    await getProductBySlug("mesa & silla");
+
+    const url = new URL(String(vi.mocked(fetch).mock.calls[0]?.[0]));
+    expect(url.searchParams.get("status")).toBe("published");
+    expect(url.searchParams.get("filters[slug][$eq]")).toBe("mesa & silla");
+    expect(url.searchParams.get("filters[active][$eq]")).toBe("true");
+    expect(url.searchParams.get("pagination[pageSize]")).toBe("1");
+    expect(url.searchParams.get("populate")).toBe("*");
+  });
+
+  it.each([
+    ["inactive", { active: false, slug: "sofa-oslo" }],
+    ["missing active flag", { active: undefined, slug: "sofa-oslo" }],
+    ["a different slug", { active: true, slug: "otro-producto" }],
+  ])(
+    "rejects an inconsistent %s row returned by Strapi",
+    async (_label: string, overrides: Record<string, unknown>) => {
+      mockFetch(200, {
+        data: [
+          {
+            id: 1,
+            name: "Sofá Oslo",
+            slug: "sofa-oslo",
+            description: "d",
+            price: 1000000,
+            currency: "CLP",
+            active: true,
+            ...overrides,
+          },
+        ],
+      });
+      const { getProductBySlug } = await import("./strapi");
+
+      await expect(getProductBySlug("sofa-oslo")).resolves.toBeNull();
+    },
+  );
 });
 
 describe("formatPrice", () => {
@@ -631,6 +811,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "Silla apilable de melamina.",
           price: 89900,
           currency: "CLP",
+          active: true,
           externalId: "CAT-2025-001",
           productType: "Silla",
           subcategory: "Sillas y asientos",
@@ -683,6 +864,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "Mesa",
           price: 150000,
           currency: "CLP",
+          active: true,
           catalogPage: "5",
         },
       ],
@@ -707,6 +889,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "d",
           price: 0,
           currency: "CLP",
+          active: true,
           importSource: "magically-migrated",
         },
       ],
@@ -726,6 +909,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "d",
           price: 0,
           currency: "CLP",
+          active: true,
           importSource: "manual",
           importBatch: null,
         },
@@ -751,6 +935,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "Silla de madera.",
           price: 199000,
           currency: "CLP",
+          active: true,
         },
       ],
     });
@@ -784,6 +969,7 @@ describe("normalizeProduct — catalog-import fields", () => {
           description: "d",
           price: 0,
           currency: "CLP",
+          active: true,
           confidence: "experimental-confidence",
         },
       ],
@@ -875,6 +1061,7 @@ describe("normalizeMedia preferredFormat", () => {
     description: "Mesa",
     price: 150000,
     currency: "CLP",
+    active: true,
     images: [
       {
         id: 10,
@@ -902,9 +1089,7 @@ describe("normalizeMedia preferredFormat", () => {
     const { getProducts } = await import("./strapi");
     const result = await getProducts({ preferredFormat: "small" });
 
-    expect(result.products[0].images?.[0]?.url).toBe(
-      "http://localhost:1337/uploads/small_1.jpg",
-    );
+    expect(result.products[0].images?.[0]?.url).toBe("http://localhost:1337/uploads/small_1.jpg");
     // The formats map is preserved regardless of the picked url.
     expect(result.products[0].images?.[0]?.formats).toEqual(formats);
   });
@@ -932,9 +1117,7 @@ describe("normalizeMedia preferredFormat", () => {
 
     // small and medium are absent — never go smaller than requested,
     // so the first available format above is large.
-    expect(result.products[0].images?.[0]?.url).toBe(
-      "http://localhost:1337/uploads/large_1.jpg",
-    );
+    expect(result.products[0].images?.[0]?.url).toBe("http://localhost:1337/uploads/large_1.jpg");
   });
 
   it("falls back to the original when no format >= preferred exists", async () => {

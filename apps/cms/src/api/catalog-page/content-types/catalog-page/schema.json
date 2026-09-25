@@ -1,0 +1,70 @@
+{
+  "kind": "singleType",
+  "collectionName": "catalog_pages",
+  "info": {
+    "singularName": "catalog-page",
+    "pluralName": "catalog-pages",
+    "displayName": "Catalog Page",
+    "description": "Editorial copy for the public and printable catalog"
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "seoTitle": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "seoDescription": {
+      "type": "text",
+      "required": false,
+      "maxLength": 160
+    },
+    "eyebrow": {
+      "type": "string",
+      "required": true,
+      "maxLength": 120
+    },
+    "productCountSuffix": {
+      "type": "string",
+      "required": true,
+      "maxLength": 180
+    },
+    "documentationText": {
+      "type": "text",
+      "required": true,
+      "maxLength": 600
+    },
+    "printCtaLabel": {
+      "type": "string",
+      "required": true,
+      "maxLength": 80
+    },
+    "printCoverTitle": {
+      "type": "string",
+      "required": true,
+      "maxLength": 180
+    },
+    "printCoverBody": {
+      "type": "text",
+      "required": true,
+      "maxLength": 600
+    },
+    "printIndexTitle": {
+      "type": "string",
+      "required": true,
+      "maxLength": 180
+    },
+    "printCategorySubtitle": {
+      "type": "string",
+      "required": true,
+      "maxLength": 180
+    },
+    "printPublishedProductsSuffix": {
+      "type": "string",
+      "required": true,
+      "maxLength": 120
+    }
+  }
+}

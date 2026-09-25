@@ -5,12 +5,31 @@ import { formatPrice, pickMediaFormat } from "@/lib/strapi";
 import { formatDimensions } from "@/lib/product-attributes";
 import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 
+export type ProductCardActionCopy = {
+  detailLabel?: string | null;
+  whatsappLabel?: string | null;
+  whatsappMessageTemplate?: string | null;
+};
+
 type ProductCardProps = {
   product: Product;
   whatsappNumber?: string;
+  actionCopy?: ProductCardActionCopy;
   variant?: "default" | "hero" | "wide";
   priority?: boolean;
 };
+
+export const PRODUCT_ACTION_LABEL_FALLBACKS = {
+  cardDetail: "Ver detalle",
+  cardWhatsapp: "WhatsApp",
+  detailWhatsapp: "Consultar por WhatsApp",
+  detailContact: "Enviar correo",
+} as const;
+
+export const resolveProductActionLabel = (
+  value: string | null | undefined,
+  fallback: string,
+): string => value?.trim() || fallback;
 
 /**
  * ProductCard — institutional product readout.
@@ -23,6 +42,7 @@ type ProductCardProps = {
 export function ProductCard({
   product,
   whatsappNumber,
+  actionCopy,
   variant = "default",
   priority = false,
 }: ProductCardProps) {
@@ -41,15 +61,32 @@ export function ProductCard({
   // product (never price, availability, or visitor data). The builder
   // returns null when no verified number is configured.
   const whatsappHref =
-    buildWhatsAppHandoff({ whatsappNumber }, { product: { name: product.name } })?.href ??
-    null;
+    buildWhatsAppHandoff(
+      {
+        whatsappNumber,
+        whatsappProductMessageTemplate: actionCopy?.whatsappMessageTemplate ?? undefined,
+      },
+      { product: { name: product.name } },
+    )?.href ?? null;
+  const detailLabel = resolveProductActionLabel(
+    actionCopy?.detailLabel,
+    PRODUCT_ACTION_LABEL_FALLBACKS.cardDetail,
+  );
+  const whatsappLabel = resolveProductActionLabel(
+    actionCopy?.whatsappLabel,
+    PRODUCT_ACTION_LABEL_FALLBACKS.cardWhatsapp,
+  );
   // B1 (T5) — the card reads the same source as the product page: the
   // structured width/height/depth when present, the raw `source`
   // string from the Excel import otherwise. English W/H/D abbreviations
   // are gone; the row is a compact Spanish "Medidas:" readout.
   const dimensions = formatDimensions(product);
 
-  const imageAspect = isHero ? "aspect-[16/10]" : variant === "wide" ? "aspect-[3/2]" : "aspect-[4/5]";
+  const imageAspect = isHero
+    ? "aspect-[16/10]"
+    : variant === "wide"
+      ? "aspect-[3/2]"
+      : "aspect-[4/5]";
 
   return (
     <article className="group flex h-full flex-col">
@@ -68,17 +105,15 @@ export function ProductCard({
                 isHero
                   ? "(min-width: 1024px) 60vw, 100vw"
                   : variant === "wide"
-                  ? "(min-width: 1024px) 50vw, 100vw"
-                  : "(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
+                    ? "(min-width: 1024px) 50vw, 100vw"
+                    : "(min-width: 1024px) 25vw, (min-width: 640px) 50vw, 100vw"
               }
               priority={priority}
               className="object-cover"
             />
           ) : (
             <div className="flex h-full w-full items-center justify-center">
-              <span className="t-overline text-ink-mute">
-                Sin imagen
-              </span>
+              <span className="t-overline text-ink-mute">Sin imagen</span>
             </div>
           )}
         </div>
@@ -91,9 +126,7 @@ export function ProductCard({
 
       <div className="flex flex-1 flex-col gap-3 pt-5">
         <div className="flex items-baseline justify-between gap-3 border-t border-taupe-faint pt-4">
-          <span className="t-overline text-ink-mute">
-            {product.category?.name ?? "Catálogo"}
-          </span>
+          <span className="t-overline text-ink-mute">{product.category?.name ?? "Catálogo"}</span>
           <span className="t-overline text-ink-mute">
             {`SKU · ${product.slug.toUpperCase().slice(0, 12)}`}
           </span>
@@ -151,9 +184,7 @@ export function ProductCard({
         )}
 
         {product.shortDescription ? (
-          <p className="t-body text-sm text-ink-mute line-clamp-2">
-            {product.shortDescription}
-          </p>
+          <p className="t-body text-sm text-ink-mute line-clamp-2">{product.shortDescription}</p>
         ) : null}
 
         <div className="mt-auto flex items-center gap-6 pt-2">
@@ -161,7 +192,7 @@ export function ProductCard({
             href={`/producto/${product.slug}` as never}
             className="t-label inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
           >
-            Ver detalle
+            {detailLabel}
             <span aria-hidden>→</span>
           </Link>
           {whatsappHref ? (
@@ -171,7 +202,7 @@ export function ProductCard({
               rel="noopener noreferrer"
               className="t-label ml-auto text-ink-mute transition-colors hover:text-ink tap-target"
             >
-              WhatsApp
+              {whatsappLabel}
             </a>
           ) : null}
         </div>

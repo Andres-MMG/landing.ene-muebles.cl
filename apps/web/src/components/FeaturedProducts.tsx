@@ -1,10 +1,11 @@
-import type { Product } from "@/lib/strapi";
-import { ProductCard } from "./ProductCard";
-import { site } from "@ene/ui-tokens";
+import type { HomePage, Product } from "@/lib/strapi";
+import { ProductCard, type ProductCardActionCopy } from "./ProductCard";
 
 type FeaturedProductsProps = {
   products: Product[];
+  content: HomePage;
   whatsappNumber?: string;
+  actionCopy?: ProductCardActionCopy;
 };
 
 /**
@@ -20,43 +21,37 @@ type FeaturedProductsProps = {
  */
 export function FeaturedProducts({
   products,
+  content,
   whatsappNumber,
+  actionCopy,
 }: FeaturedProductsProps) {
   if (products.length === 0) return null;
 
   const [hero, ...rest] = products;
 
   return (
-    <section
-      aria-labelledby="destacados-heading"
-      className="bg-paper"
-    >
+    <section aria-labelledby="destacados-heading" className="bg-paper">
       <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-12 sm:px-10 sm:pt-28 sm:pb-16 lg:px-16 lg:pt-32 lg:pb-20">
         <header className="grid grid-cols-1 gap-8 border-b border-ink-line pb-12 lg:grid-cols-12 lg:gap-12">
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe-text">
-                {site.featuredOverline}
-              </span>
+              <span className="t-label text-taupe-text">{content.featuredEyebrow}</span>
             </div>
             <h2
               id="destacados-heading"
               className="t-h2 mt-6 max-w-[24ch] text-[clamp(2rem,1.2rem+3.2vw,3.5rem)] text-ink"
             >
-              {site.featuredHeading}
+              {content.featuredTitle}
             </h2>
           </div>
           <div className="lg:col-span-4 lg:col-start-9">
-            <p className="t-body text-base text-ink-mute">
-              La selección activa del catálogo. Cada uno se entrega con
-              ficha técnica y plazo de despacho.
-            </p>
+            <p className="t-body text-base text-ink-mute">{content.featuredBody}</p>
             <a
               href="/catalogo"
               className="t-label mt-6 inline-flex items-center gap-2 text-ink underline-offset-[6px] transition-colors hover:text-taupe-text hover:underline tap-target"
             >
-              {site.catalogAll}
+              {content.featuredCtaLabel}
               <span aria-hidden>→</span>
             </a>
           </div>
@@ -70,6 +65,7 @@ export function FeaturedProducts({
               <ProductCard
                 product={hero}
                 whatsappNumber={whatsappNumber}
+                actionCopy={actionCopy}
                 variant="hero"
                 priority
               />
@@ -77,25 +73,21 @@ export function FeaturedProducts({
           ) : null}
 
           {rest.slice(0, 3).map((product) => (
-            <div
-              key={product.id}
-              className="col-span-12 sm:col-span-6 lg:col-span-4"
-            >
+            <div key={product.id} className="col-span-12 sm:col-span-6 lg:col-span-4">
               <ProductCard
                 product={product}
                 whatsappNumber={whatsappNumber}
+                actionCopy={actionCopy}
               />
             </div>
           ))}
 
           {rest.slice(3).map((product) => (
-            <div
-              key={product.id}
-              className="col-span-12 sm:col-span-6 lg:col-span-6"
-            >
+            <div key={product.id} className="col-span-12 sm:col-span-6 lg:col-span-6">
               <ProductCard
                 product={product}
                 whatsappNumber={whatsappNumber}
+                actionCopy={actionCopy}
                 variant="wide"
               />
             </div>

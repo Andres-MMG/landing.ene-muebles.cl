@@ -48,13 +48,23 @@
       "type": "string",
       "maxLength": 200
     },
+    "imageCaption": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "galleryCaption": {
+      "type": "string",
+      "maxLength": 120
+    },
+    "railSecondaryText": {
+      "type": "string",
+      "maxLength": 120
+    },
     "image": {
       "type": "media",
       "multiple": false,
       "required": false,
-      "allowedTypes": [
-        "images"
-      ]
+      "allowedTypes": ["images"]
     }
   }
 }

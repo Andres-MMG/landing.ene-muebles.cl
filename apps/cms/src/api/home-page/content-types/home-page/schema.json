@@ -1,0 +1,74 @@
+{
+  "kind": "singleType",
+  "collectionName": "home_pages",
+  "info": {
+    "singularName": "home-page",
+    "pluralName": "home-pages",
+    "displayName": "Home Page",
+    "description": "Editorial copy for the catalog-lines and featured-products sections on the homepage."
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "pluginOptions": {},
+  "attributes": {
+    "seoTitle": {
+      "type": "string",
+      "required": false,
+      "maxLength": 60
+    },
+    "seoDescription": {
+      "type": "text",
+      "required": false,
+      "maxLength": 160
+    },
+    "catalogEyebrow": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "catalogTitle": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "catalogBody": {
+      "type": "text",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 800
+    },
+    "catalogCtaLabel": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 80
+    },
+    "featuredEyebrow": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 120
+    },
+    "featuredTitle": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 240
+    },
+    "featuredBody": {
+      "type": "text",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 800
+    },
+    "featuredCtaLabel": {
+      "type": "string",
+      "required": true,
+      "minLength": 1,
+      "maxLength": 80
+    }
+  }
+}

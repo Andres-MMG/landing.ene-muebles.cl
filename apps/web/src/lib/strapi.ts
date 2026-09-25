@@ -1,5 +1,10 @@
 import { site as siteTokens } from "@ene/ui-tokens";
 import { normalizeProductSlug } from "./lead-policy";
+import {
+  DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+  HEADER_WHATSAPP_LABEL_MAX_LENGTH,
+  MOBILE_WHATSAPP_LABEL_MAX_LENGTH,
+} from "./public-navigation";
 
 /**
  * Strapi v5 client for the public Next.js frontend.
@@ -48,6 +53,12 @@ export const STRAPI_CACHE_TAGS = {
   siteSettings: "site-settings",
   /** Marketing-section singletons: hero/about/contact-cta/footer. */
   sections: "sections",
+  /** Homepage-only catalog-lines and featured-products editorial copy. */
+  homePage: "home-page",
+  /** Public and printable catalog editorial copy. */
+  catalogPage: "catalog-page",
+  /** Public contact-page and lead-form editorial copy. */
+  contactPage: "contact-page",
 } as const;
 
 export type StrapiCacheTag = (typeof STRAPI_CACHE_TAGS)[keyof typeof STRAPI_CACHE_TAGS];
@@ -99,6 +110,13 @@ export type SiteSetting = {
   documentId?: string;
   siteName: string;
   tagline?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  seoShareImageKicker?: string;
+  seoShareImageTitle?: string;
+  seoShareImageDescription?: string;
+  seoShareImageFooter?: string;
+  seoShareImageAlt?: string;
   contactEmail?: string;
   contactPhone?: string;
   whatsappNumber?: string;
@@ -113,12 +131,27 @@ export type SiteSetting = {
   addressRegion?: string;
   /**
    * B1 (U6) — dispatch-coverage copy, single source of truth.
-    * Seeded as the confirmed Valparaíso-to-Los-Lagos regional range.
+   * Seeded as the confirmed Valparaíso-to-Los-Lagos regional range.
    */
   dispatchCoverage?: string;
   socialLinks?: SocialLinks;
   businessHours?: string;
   aboutText?: string;
+  paymentTermsText?: string;
+  warrantyText?: string;
+  quoteResponseTimeText?: string;
+  navigationHomeLabel?: string;
+  navigationCatalogLabel?: string;
+  navigationAboutLabel?: string;
+  navigationContactLabel?: string;
+  headerWhatsappLabel?: string;
+  mobileWhatsappLabel?: string;
+  whatsappProductMessageTemplate?: string;
+  productCardDetailLabel?: string;
+  productCardWhatsappLabel?: string;
+  productDetailWhatsappLabel?: string;
+  productDetailContactLabel?: string;
+  foundedYear?: number;
   rut?: string;
   heroImage?: StrapiMedia | null;
 };
@@ -130,13 +163,90 @@ export type SiteSetting = {
  * any individual field as missing if it is `undefined`/`null` and
  * fall back to per-section defaults baked into each helper.
  */
+export type HomePage = {
+  id?: number;
+  documentId?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  catalogEyebrow: string;
+  catalogTitle: string;
+  catalogBody: string;
+  catalogCtaLabel: string;
+  featuredEyebrow: string;
+  featuredTitle: string;
+  featuredBody: string;
+  featuredCtaLabel: string;
+};
+
+export type CatalogPage = {
+  id?: number;
+  documentId?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  eyebrow: string;
+  productCountSuffix: string;
+  documentationText: string;
+  printCtaLabel: string;
+  printCoverTitle: string;
+  printCoverBody: string;
+  printIndexTitle: string;
+  printCategorySubtitle: string;
+  printPublishedProductsSuffix: string;
+};
+
+export type ContactPage = {
+  id?: number;
+  documentId?: string;
+  seoTitle?: string;
+  seoDescription?: string;
+  heroEyebrow: string;
+  heroTitle: string;
+  heroBody: string;
+  whatsappCtaLabel: string;
+  emailCtaLabel: string;
+  alternateContactEyebrow: string;
+  phoneContactLabel: string;
+  whatsappContactLabel: string;
+  businessHoursLabel: string;
+  addressLabel: string;
+  formEyebrow: string;
+  formTitle: string;
+  formBody: string;
+  nameFieldLabel: string;
+  institutionFieldLabel: string;
+  emailFieldLabel: string;
+  phoneFieldLabel: string;
+  productFieldLabel: string;
+  generalInquiryLabel: string;
+  regionFieldLabel: string;
+  regionPlaceholder: string;
+  messageFieldLabel: string;
+  consentBeforeLink: string;
+  consentPrivacyLinkLabel: string;
+  consentAfterLink: string;
+  responseTimeText: string;
+  submitLabel: string;
+};
+
 export type AboutSection = {
   id?: number;
   documentId?: string;
+  seoTitle?: string;
+  seoDescription?: string;
   eyebrow?: string;
   title?: string;
   intro?: string;
   body?: string;
+  pageEyebrow?: string;
+  pageTitle?: string;
+  yearsInBusinessLabel?: string;
+  productCountLabel?: string;
+  productLineCountLabel?: string;
+  coverageLabel?: string;
+  warrantyLabel?: string;
+  projectCtaTitle?: string;
+  projectCtaBody?: string;
+  projectCtaLabel?: string;
   /**
    * B2 batch 2 fix: kicker (small mono label) is split from the
    * h2 (longer statement) so the public page no longer renders the
@@ -164,16 +274,21 @@ export type HeroSection = {
   primaryCtaHref?: string;
   secondaryCtaLabel?: string;
   secondaryCtaHref?: string;
+  imageCaption?: string;
+  galleryCaption?: string;
+  railSecondaryText?: string;
   image?: StrapiMedia | null;
 };
 
 export type ContactCTASection = {
   id?: number;
   documentId?: string;
+  eyebrow?: string;
   title?: string;
   body?: string;
   buttonLabel?: string;
   buttonHref?: string;
+  emailLabel?: string;
 };
 
 export type FooterBlock = {
@@ -182,6 +297,20 @@ export type FooterBlock = {
   copyrightText?: string;
   tagline?: string;
   legalSnippet?: string;
+  productCountSuffix?: string;
+  catalogHeading?: string;
+  contactHeading?: string;
+  legalHeading?: string;
+  socialHeading?: string;
+  catalogCtaLabel?: string;
+  officeLineLabel?: string;
+  schoolLineLabel?: string;
+  aboutLinkLabel?: string;
+  termsLinkLabel?: string;
+  privacyLinkLabel?: string;
+  rutLabel?: string;
+  catalogStampLabel?: string;
+  writtenBackingLabel?: string;
 };
 
 export type Category = {
@@ -481,9 +610,7 @@ const normalizeMedia = (media: any, options?: NormalizeMediaOptions): StrapiMedi
 const normalizeImageList = (images: any, options?: NormalizeMediaOptions): StrapiMedia[] => {
   if (!images) return [];
   if (!Array.isArray(images)) return [];
-  return images
-    .map((m) => normalizeMedia(m, options))
-    .filter((m): m is StrapiMedia => m !== null);
+  return images.map((m) => normalizeMedia(m, options)).filter((m): m is StrapiMedia => m !== null);
 };
 
 export async function getSiteSettings(): Promise<SiteSetting> {
@@ -505,7 +632,7 @@ export async function getSiteSettings(): Promise<SiteSetting> {
   }
 }
 
-const FALLBACK_SITE_SETTINGS: SiteSetting = {
+export const FALLBACK_SITE_SETTINGS: SiteSetting = {
   siteName: "ENE-MUEBLES",
 };
 
@@ -542,6 +669,26 @@ function optionalString(value: unknown, field: string): string | undefined {
   throw new Error(`[strapi] getSiteSettings: malformed ${field}`);
 }
 
+function optionalBoundedCopy(value: unknown, field: string, maxLength: number): string | undefined {
+  const copy = optionalString(value, field);
+  if (copy === undefined) return undefined;
+  return copy.trim().length <= maxLength ? copy : undefined;
+}
+
+function optionalSeoCopy(value: unknown, maxLength: number): string | undefined {
+  if (typeof value !== "string") return undefined;
+  const normalized = value.trim();
+  return normalized.length > 0 && normalized.length <= maxLength ? normalized : undefined;
+}
+
+function optionalFoundedYear(value: unknown): number | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value !== "number" || !Number.isInteger(value) || value < 1800 || value > 2100) {
+    throw new Error("[strapi] getSiteSettings: malformed foundedYear");
+  }
+  return value;
+}
+
 function normalizeSiteSettings(raw: unknown): SiteSetting {
   if (!isRecord(raw) || typeof raw.siteName !== "string" || raw.siteName.trim() === "") {
     throw new Error("[strapi] getSiteSettings: malformed data");
@@ -563,6 +710,13 @@ function normalizeSiteSettings(raw: unknown): SiteSetting {
     documentId: optionalString(raw.documentId, "documentId"),
     siteName: raw.siteName.trim(),
     tagline: optionalString(raw.tagline, "tagline"),
+    seoTitle: optionalSeoCopy(raw.seoTitle, 60),
+    seoDescription: optionalSeoCopy(raw.seoDescription, 160),
+    seoShareImageKicker: optionalSeoCopy(raw.seoShareImageKicker, 100),
+    seoShareImageTitle: optionalSeoCopy(raw.seoShareImageTitle, 120),
+    seoShareImageDescription: optionalSeoCopy(raw.seoShareImageDescription, 200),
+    seoShareImageFooter: optionalSeoCopy(raw.seoShareImageFooter, 160),
+    seoShareImageAlt: optionalSeoCopy(raw.seoShareImageAlt, 200),
     contactEmail: optionalString(raw.contactEmail, "contactEmail"),
     contactPhone: optionalString(raw.contactPhone, "contactPhone"),
     whatsappNumber: optionalString(raw.whatsappNumber, "whatsappNumber"),
@@ -574,6 +728,57 @@ function normalizeSiteSettings(raw: unknown): SiteSetting {
     socialLinks,
     businessHours: optionalString(raw.businessHours, "businessHours"),
     aboutText: optionalString(raw.aboutText, "aboutText"),
+    paymentTermsText: optionalString(raw.paymentTermsText, "paymentTermsText"),
+    warrantyText: optionalString(raw.warrantyText, "warrantyText"),
+    quoteResponseTimeText: optionalString(raw.quoteResponseTimeText, "quoteResponseTimeText"),
+    navigationHomeLabel: optionalBoundedCopy(
+      raw.navigationHomeLabel,
+      "navigationHomeLabel",
+      DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    ),
+    navigationCatalogLabel: optionalBoundedCopy(
+      raw.navigationCatalogLabel,
+      "navigationCatalogLabel",
+      DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    ),
+    navigationAboutLabel: optionalBoundedCopy(
+      raw.navigationAboutLabel,
+      "navigationAboutLabel",
+      DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    ),
+    navigationContactLabel: optionalBoundedCopy(
+      raw.navigationContactLabel,
+      "navigationContactLabel",
+      DESKTOP_NAVIGATION_LABEL_MAX_LENGTH,
+    ),
+    headerWhatsappLabel: optionalBoundedCopy(
+      raw.headerWhatsappLabel,
+      "headerWhatsappLabel",
+      HEADER_WHATSAPP_LABEL_MAX_LENGTH,
+    ),
+    mobileWhatsappLabel: optionalBoundedCopy(
+      raw.mobileWhatsappLabel,
+      "mobileWhatsappLabel",
+      MOBILE_WHATSAPP_LABEL_MAX_LENGTH,
+    ),
+    whatsappProductMessageTemplate: optionalString(
+      raw.whatsappProductMessageTemplate,
+      "whatsappProductMessageTemplate",
+    ),
+    productCardDetailLabel: optionalString(raw.productCardDetailLabel, "productCardDetailLabel"),
+    productCardWhatsappLabel: optionalString(
+      raw.productCardWhatsappLabel,
+      "productCardWhatsappLabel",
+    ),
+    productDetailWhatsappLabel: optionalString(
+      raw.productDetailWhatsappLabel,
+      "productDetailWhatsappLabel",
+    ),
+    productDetailContactLabel: optionalString(
+      raw.productDetailContactLabel,
+      "productDetailContactLabel",
+    ),
+    foundedYear: optionalFoundedYear(raw.foundedYear),
     rut: optionalString(raw.rut, "rut"),
     heroImage: normalizeMedia(heroImage),
   };
@@ -612,10 +817,77 @@ function normalizeSocialLinks(value: unknown): SocialLinks | undefined {
  * for any copy that is reused elsewhere on the marketing pages.
  */
 
+const FALLBACK_HOME_PAGE: HomePage = {
+  catalogEyebrow: siteTokens.catalogOverview,
+  catalogTitle: "El catálogo se divide en dos líneas de fabricación.",
+  catalogBody:
+    "Cada línea agrupa productos con la misma estructura, materiales y plazos de despacho.",
+  catalogCtaLabel: siteTokens.catalogAll,
+  featuredEyebrow: siteTokens.featuredOverline,
+  featuredTitle: siteTokens.featuredHeading,
+  featuredBody:
+    "La selección activa del catálogo. Cada uno se entrega con ficha técnica y plazo de despacho.",
+  featuredCtaLabel: siteTokens.catalogAll,
+};
+
+const FALLBACK_CATALOG_PAGE: CatalogPage = {
+  eyebrow: "Catálogo institucional",
+  productCountSuffix: "productos certificados para instituciones.",
+  documentationText: "Cada producto se entrega con ficha técnica y declaración de materiales.",
+  printCtaLabel: "Imprimir PDF",
+  printCoverTitle: "Mobiliario institucional",
+  printCoverBody:
+    "Mobiliario para aulas, oficinas e instituciones. Información vigente al momento de la solicitud.",
+  printIndexTitle: "Líneas de producto",
+  printCategorySubtitle: "Mobiliario institucional",
+  printPublishedProductsSuffix: "productos publicados",
+};
+
+const FALLBACK_CONTACT_PAGE: Readonly<ContactPage> = Object.freeze({
+  heroEyebrow: siteTokens.contactOverline,
+  heroTitle: siteTokens.contactHeadingPage,
+  heroBody: siteTokens.contactBodyPage,
+  whatsappCtaLabel: siteTokens.whatsappCta,
+  emailCtaLabel: siteTokens.emailLabel,
+  alternateContactEyebrow: "Si prefieres",
+  phoneContactLabel: siteTokens.phoneLabel,
+  whatsappContactLabel: siteTokens.whatsappLabel,
+  businessHoursLabel: siteTokens.hoursLabel,
+  addressLabel: siteTokens.addressLabel,
+  formEyebrow: "Formulario",
+  formTitle: "Envíanos tu requerimiento.",
+  formBody: siteTokens.contactoNote,
+  nameFieldLabel: "Nombre",
+  institutionFieldLabel: "Institución o empresa",
+  emailFieldLabel: "Correo",
+  phoneFieldLabel: "Teléfono",
+  productFieldLabel: "¿Sobre qué producto nos escribes?",
+  generalInquiryLabel: "Pregunta general",
+  regionFieldLabel: "Región",
+  regionPlaceholder: "Selecciona una región",
+  messageFieldLabel: "Cuéntanos qué necesitas",
+  consentBeforeLink: "Acepto la",
+  consentPrivacyLinkLabel: "política de privacidad",
+  consentAfterLink: "y autorizo el uso de mis datos para recibir la cotización solicitada.",
+  responseTimeText: "Respondemos en 24 h hábiles",
+  submitLabel: "Enviar mensaje",
+});
+
 const FALLBACK_ABOUT: AboutSection = {
   eyebrow: siteTokens.aboutOverline,
   title: siteTokens.aboutHeading,
   intro: siteTokens.aboutIntro,
+  pageEyebrow: siteTokens.aboutOverlineSec,
+  pageTitle: siteTokens.aboutHeadingSec,
+  yearsInBusinessLabel: "Años en el rubro",
+  productCountLabel: "Productos en catálogo",
+  productLineCountLabel: "Líneas de producto",
+  coverageLabel: "Cobertura",
+  warrantyLabel: "Garantía",
+  projectCtaTitle: "¿Listo para cotizar tu proyecto institucional?",
+  projectCtaBody:
+    "Envíanos tu lista, región y plazos. Te respondemos con ficha técnica y propuesta en 24 h hábiles.",
+  projectCtaLabel: "Ir a contacto",
   missionLabel: siteTokens.missionLabel,
   missionHeading: siteTokens.missionHeading,
   missionBody: siteTokens.missionBody,
@@ -637,32 +909,434 @@ const FALLBACK_HERO: HeroSection = {
   primaryCtaHref: "/catalogo",
   secondaryCtaLabel: siteTokens.quoteCta,
   secondaryCtaHref: "#contacto",
+  imageCaption: "Catálogo 2026",
+  galleryCaption: "Nuestras instalaciones",
+  railSecondaryText: "Fabricación y distribución",
   image: null,
 };
 
 const FALLBACK_CONTACT_CTA: ContactCTASection = {
+  eyebrow: siteTokens.contactOverline,
   title: siteTokens.contactHeading,
   body: siteTokens.contactBody,
   buttonLabel: siteTokens.whatsappCta,
   buttonHref: undefined,
+  emailLabel: siteTokens.emailLabel,
 };
+
+const PUBLIC_FOOTER_FALLBACK: FooterBlock = {
+  copyrightText: undefined,
+  tagline: undefined,
+  legalSnippet: "Proveedor institucional · Chile",
+  productCountSuffix: "productos certificados para instituciones",
+  catalogHeading: "Catálogo",
+  contactHeading: "Contacto",
+  legalHeading: "Legal",
+  socialHeading: "Redes",
+  catalogCtaLabel: "Ver catálogo",
+  officeLineLabel: "Línea oficina",
+  schoolLineLabel: "Línea escolar",
+  aboutLinkLabel: "Sobre nosotros",
+  termsLinkLabel: "Términos y condiciones",
+  privacyLinkLabel: "Política de privacidad",
+  rutLabel: "RUT",
+  catalogStampLabel: "Catálogo institucional",
+  writtenBackingLabel: "Respaldo escrito",
+};
+
+const FOOTER_FIELD_LIMITS = {
+  copyrightText: 200,
+  tagline: 300,
+  legalSnippet: 300,
+  productCountSuffix: 160,
+  catalogHeading: 60,
+  contactHeading: 60,
+  legalHeading: 60,
+  socialHeading: 60,
+  catalogCtaLabel: 80,
+  officeLineLabel: 80,
+  schoolLineLabel: 80,
+  aboutLinkLabel: 80,
+  termsLinkLabel: 120,
+  privacyLinkLabel: 120,
+  rutLabel: 30,
+  catalogStampLabel: 120,
+  writtenBackingLabel: 120,
+} as const satisfies Record<Exclude<keyof FooterBlock, "id" | "documentId">, number>;
+
+function readFooterCopy(
+  value: unknown,
+  fallback: string | undefined,
+  maxLength: number,
+): string | undefined {
+  if (typeof value !== "string") return fallback;
+  const trimmed = value.trim();
+  return trimmed.length > 0 && trimmed.length <= maxLength ? trimmed : fallback;
+}
+
+function normalizeFooterBlock(raw: unknown): FooterBlock {
+  const record = isRecord(raw) ? raw : {};
+  const normalized: FooterBlock = {
+    copyrightText: readFooterCopy(
+      record.copyrightText,
+      PUBLIC_FOOTER_FALLBACK.copyrightText,
+      FOOTER_FIELD_LIMITS.copyrightText,
+    ),
+    tagline: readFooterCopy(
+      record.tagline,
+      PUBLIC_FOOTER_FALLBACK.tagline,
+      FOOTER_FIELD_LIMITS.tagline,
+    ),
+    legalSnippet: readFooterCopy(
+      record.legalSnippet,
+      PUBLIC_FOOTER_FALLBACK.legalSnippet,
+      FOOTER_FIELD_LIMITS.legalSnippet,
+    ),
+    productCountSuffix: readFooterCopy(
+      record.productCountSuffix,
+      PUBLIC_FOOTER_FALLBACK.productCountSuffix,
+      FOOTER_FIELD_LIMITS.productCountSuffix,
+    ),
+    catalogHeading: readFooterCopy(
+      record.catalogHeading,
+      PUBLIC_FOOTER_FALLBACK.catalogHeading,
+      FOOTER_FIELD_LIMITS.catalogHeading,
+    ),
+    contactHeading: readFooterCopy(
+      record.contactHeading,
+      PUBLIC_FOOTER_FALLBACK.contactHeading,
+      FOOTER_FIELD_LIMITS.contactHeading,
+    ),
+    legalHeading: readFooterCopy(
+      record.legalHeading,
+      PUBLIC_FOOTER_FALLBACK.legalHeading,
+      FOOTER_FIELD_LIMITS.legalHeading,
+    ),
+    socialHeading: readFooterCopy(
+      record.socialHeading,
+      PUBLIC_FOOTER_FALLBACK.socialHeading,
+      FOOTER_FIELD_LIMITS.socialHeading,
+    ),
+    catalogCtaLabel: readFooterCopy(
+      record.catalogCtaLabel,
+      PUBLIC_FOOTER_FALLBACK.catalogCtaLabel,
+      FOOTER_FIELD_LIMITS.catalogCtaLabel,
+    ),
+    officeLineLabel: readFooterCopy(
+      record.officeLineLabel,
+      PUBLIC_FOOTER_FALLBACK.officeLineLabel,
+      FOOTER_FIELD_LIMITS.officeLineLabel,
+    ),
+    schoolLineLabel: readFooterCopy(
+      record.schoolLineLabel,
+      PUBLIC_FOOTER_FALLBACK.schoolLineLabel,
+      FOOTER_FIELD_LIMITS.schoolLineLabel,
+    ),
+    aboutLinkLabel: readFooterCopy(
+      record.aboutLinkLabel,
+      PUBLIC_FOOTER_FALLBACK.aboutLinkLabel,
+      FOOTER_FIELD_LIMITS.aboutLinkLabel,
+    ),
+    termsLinkLabel: readFooterCopy(
+      record.termsLinkLabel,
+      PUBLIC_FOOTER_FALLBACK.termsLinkLabel,
+      FOOTER_FIELD_LIMITS.termsLinkLabel,
+    ),
+    privacyLinkLabel: readFooterCopy(
+      record.privacyLinkLabel,
+      PUBLIC_FOOTER_FALLBACK.privacyLinkLabel,
+      FOOTER_FIELD_LIMITS.privacyLinkLabel,
+    ),
+    rutLabel: readFooterCopy(
+      record.rutLabel,
+      PUBLIC_FOOTER_FALLBACK.rutLabel,
+      FOOTER_FIELD_LIMITS.rutLabel,
+    ),
+    catalogStampLabel: readFooterCopy(
+      record.catalogStampLabel,
+      PUBLIC_FOOTER_FALLBACK.catalogStampLabel,
+      FOOTER_FIELD_LIMITS.catalogStampLabel,
+    ),
+    writtenBackingLabel: readFooterCopy(
+      record.writtenBackingLabel,
+      PUBLIC_FOOTER_FALLBACK.writtenBackingLabel,
+      FOOTER_FIELD_LIMITS.writtenBackingLabel,
+    ),
+  };
+
+  if (typeof record.id === "number") normalized.id = record.id;
+  if (typeof record.documentId === "string") normalized.documentId = record.documentId;
+  return normalized;
+}
 
 function currentYearCopyright(): string {
   return `© ${new Date().getFullYear()} ${siteTokens.brand}`;
 }
 
+const HOME_PAGE_STRING_FIELDS = [
+  "catalogEyebrow",
+  "catalogTitle",
+  "catalogBody",
+  "catalogCtaLabel",
+  "featuredEyebrow",
+  "featuredTitle",
+  "featuredBody",
+  "featuredCtaLabel",
+] as const satisfies readonly (keyof HomePage)[];
+
+function normalizeHomePage(raw: unknown): HomePage {
+  if (!isRecord(raw)) {
+    throw new Error("[strapi] getHomePage: malformed data");
+  }
+
+  const normalized = {} as HomePage;
+  for (const field of HOME_PAGE_STRING_FIELDS) {
+    const value = raw[field];
+    if (typeof value !== "string" || value.trim() === "") {
+      throw new Error("[strapi] getHomePage: malformed " + field);
+    }
+    normalized[field] = value.trim();
+  }
+
+  normalized.seoTitle = optionalSeoCopy(raw.seoTitle, 60);
+  normalized.seoDescription = optionalSeoCopy(raw.seoDescription, 160);
+
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "number") throw new Error("[strapi] getHomePage: malformed id");
+    normalized.id = raw.id;
+  }
+  if (raw.documentId !== undefined) {
+    if (typeof raw.documentId !== "string") {
+      throw new Error("[strapi] getHomePage: malformed documentId");
+    }
+    normalized.documentId = raw.documentId;
+  }
+
+  return normalized;
+}
+
+export async function getHomePage(): Promise<HomePage> {
+  try {
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
+      "/api/home-page",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.homePage] },
+    );
+    const raw = (json as { data?: unknown }).data;
+    if (!raw) return { ...FALLBACK_HOME_PAGE };
+    return normalizeHomePage(raw);
+  } catch {
+    return { ...FALLBACK_HOME_PAGE };
+  }
+}
+
+const CATALOG_PAGE_STRING_FIELDS = [
+  "eyebrow",
+  "productCountSuffix",
+  "documentationText",
+  "printCtaLabel",
+  "printCoverTitle",
+  "printCoverBody",
+  "printIndexTitle",
+  "printCategorySubtitle",
+  "printPublishedProductsSuffix",
+] as const satisfies readonly (keyof CatalogPage)[];
+
+function normalizeCatalogPage(raw: unknown): CatalogPage {
+  if (!isRecord(raw)) {
+    throw new Error("[strapi] getCatalogPage: malformed data");
+  }
+
+  const normalized = {} as CatalogPage;
+  for (const field of CATALOG_PAGE_STRING_FIELDS) {
+    const value = raw[field];
+    if (typeof value !== "string" || value.trim() === "") {
+      throw new Error("[strapi] getCatalogPage: malformed " + field);
+    }
+    normalized[field] = value.trim();
+  }
+
+  normalized.seoTitle = optionalSeoCopy(raw.seoTitle, 60);
+  normalized.seoDescription = optionalSeoCopy(raw.seoDescription, 160);
+
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "number") throw new Error("[strapi] getCatalogPage: malformed id");
+    normalized.id = raw.id;
+  }
+  if (raw.documentId !== undefined) {
+    if (typeof raw.documentId !== "string") {
+      throw new Error("[strapi] getCatalogPage: malformed documentId");
+    }
+    normalized.documentId = raw.documentId;
+  }
+
+  return normalized;
+}
+
+export async function getCatalogPage(): Promise<CatalogPage> {
+  try {
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
+      "/api/catalog-page",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalogPage] },
+    );
+    const raw = (json as { data?: unknown }).data;
+    if (!raw) return { ...FALLBACK_CATALOG_PAGE };
+    return normalizeCatalogPage(raw);
+  } catch {
+    return { ...FALLBACK_CATALOG_PAGE };
+  }
+}
+
+const CONTACT_PAGE_STRING_FIELDS = [
+  "heroEyebrow",
+  "heroTitle",
+  "heroBody",
+  "whatsappCtaLabel",
+  "emailCtaLabel",
+  "alternateContactEyebrow",
+  "phoneContactLabel",
+  "whatsappContactLabel",
+  "businessHoursLabel",
+  "addressLabel",
+  "formEyebrow",
+  "formTitle",
+  "formBody",
+  "nameFieldLabel",
+  "institutionFieldLabel",
+  "emailFieldLabel",
+  "phoneFieldLabel",
+  "productFieldLabel",
+  "generalInquiryLabel",
+  "regionFieldLabel",
+  "regionPlaceholder",
+  "messageFieldLabel",
+  "consentBeforeLink",
+  "consentPrivacyLinkLabel",
+  "consentAfterLink",
+  "responseTimeText",
+  "submitLabel",
+] as const satisfies readonly (keyof ContactPage)[];
+
+function normalizeContactPage(raw: unknown): ContactPage {
+  if (!isRecord(raw)) {
+    throw new Error("[strapi] getContactPage: malformed data");
+  }
+
+  const normalized = {} as ContactPage;
+  for (const field of CONTACT_PAGE_STRING_FIELDS) {
+    const value = raw[field];
+    if (typeof value !== "string" || value.trim() === "") {
+      throw new Error("[strapi] getContactPage: malformed " + field);
+    }
+    normalized[field] = value.trim();
+  }
+
+  normalized.seoTitle = optionalSeoCopy(raw.seoTitle, 60);
+  normalized.seoDescription = optionalSeoCopy(raw.seoDescription, 160);
+
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "number") throw new Error("[strapi] getContactPage: malformed id");
+    normalized.id = raw.id;
+  }
+  if (raw.documentId !== undefined) {
+    if (typeof raw.documentId !== "string") {
+      throw new Error("[strapi] getContactPage: malformed documentId");
+    }
+    normalized.documentId = raw.documentId;
+  }
+
+  return normalized;
+}
+
+export async function getContactPage(): Promise<ContactPage> {
+  try {
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
+      "/api/contact-page",
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.contactPage] },
+    );
+    const raw = (json as { data?: unknown }).data;
+    if (!raw) return { ...FALLBACK_CONTACT_PAGE };
+    return normalizeContactPage(raw);
+  } catch {
+    return { ...FALLBACK_CONTACT_PAGE };
+  }
+}
+
+const ABOUT_OPTIONAL_STRING_FIELDS = [
+  "eyebrow",
+  "title",
+  "intro",
+  "body",
+  "pageEyebrow",
+  "pageTitle",
+  "yearsInBusinessLabel",
+  "productCountLabel",
+  "productLineCountLabel",
+  "coverageLabel",
+  "warrantyLabel",
+  "projectCtaTitle",
+  "projectCtaBody",
+  "projectCtaLabel",
+  "missionLabel",
+  "missionHeading",
+  "missionBody",
+  "visionLabel",
+  "visionHeading",
+  "visionBody",
+  "valuesLabel",
+  "valuesHeading",
+] as const satisfies readonly (keyof AboutSection)[];
+
+function normalizeAboutSection(raw: unknown): AboutSection {
+  if (!isRecord(raw)) throw new Error("[strapi] getAboutSection: malformed data");
+
+  const normalized: AboutSection = {
+    seoTitle: optionalSeoCopy(raw.seoTitle, 60),
+    seoDescription: optionalSeoCopy(raw.seoDescription, 160),
+  };
+  for (const field of ABOUT_OPTIONAL_STRING_FIELDS) {
+    const value = raw[field];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== "string") {
+      throw new Error("[strapi] getAboutSection: malformed " + field);
+    }
+    const trimmed = value.trim();
+    if (trimmed) normalized[field] = trimmed;
+  }
+
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "number") throw new Error("[strapi] getAboutSection: malformed id");
+    normalized.id = raw.id;
+  }
+  if (raw.documentId !== undefined) {
+    if (typeof raw.documentId !== "string") {
+      throw new Error("[strapi] getAboutSection: malformed documentId");
+    }
+    normalized.documentId = raw.documentId;
+  }
+  if (raw.values !== undefined && raw.values !== null) {
+    if (!Array.isArray(raw.values)) throw new Error("[strapi] getAboutSection: malformed values");
+    normalized.values = raw.values as AboutSection["values"];
+  }
+  if (raw.image !== undefined) normalized.image = normalizeMedia(raw.image);
+
+  return normalized;
+}
+
 export async function getAboutSection(): Promise<AboutSection> {
   try {
-    const json = await request<SingleEnvelope<AboutSection> | { data: null }>(
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
       "/api/about-section?populate=*",
       undefined,
       { tags: [STRAPI_CACHE_TAGS.sections] },
     );
-    const raw = (json as { data?: AboutSection | null }).data;
-    if (!raw) return FALLBACK_ABOUT;
-    return { ...raw, image: normalizeMedia(raw.image) };
+    const raw = (json as { data?: unknown }).data;
+    if (!raw) return { ...FALLBACK_ABOUT };
+    return normalizeAboutSection(raw);
   } catch {
-    return FALLBACK_ABOUT;
+    return { ...FALLBACK_ABOUT };
   }
 }
 
@@ -681,43 +1355,66 @@ export async function getHeroSection(): Promise<HeroSection> {
   }
 }
 
+const CONTACT_CTA_OPTIONAL_STRING_FIELDS = [
+  "eyebrow",
+  "title",
+  "body",
+  "buttonLabel",
+  "buttonHref",
+  "emailLabel",
+] as const satisfies readonly (keyof ContactCTASection)[];
+
+function normalizeContactCTASection(raw: unknown): ContactCTASection {
+  if (!isRecord(raw)) throw new Error("[strapi] getContactCTASection: malformed data");
+
+  const normalized: ContactCTASection = {};
+  for (const field of CONTACT_CTA_OPTIONAL_STRING_FIELDS) {
+    const value = raw[field];
+    if (value === undefined || value === null) continue;
+    if (typeof value !== "string") {
+      throw new Error("[strapi] getContactCTASection: malformed " + field);
+    }
+    const trimmed = value.trim();
+    if (trimmed) normalized[field] = trimmed;
+  }
+  if (raw.id !== undefined) {
+    if (typeof raw.id !== "number") throw new Error("[strapi] getContactCTASection: malformed id");
+    normalized.id = raw.id;
+  }
+  if (raw.documentId !== undefined) {
+    if (typeof raw.documentId !== "string") {
+      throw new Error("[strapi] getContactCTASection: malformed documentId");
+    }
+    normalized.documentId = raw.documentId;
+  }
+  return normalized;
+}
+
 export async function getContactCTASection(): Promise<ContactCTASection> {
   try {
-    const json = await request<SingleEnvelope<ContactCTASection> | { data: null }>(
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
       "/api/contact-cta-section?populate=*",
       undefined,
       { tags: [STRAPI_CACHE_TAGS.sections] },
     );
-    const raw = (json as { data?: ContactCTASection | null }).data;
-    if (!raw) return FALLBACK_CONTACT_CTA;
-    return raw;
+    const raw = (json as { data?: unknown }).data;
+    if (!raw) return { ...FALLBACK_CONTACT_CTA };
+    return normalizeContactCTASection(raw);
   } catch {
-    return FALLBACK_CONTACT_CTA;
+    return { ...FALLBACK_CONTACT_CTA };
   }
 }
 
 export async function getFooterBlock(): Promise<FooterBlock> {
   try {
-    const json = await request<SingleEnvelope<FooterBlock> | { data: null }>(
+    const json = await request<SingleEnvelope<unknown> | { data: null }>(
       "/api/footer-block",
       undefined,
       { tags: [STRAPI_CACHE_TAGS.sections] },
     );
-    const raw = (json as { data?: FooterBlock | null }).data;
-    if (!raw) {
-      return {
-        copyrightText: currentYearCopyright(),
-        tagline: undefined,
-        legalSnippet: "Proveedor institucional · Chile",
-      };
-    }
-    return raw;
+    return normalizeFooterBlock((json as { data?: unknown }).data);
   } catch {
-    return {
-      copyrightText: currentYearCopyright(),
-      tagline: undefined,
-      legalSnippet: "Proveedor institucional · Chile",
-    };
+    return { ...PUBLIC_FOOTER_FALLBACK };
   }
 }
 
@@ -727,18 +1424,22 @@ export async function getFooterBlock(): Promise<FooterBlock> {
  * Same data the helpers return when Strapi is unreachable.
  */
 export const __sectionFallbacks = {
+  homePage: FALLBACK_HOME_PAGE,
+  catalogPage: FALLBACK_CATALOG_PAGE,
+  contactPage: FALLBACK_CONTACT_PAGE,
   about: FALLBACK_ABOUT,
   hero: FALLBACK_HERO,
   contactCta: FALLBACK_CONTACT_CTA,
+  footer: PUBLIC_FOOTER_FALLBACK,
 };
 
 /**
  * Per-section fallback factories. Each function returns a freshly
- * allocated object so callers may safely mutate it. The public read
- * helpers (`getHeroSection`, `getAboutSection`, `getContactCTASection`,
- * `getFooterBlock`) return values equivalent to these factories when
- * Strapi responds with `data: null`, an empty object, or the request
- * fails.
+ * allocated object so callers may safely mutate it. Public readers use
+ * equivalent copy defaults when Strapi has no usable value. Footer is
+ * intentionally split: its public fallback leaves copyrightText
+ * undefined so the renderer can derive the live Site Setting brand,
+ * while this admin factory provides an editable current-year default.
  *
  * The admin pages reuse the same factories so an editor opening
  * `/admin/hero` for the first time sees the same copy the public
@@ -753,13 +1454,15 @@ export const __sectionFallbacks = {
  * factory rather than dereference a property.
  */
 export const sectionFallbacks = {
+  homePage: (): HomePage => ({ ...FALLBACK_HOME_PAGE }),
+  catalogPage: (): CatalogPage => ({ ...FALLBACK_CATALOG_PAGE }),
+  contactPage: (): ContactPage => ({ ...FALLBACK_CONTACT_PAGE }),
   hero: (): HeroSection => ({ ...FALLBACK_HERO }),
   about: (): AboutSection => ({ ...FALLBACK_ABOUT }),
   contactCta: (): ContactCTASection => ({ ...FALLBACK_CONTACT_CTA }),
   footer: (): FooterBlock => ({
+    ...PUBLIC_FOOTER_FALLBACK,
     copyrightText: currentYearCopyright(),
-    tagline: undefined,
-    legalSnippet: "Proveedor institucional · Chile",
   }),
 };
 
@@ -867,9 +1570,13 @@ export async function getProducts(options?: ProductListOptions): Promise<Product
   if (q) {
     params.set("filters[name][$containsi]", q);
   }
-  const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
-    tags: [STRAPI_CACHE_TAGS.catalog],
-  });
+  const json = await request<CollectionEnvelope<Product>>(
+    `/api/products?${params.toString()}`,
+    undefined,
+    {
+      tags: [STRAPI_CACHE_TAGS.catalog],
+    },
+  );
   return {
     products: (json.data ?? []).map((raw) => normalizeProduct(raw, options)),
     total: json.meta?.pagination?.total ?? json.data?.length ?? 0,
@@ -954,8 +1661,25 @@ const CATALOG_PRODUCT_FIELDS = [
   "publishedAt",
 ] as const;
 
-const CATALOG_CATEGORY_FIELDS = ["id", "documentId", "name", "slug", "active", "order", "publishedAt"] as const;
-const CATALOG_IMAGE_FIELDS = ["id", "documentId", "url", "alternativeText", "width", "height", "mime", "formats"] as const;
+const CATALOG_CATEGORY_FIELDS = [
+  "id",
+  "documentId",
+  "name",
+  "slug",
+  "active",
+  "order",
+  "publishedAt",
+] as const;
+const CATALOG_IMAGE_FIELDS = [
+  "id",
+  "documentId",
+  "url",
+  "alternativeText",
+  "width",
+  "height",
+  "mime",
+  "formats",
+] as const;
 
 const addIndexedParams = (params: URLSearchParams, key: string, values: readonly string[]) => {
   values.forEach((value, index) => params.set(`${key}[${index}]`, value));
@@ -1049,6 +1773,136 @@ export async function getAllProducts(): Promise<Product[]> {
   return (await getCatalogSnapshot()).products;
 }
 
+export const SINGLE_SITEMAP_URL_LIMIT = 50_000;
+const SITEMAP_PAGE_SIZE = 100;
+const SITEMAP_MAX_PAGES = Math.ceil(SINGLE_SITEMAP_URL_LIMIT / SITEMAP_PAGE_SIZE);
+
+export type SitemapProduct = Pick<
+  Product,
+  "slug" | "createdAt" | "updatedAt" | "publishedAt" | "images"
+>;
+export type SitemapCategory = Pick<Category, "slug">;
+
+function paginationTotal(value: unknown): number | undefined {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? value : undefined;
+}
+
+function hasReachedPaginationEnd(
+  batchLength: number,
+  accumulatedLength: number,
+  total: number | undefined,
+): boolean {
+  return (
+    batchLength === 0 ||
+    batchLength < SITEMAP_PAGE_SIZE ||
+    (total !== undefined && accumulatedLength >= total)
+  );
+}
+
+function assertSitemapPaginationBudget(page: number, entity: "product" | "category"): void {
+  if (page <= SITEMAP_MAX_PAGES) return;
+  throw new Error(`Published ${entity} pagination exhausted the single-sitemap URL budget`);
+}
+
+export async function getSitemapProducts(): Promise<SitemapProduct[]> {
+  const products: SitemapProduct[] = [];
+  let fetchedRows = 0;
+  let page = 1;
+
+  while (true) {
+    assertSitemapPaginationBudget(page, "product");
+    const params = new URLSearchParams();
+    params.set("status", "published");
+    params.set("filters[active][$eq]", "true");
+    params.set("pagination[page]", String(page));
+    params.set("pagination[pageSize]", String(SITEMAP_PAGE_SIZE));
+    params.set("sort[0]", "order:asc");
+    params.set("sort[1]", "slug:asc");
+    addIndexedParams(params, "fields", ["slug", "updatedAt", "publishedAt", "createdAt"]);
+    addIndexedParams(params, "populate[images][fields]", CATALOG_IMAGE_FIELDS);
+
+    const json = await request<CollectionEnvelope<unknown>>(
+      `/api/products?${params.toString()}`,
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalog] },
+    );
+    const rows = Array.isArray(json.data) ? json.data : [];
+    fetchedRows += rows.length;
+    if (fetchedRows > SINGLE_SITEMAP_URL_LIMIT) {
+      throw new Error("Published product count exceeds the single-sitemap URL limit");
+    }
+    const batch = rows.flatMap((raw): SitemapProduct[] => {
+      if (!isRecord(raw) || typeof raw.slug !== "string" || raw.slug.trim() === "") return [];
+      const image = normalizeImageList(raw.images).slice(0, 1);
+      return [
+        {
+          slug: raw.slug.trim(),
+          createdAt: typeof raw.createdAt === "string" ? raw.createdAt : undefined,
+          updatedAt: typeof raw.updatedAt === "string" ? raw.updatedAt : undefined,
+          publishedAt:
+            typeof raw.publishedAt === "string" || raw.publishedAt === null
+              ? raw.publishedAt
+              : undefined,
+          images: image,
+        },
+      ];
+    });
+    products.push(...batch);
+
+    const total = paginationTotal(json.meta?.pagination?.total);
+    if (total !== undefined && total > SINGLE_SITEMAP_URL_LIMIT) {
+      throw new Error("Published product count exceeds the single-sitemap URL limit");
+    }
+    if (hasReachedPaginationEnd(rows.length, products.length, total)) break;
+    page += 1;
+  }
+
+  return products;
+}
+
+export async function getSitemapCategories(): Promise<SitemapCategory[]> {
+  const categories: SitemapCategory[] = [];
+  let fetchedRows = 0;
+  let page = 1;
+
+  while (true) {
+    assertSitemapPaginationBudget(page, "category");
+    const params = new URLSearchParams();
+    params.set("status", "published");
+    params.set("filters[active][$eq]", "true");
+    params.set("fields[0]", "slug");
+    params.set("sort", "order:asc");
+    params.set("pagination[page]", String(page));
+    params.set("pagination[pageSize]", String(SITEMAP_PAGE_SIZE));
+
+    const json = await request<CollectionEnvelope<unknown>>(
+      `/api/categories?${params.toString()}`,
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalog] },
+    );
+    const rows = Array.isArray(json.data) ? json.data : [];
+    fetchedRows += rows.length;
+    if (fetchedRows > SINGLE_SITEMAP_URL_LIMIT) {
+      throw new Error("Published category count exceeds the single-sitemap URL limit");
+    }
+    const batch = rows.flatMap((raw): SitemapCategory[] =>
+      isRecord(raw) && typeof raw.slug === "string" && raw.slug.trim() !== ""
+        ? [{ slug: raw.slug.trim() }]
+        : [],
+    );
+    categories.push(...batch);
+
+    const total = paginationTotal(json.meta?.pagination?.total);
+    if (total !== undefined && total > SINGLE_SITEMAP_URL_LIMIT) {
+      throw new Error("Published category count exceeds the single-sitemap URL limit");
+    }
+    if (hasReachedPaginationEnd(rows.length, categories.length, total)) break;
+    page += 1;
+  }
+
+  return categories;
+}
+
 const normalizeContactProductOption = (raw: unknown): ContactProductOption | null => {
   if (!raw || typeof raw !== "object") return null;
   const candidate = raw as { slug?: unknown; name?: unknown };
@@ -1078,9 +1932,13 @@ export async function getContactProductOptions(): Promise<ContactProductOption[]
       params.set("pagination[page]", String(page));
       params.set("pagination[pageSize]", "100");
 
-      const json = await request<CollectionEnvelope<unknown>>(`/api/products?${params.toString()}`, undefined, {
-        tags: [STRAPI_CACHE_TAGS.catalog],
-      });
+      const json = await request<CollectionEnvelope<unknown>>(
+        `/api/products?${params.toString()}`,
+        undefined,
+        {
+          tags: [STRAPI_CACHE_TAGS.catalog],
+        },
+      );
       const batch = (json.data ?? [])
         .map(normalizeContactProductOption)
         .filter((option): option is ContactProductOption => option !== null);
@@ -1115,12 +1973,48 @@ export async function getContactProductBySlug(slug: unknown): Promise<ContactPro
     params.set("fields[1]", "slug");
     params.set("pagination[pageSize]", "1");
 
-    const json = await request<CollectionEnvelope<unknown>>(`/api/products?${params.toString()}`, undefined, {
-      tags: [STRAPI_CACHE_TAGS.catalog],
-    });
+    const json = await request<CollectionEnvelope<unknown>>(
+      `/api/products?${params.toString()}`,
+      undefined,
+      {
+        tags: [STRAPI_CACHE_TAGS.catalog],
+      },
+    );
     return normalizeContactProductOption(json.data?.[0]);
   } catch {
     return null;
+  }
+}
+
+function normalizeNonNegativeCount(value: unknown, fallback: number): number {
+  const safeFallback = Number.isSafeInteger(fallback) && fallback >= 0 ? fallback : 0;
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0
+    ? value
+    : safeFallback;
+}
+
+/**
+ * Count of active, published categories without downloading the collection.
+ * Strapi's pagination total is authoritative; malformed or missing totals fall
+ * back to the bounded response length and operational failures become zero.
+ */
+export async function getCategoryCount(): Promise<number> {
+  try {
+    const params = new URLSearchParams();
+    params.set("status", "published");
+    params.set("filters[active][$eq]", "true");
+    params.set("fields[0]", "documentId");
+    params.set("pagination[pageSize]", "1");
+
+    const json = await request<CollectionEnvelope<unknown>>(
+      `/api/categories?${params.toString()}`,
+      undefined,
+      { tags: [STRAPI_CACHE_TAGS.catalog] },
+    );
+    const fallback = Array.isArray(json.data) ? json.data.length : 0;
+    return normalizeNonNegativeCount(json.meta?.pagination?.total, fallback);
+  } catch {
+    return 0;
   }
 }
 
@@ -1136,9 +2030,13 @@ export async function getProductCount(): Promise<number> {
     params.set("filters[active][$eq]", "true");
     params.set("fields[0]", "documentId");
     params.set("pagination[pageSize]", "1");
-    const json = await request<CollectionEnvelope<Product>>(`/api/products?${params.toString()}`, undefined, {
-      tags: [STRAPI_CACHE_TAGS.catalog],
-    });
+    const json = await request<CollectionEnvelope<Product>>(
+      `/api/products?${params.toString()}`,
+      undefined,
+      {
+        tags: [STRAPI_CACHE_TAGS.catalog],
+      },
+    );
     return json.meta?.pagination?.total ?? json.data?.length ?? 0;
   } catch {
     return 0;
@@ -1146,13 +2044,20 @@ export async function getProductCount(): Promise<number> {
 }
 
 export async function getProductBySlug(slug: string): Promise<Product | null> {
+  const params = new URLSearchParams({
+    status: "published",
+    "filters[slug][$eq]": slug,
+    "filters[active][$eq]": "true",
+    "pagination[pageSize]": "1",
+    populate: "*",
+  });
   const json = await request<CollectionEnvelope<Product>>(
-    `/api/products?filters[slug][$eq]=${encodeURIComponent(slug)}&populate=*`,
+    `/api/products?${params.toString()}`,
     undefined,
     { tags: [STRAPI_CACHE_TAGS.catalog] },
   );
   const raw = json.data?.[0];
-  if (!raw) return null;
+  if (!raw || raw.active !== true || raw.slug !== slug) return null;
   return normalizeProduct(raw);
 }
 

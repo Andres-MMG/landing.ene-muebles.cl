@@ -1,93 +1,134 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { site as siteTokens } from '@ene/ui-tokens';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+
+const mocks = vi.hoisted(() => ({
+  getStrapiAdminToken: vi.fn(),
+}));
+
+vi.mock("@/lib/admin/strapi-admin", () => ({
+  getStrapiAdminToken: mocks.getStrapiAdminToken,
+}));
 
 const ORIGINAL_ENV = { ...process.env };
 
-beforeEach(() => {
-  vi.resetModules();
-  process.env = { ...ORIGINAL_ENV };
-  process.env.STRAPI_INTERNAL_URL = 'http://localhost:1337';
-  process.env.STRAPI_API_TOKEN = 'test-token';
-  vi.stubGlobal('fetch', vi.fn());
-});
+function response(status: number, body: unknown): Response {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
 
-afterEach(() => {
-  vi.unstubAllGlobals();
-  process.env = ORIGINAL_ENV;
-});
+describe("Admin footer loader", () => {
+  beforeEach(() => {
+    vi.resetModules();
+    process.env = { ...ORIGINAL_ENV, STRAPI_INTERNAL_URL: "http://localhost:1337" };
+    mocks.getStrapiAdminToken.mockReset();
+    mocks.getStrapiAdminToken.mockReturnValue(" test-token ");
+    vi.stubGlobal("fetch", vi.fn());
+  });
 
-const mockFetch = (status: number, body: unknown) => {
-  (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
-    new Response(JSON.stringify(body), {
-      status,
-      headers: { 'Content-Type': 'application/json' },
-    })
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env = ORIGINAL_ENV;
+  });
+
+  it.each([
+    [404, { error: { message: "Not found" } }],
+    [200, { data: null }],
+  ])(
+    "uses the exact editable fallback only for confirmed absence (%s)",
+    async (status: number, body: unknown) => {
+      vi.mocked(fetch).mockResolvedValueOnce(response(status, body));
+      const { getFooterBlockForAdmin } = await import("./page");
+
+      const block = await getFooterBlockForAdmin();
+
+      expect(block).toMatchObject({
+        productCountSuffix: "productos certificados para instituciones",
+        catalogHeading: "Catálogo",
+        contactHeading: "Contacto",
+        legalHeading: "Legal",
+        socialHeading: "Redes",
+        catalogCtaLabel: "Ver catálogo",
+        officeLineLabel: "Línea oficina",
+        schoolLineLabel: "Línea escolar",
+        aboutLinkLabel: "Sobre nosotros",
+        termsLinkLabel: "Términos y condiciones",
+        privacyLinkLabel: "Política de privacidad",
+        rutLabel: "RUT",
+        catalogStampLabel: "Catálogo institucional",
+        writtenBackingLabel: "Respaldo escrito",
+      });
+    },
   );
-};
 
-describe('Admin /admin/footer data-loader — fallback contract', () => {
-  // The footer admin page owns three scalar fields (copyrightText,
-  // tagline, legalSnippet). The footer-block singleton is a Strapi v5
-  // singleType that returns `data: null` until an editor saves. The
-  // page must fall back to the same content the public read helper
-  // returns so the editor sees live site copy and does not have to
-  // retype it.
-
-  it('returns the auto-generated copyright + legal snippet fallback when Strapi responds with data: null', async () => {
-    mockFetch(200, { data: null });
-    const { getFooterBlock } = await import('./page');
-    const block = await getFooterBlock();
-    const year = new Date().getFullYear();
-    expect(block.copyrightText).toBe(`© ${year} ${siteTokens.brand}`);
-    expect(block.legalSnippet).toBe('Proveedor institucional · Chile');
-    // Tagline stays undefined so the consumer-side `?? site.footerCopy`
-    // resolves to the typed fallback in <Footer>.
-    expect(block.tagline).toBeUndefined();
-  });
-
-  it('returns the same fallback when Strapi responds with an empty object', async () => {
-    mockFetch(200, { data: {} });
-    const { getFooterBlock } = await import('./page');
-    const block = await getFooterBlock();
-    const year = new Date().getFullYear();
-    expect(block.copyrightText).toBe(`© ${year} ${siteTokens.brand}`);
-    expect(block.legalSnippet).toBe('Proveedor institucional · Chile');
-  });
-
-  it('returns the same fallback when the upstream fetch throws', async () => {
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error('ECONNREFUSED')
+  it("keeps a partial real CMS record primary instead of filling missing fields", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      response(200, { data: { catalogHeading: "Encabezado CMS" } }),
     );
-    const { getFooterBlock } = await import('./page');
-    const block = await getFooterBlock();
-    const year = new Date().getFullYear();
-    expect(block.copyrightText).toBe(`© ${year} ${siteTokens.brand}`);
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    const block = await getFooterBlockForAdmin();
+
+    expect(block).toEqual({ catalogHeading: "Encabezado CMS" });
+    expect(block.productCountSuffix).toBeUndefined();
   });
 
-  it('returns Strapi-supplied values verbatim when the singleton is seeded', async () => {
-    mockFetch(200, {
-      data: {
-        copyrightText: '© 2026 Ene Muebles · institucional',
-        tagline: 'CMS tagline',
-        legalSnippet: 'CMS legal snippet',
-      },
-    });
-    const { getFooterBlock } = await import('./page');
-    const block = await getFooterBlock();
-    expect(block.copyrightText).toBe('© 2026 Ene Muebles · institucional');
-    expect(block.tagline).toBe('CMS tagline');
-    expect(block.legalSnippet).toBe('CMS legal snippet');
+  it("sends the trimmed admin token when configured", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, { data: null }));
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await getFooterBlockForAdmin();
+
+    expect(fetch).toHaveBeenCalledWith(
+      "http://localhost:1337/api/footer-block?status=draft",
+      expect.objectContaining({
+        headers: { Authorization: "Bearer test-token" },
+        cache: "no-store",
+      }),
+    );
   });
 
-  it('embeds the current calendar year in the auto-generated copyright', async () => {
-    // Sanity check: the fallback copyright is computed at call time
-    // so it stays current as years roll over. If a future change
-    // accidentally pre-computes this in a module-level constant,
-    // this test catches the regression.
-    mockFetch(200, { data: null });
-    const { getFooterBlock } = await import('./page');
-    const block = await getFooterBlock();
-    const year = new Date().getFullYear();
-    expect(block.copyrightText).toContain(String(year));
+  it("omits the Authorization header when the admin token is blank", async () => {
+    mocks.getStrapiAdminToken.mockReturnValue("   ");
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, { data: null }));
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await getFooterBlockForAdmin();
+
+    const init = vi.mocked(fetch).mock.calls[0]?.[1];
+    expect(init).not.toHaveProperty("headers");
+  });
+
+  it.each([401, 500])("fails closed for upstream HTTP %s", async (status: number) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(status, { error: { message: "upstream" } }));
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await expect(getFooterBlockForAdmin()).rejects.toThrow(String(status));
+  });
+
+  it("fails closed for network errors", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await expect(getFooterBlockForAdmin()).rejects.toThrow("ECONNREFUSED");
+  });
+
+  it.each([
+    ["missing envelope", { other: null }],
+    ["invalid data", { data: "wrong" }],
+  ])("fails closed for malformed CMS payload: %s", async (_label: string, body: unknown) => {
+    vi.mocked(fetch).mockResolvedValueOnce(response(200, body));
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await expect(getFooterBlockForAdmin()).rejects.toThrow("inválid");
+  });
+
+  it("fails closed for non-JSON CMS payloads", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response("not-json", { status: 200, headers: { "Content-Type": "text/plain" } }),
+    );
+    const { getFooterBlockForAdmin } = await import("./page");
+
+    await expect(getFooterBlockForAdmin()).rejects.toThrow();
   });
 });

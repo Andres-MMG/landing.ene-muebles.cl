@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useRef, useState } from "react";
 import { MobileMenu } from "./MobileMenu";
+import { isPublicNavigationActive, resolvePublicNavigation } from "@/lib/public-navigation";
 import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 
 type HeaderProps = {
@@ -12,23 +13,16 @@ type HeaderProps = {
   whatsappDefaultMessage?: string;
   contactPhone?: string;
   contactEmail?: string;
+  navigationHomeLabel?: string;
+  navigationCatalogLabel?: string;
+  navigationAboutLabel?: string;
+  navigationContactLabel?: string;
+  headerWhatsappLabel?: string;
+  mobileWhatsappLabel?: string;
 };
 
 const DEFAULT_WHATSAPP_MESSAGE =
   "Hola, me gustaría una cotización de su catálogo de mobiliario institucional.";
-
-const navItems: { label: string; href: string }[] = [
-  { label: "Inicio", href: "/" },
-  { label: "Catálogo", href: "/catalogo" },
-  { label: "Nosotros", href: "/nosotros" },
-  { label: "Contacto", href: "/contacto" },
-];
-
-const isActive = (pathname: string, href: string): boolean => {
-  if (href === "/") return pathname === "/";
-  if (href === "/catalogo") return pathname.startsWith("/catalogo") || pathname.startsWith("/categoria") || pathname.startsWith("/producto");
-  return pathname === href || pathname.startsWith(`${href}/`);
-};
 
 /**
  * Header — sticky institutional navigation.
@@ -43,10 +37,24 @@ export function Header({
   whatsappDefaultMessage,
   contactPhone,
   contactEmail,
+  navigationHomeLabel,
+  navigationCatalogLabel,
+  navigationAboutLabel,
+  navigationContactLabel,
+  headerWhatsappLabel,
+  mobileWhatsappLabel,
 }: HeaderProps) {
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
   const menuTriggerRef = useRef<HTMLButtonElement>(null);
+  const navigation = resolvePublicNavigation({
+    navigationHomeLabel,
+    navigationCatalogLabel,
+    navigationAboutLabel,
+    navigationContactLabel,
+    headerWhatsappLabel,
+    mobileWhatsappLabel,
+  });
 
   const whatsappHref =
     buildWhatsAppHandoff(
@@ -56,30 +64,34 @@ export function Header({
 
   return (
     <header className="sticky top-0 z-30 border-b border-ink-line bg-paper">
-      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-6 px-6 sm:px-10 lg:h-20 lg:px-16">
+      <div className="mx-auto flex h-16 w-full max-w-[1440px] items-center gap-4 px-6 sm:px-10 lg:h-20 lg:px-16 xl:gap-6">
         <Link
           href="/"
-          className="inline-flex items-center py-2 font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-text lg:py-0 lg:text-xl"
+          aria-label={siteName}
+          title={siteName}
+          className="inline-flex min-w-0 max-w-48 shrink items-center truncate whitespace-nowrap py-2 font-display text-lg font-semibold tracking-tight text-ink transition-colors hover:text-taupe-text lg:py-0 lg:text-xl"
         >
           {siteName}
         </Link>
 
         <nav
           aria-label="Navegación principal"
-          className="hidden lg:flex lg:flex-1 lg:items-center lg:justify-center lg:gap-10"
+          className="hidden min-w-0 lg:flex lg:flex-1 lg:items-center lg:justify-center lg:gap-4 xl:gap-8"
         >
-          {navItems.map((item) => {
-            const active = isActive(pathname, item.href);
+          {navigation.items.map((item) => {
+            const active = isPublicNavigationActive(pathname, item.href);
             return (
               <Link
                 key={item.href}
                 href={item.href as never}
-                className={`relative inline-flex items-center py-1 text-sm font-medium tracking-tight transition-colors hover:text-taupe-text ${
+                aria-label={item.label}
+                title={item.label}
+                className={`relative inline-flex min-w-0 max-w-28 items-center py-1 text-sm font-medium tracking-tight transition-colors hover:text-taupe-text xl:max-w-36 ${
                   active ? "text-ink" : "text-ink-mute"
                 }`}
                 aria-current={active ? "page" : undefined}
               >
-                {item.label}
+                <span className="min-w-0 truncate whitespace-nowrap">{item.label}</span>
                 <span
                   aria-hidden
                   className={`absolute inset-x-0 -bottom-1 h-px transition-colors ${
@@ -91,16 +103,22 @@ export function Header({
           })}
         </nav>
 
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex min-w-0 shrink-0 items-center gap-3">
           {whatsappHref ? (
             <a
               href={whatsappHref}
               target="_blank"
               rel="noopener noreferrer"
-              className="hidden lg:inline-flex lg:items-center lg:gap-2 lg:border lg:border-ink lg:px-4 lg:py-2 lg:text-xs lg:font-medium lg:uppercase lg:tracking-[0.18em] lg:text-ink lg:transition-colors lg:duration-300 lg:hover:bg-ink lg:hover:text-paper"
+              aria-label={navigation.labels.headerWhatsapp}
+              title={navigation.labels.headerWhatsapp}
+              className="hidden min-w-0 max-w-48 lg:inline-flex lg:items-center lg:gap-2 lg:border lg:border-ink lg:px-4 lg:py-2 lg:text-xs lg:font-medium lg:uppercase lg:tracking-[0.18em] lg:text-ink lg:transition-colors lg:duration-300 lg:hover:bg-ink lg:hover:text-paper"
             >
-              WhatsApp
-              <span aria-hidden>→</span>
+              <span className="min-w-0 truncate whitespace-nowrap">
+                {navigation.labels.headerWhatsapp}
+              </span>
+              <span className="shrink-0" aria-hidden>
+                →
+              </span>
             </a>
           ) : null}
 
@@ -133,10 +151,11 @@ export function Header({
       <MobileMenu
         open={menuOpen}
         onClose={() => setMenuOpen(false)}
-        items={navItems}
+        items={navigation.items}
         pathname={pathname}
-        isActive={isActive}
+        isActive={isPublicNavigationActive}
         whatsappHref={whatsappHref}
+        whatsappLabel={navigation.labels.mobileWhatsapp}
         contactPhone={contactPhone}
         contactEmail={contactEmail}
         triggerRef={menuTriggerRef}

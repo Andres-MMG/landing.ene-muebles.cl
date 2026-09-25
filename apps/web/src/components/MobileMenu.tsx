@@ -1,12 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import {
-  type ReactNode,
-  type RefObject,
-  useEffect,
-  useRef,
-} from "react";
+import { type ReactNode, type RefObject, useEffect, useRef } from "react";
 
 export type NavItem = { label: string; href: string };
 
@@ -17,6 +12,7 @@ type MobileMenuProps = {
   pathname: string;
   isActive: (pathname: string, href: string) => boolean;
   whatsappHref?: string | null;
+  whatsappLabel?: string;
   contactPhone?: string;
   contactEmail?: string;
   brand?: string;
@@ -27,7 +23,12 @@ type MobileMenuProps = {
 };
 
 function canRestoreFocus(trigger: HTMLButtonElement | null): trigger is HTMLButtonElement {
-  if (!trigger || !trigger.isConnected || !trigger.ownerDocument.contains(trigger) || trigger.disabled) {
+  if (
+    !trigger ||
+    !trigger.isConnected ||
+    !trigger.ownerDocument.contains(trigger) ||
+    trigger.disabled
+  ) {
     return false;
   }
 
@@ -60,6 +61,7 @@ export function MobileMenu({
   pathname,
   isActive,
   whatsappHref,
+  whatsappLabel = "Hablar por WhatsApp",
   contactPhone,
   contactEmail,
   brand,
@@ -82,9 +84,7 @@ export function MobileMenu({
     const previousBodyPaddingRight = body.style.paddingRight;
     const menuTrigger = triggerRef.current;
     const scrollbarWidth = window.innerWidth - html.clientWidth;
-    const computedBodyPaddingRight = Number.parseFloat(
-      window.getComputedStyle(body).paddingRight,
-    );
+    const computedBodyPaddingRight = Number.parseFloat(window.getComputedStyle(body).paddingRight);
 
     html.style.overflow = "hidden";
     body.style.overflow = "hidden";
@@ -156,9 +156,7 @@ export function MobileMenu({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50"
-    >
+    <div className="fixed inset-0 z-50">
       <button
         type="button"
         aria-label="Cerrar menú"
@@ -173,95 +171,97 @@ export function MobileMenu({
         aria-label={menuLabel}
         className="relative ml-auto flex h-full w-full max-w-xl flex-col bg-paper"
       >
-      <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink-line px-6 sm:px-10">
-        <span className={brand ? "t-display text-lg font-semibold tracking-tight text-ink" : "t-overline text-ink-mute"}>
-          {brand ?? menuLabel}
-        </span>
-        <button
-          ref={closeButtonRef}
-          type="button"
-          onClick={onClose}
-          aria-label="Cerrar menú"
-          className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper"
-        >
-          <svg
-            width="12"
-            height="12"
-            viewBox="0 0 12 12"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.5"
-            aria-hidden
+        <div className="flex h-16 shrink-0 items-center justify-between border-b border-ink-line px-6 sm:px-10">
+          <span
+            className={
+              brand
+                ? "t-display text-lg font-semibold tracking-tight text-ink"
+                : "t-overline text-ink-mute"
+            }
           >
-            <line x1="0" y1="0" x2="12" y2="12" />
-            <line x1="12" y1="0" x2="0" y2="12" />
-          </svg>
-        </button>
-      </div>
+            {brand ?? menuLabel}
+          </span>
+          <button
+            ref={closeButtonRef}
+            type="button"
+            onClick={onClose}
+            aria-label="Cerrar menú"
+            className="inline-flex h-11 w-11 items-center justify-center border border-ink text-ink transition-colors hover:bg-ink hover:text-paper"
+          >
+            <svg
+              width="12"
+              height="12"
+              viewBox="0 0 12 12"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              aria-hidden
+            >
+              <line x1="0" y1="0" x2="12" y2="12" />
+              <line x1="12" y1="0" x2="0" y2="12" />
+            </svg>
+          </button>
+        </div>
 
-      <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-8 sm:px-10">
-        <ul className="divide-y divide-ink-line">
-          {items.map((item) => {
-            const active = isActive(pathname, item.href);
-            return (
-              <li key={item.href}>
-                <Link
-                  href={item.href as never}
-                  onClick={onClose}
-                  className={`t-mono flex min-h-[44px] items-center py-3 text-base sm:text-lg transition-colors hover:text-ink ${
-                    active ? "text-ink" : "text-ink-mute"
-                  }`}
-                  aria-current={active ? "page" : undefined}
-                >
-                  {item.label}
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <nav className="flex min-h-0 flex-1 flex-col overflow-y-auto px-6 py-8 sm:px-10">
+          <ul className="divide-y divide-ink-line">
+            {items.map((item) => {
+              const active = isActive(pathname, item.href);
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href as never}
+                    onClick={onClose}
+                    className={`t-mono flex min-h-[44px] items-center py-3 text-base sm:text-lg transition-colors hover:text-ink ${
+                      active ? "text-ink" : "text-ink-mute"
+                    }`}
+                    aria-current={active ? "page" : undefined}
+                  >
+                    {item.label}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
 
-        <div className="mt-auto space-y-5 border-t border-ink-line pt-6">
-          {footer ? (
-            footer
-          ) : whatsappHref || contactPhone || contactEmail ? (
+          <div className="mt-auto space-y-5 border-t border-ink-line pt-6">
+            {footer ? (
+              footer
+            ) : whatsappHref || contactPhone || contactEmail ? (
               <>
                 {whatsappHref ? (
-            <a
-              href={whatsappHref}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-3 bg-ink px-6 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors hover:bg-taupe-deep"
-            >
-              Hablar por WhatsApp
-              <span aria-hidden>→</span>
-            </a>
+                  <a
+                    href={whatsappHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-3 bg-ink px-6 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors hover:bg-taupe-deep"
+                  >
+                    {whatsappLabel}
+                    <span aria-hidden>→</span>
+                  </a>
                 ) : null}
                 {contactPhone ? (
-            <a
-              href={`tel:${contactPhone.replace(/\s/g, "")}`}
-              className="t-mono block min-h-[44px] py-2 text-base text-ink"
-            >
-              <span className="t-overline text-ink-mute">
-                Tel
-              </span>
-              <span className="mt-1 block">{contactPhone}</span>
-            </a>
+                  <a
+                    href={`tel:${contactPhone.replace(/\s/g, "")}`}
+                    className="t-mono block min-h-[44px] py-2 text-base text-ink"
+                  >
+                    <span className="t-overline text-ink-mute">Tel</span>
+                    <span className="mt-1 block">{contactPhone}</span>
+                  </a>
                 ) : null}
                 {contactEmail ? (
-            <a
-              href={`mailto:${contactEmail}`}
-              className="t-mono block min-h-[44px] py-2 text-base text-ink"
-            >
-              <span className="t-overline text-ink-mute">
-                Email
-              </span>
-              <span className="mt-1 block">{contactEmail}</span>
-            </a>
+                  <a
+                    href={`mailto:${contactEmail}`}
+                    className="t-mono block min-h-[44px] py-2 text-base text-ink"
+                  >
+                    <span className="t-overline text-ink-mute">Email</span>
+                    <span className="mt-1 block">{contactEmail}</span>
+                  </a>
                 ) : null}
               </>
-          ) : null}
-        </div>
-      </nav>
+            ) : null}
+          </div>
+        </nav>
       </div>
     </div>
   );

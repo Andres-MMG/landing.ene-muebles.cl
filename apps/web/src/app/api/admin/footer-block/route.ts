@@ -1,105 +1,142 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
-import { revalidateTag } from 'next/cache';
-import { getServerSession } from '@/lib/admin/session';
-import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
-import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
+import { revalidateTag } from "next/cache";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { requireAdmin, strapiAuthFailure } from "@/lib/admin/require-admin";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import { STRAPI_CACHE_TAGS } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
-/**
- * GET /api/admin/footer-block
- *   Read the `footer-block` singleton.
- *
- * PUT /api/admin/footer-block
- *   Update the copyright line, the secondary tagline overlay, and the
- *   secondary legal snippet. The four column-header labels still live
- *   on `@ene/ui-tokens` because they are navigation chrome, not
- *   per-release copy. `/terminos` and `/privacidad` are static Next.js
- *   pages and are intentionally not in scope here.
- */
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const trimmedString = (max: number) =>
-  z.string().max(max).transform((s) => s.trim());
+  z
+    .string()
+    .max(max)
+    .transform((value) => value.trim());
 
 const requiredTrimmed = (max: number, label: string) =>
-  trimmedString(max).refine((s) => s.length > 0, { message: `${label} no debe estar vacío` });
+  trimmedString(max).refine((value) => value.length > 0, {
+    message: label + " no debe estar vacío",
+  });
 
 const optionalClearedString = (max: number) =>
-  z.union([trimmedString(max), z.null()]).optional();
+  z
+    .union([trimmedString(max), z.null()])
+    .transform((value) => (typeof value === "string" && value.length === 0 ? null : value))
+    .optional();
 
-const PatchBody = z
+const PutBody = z
   .object({
-    copyrightText: requiredTrimmed(200, 'Texto de copyright').optional(),
+    copyrightText: requiredTrimmed(200, "Texto de copyright").optional(),
     tagline: optionalClearedString(300),
     legalSnippet: optionalClearedString(300),
+    productCountSuffix: optionalClearedString(160),
+    catalogHeading: optionalClearedString(60),
+    contactHeading: optionalClearedString(60),
+    legalHeading: optionalClearedString(60),
+    socialHeading: optionalClearedString(60),
+    catalogCtaLabel: optionalClearedString(80),
+    officeLineLabel: optionalClearedString(80),
+    schoolLineLabel: optionalClearedString(80),
+    aboutLinkLabel: optionalClearedString(80),
+    termsLinkLabel: optionalClearedString(120),
+    privacyLinkLabel: optionalClearedString(120),
+    rutLabel: optionalClearedString(30),
+    catalogStampLabel: optionalClearedString(120),
+    writtenBackingLabel: optionalClearedString(120),
   })
   .strict();
 
-export async function GET() {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const res = await fetch(
-    `${(process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '')}/api/footer-block`,
-    {
-      headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
-      cache: 'no-store',
-    }
-  );
-  const data = await res.json().catch(() => null);
-  return NextResponse.json(data ?? { data: null }, { status: res.status });
+function strapiUrl(status: "draft" | "published"): string {
+  const base = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
+  return base + "/api/footer-block?status=" + status;
 }
 
-export async function PUT(req: NextRequest) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+function unauthorized(): NextResponse {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
 
-  let body: z.infer<typeof PatchBody>;
-  try {
-    body = PatchBody.parse(await req.json());
-  } catch (err) {
-    const issues =
-      err instanceof z.ZodError
-        ? err.issues.map((i) => ({ path: i.path, message: i.message, code: i.code }))
-        : [{ path: [], message: String(err), code: 'unknown' }];
-    return NextResponse.json(
-      { error: 'Datos inválidos', details: { issues } },
-      { status: 400 }
-    );
-  }
-
-  const data: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(body)) {
-    if (v === undefined) continue;
-    if (typeof v === 'string' && v.trim() === '') continue;
-    if (v === null) {
-      data[k] = null;
-      continue;
-    }
-    data[k] = v;
-  }
-
-  const res = await fetch(
-    `${(process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '')}/api/footer-block`,
-    {
-      method: 'PUT',
-      headers: {
-        Authorization: `Bearer ${getStrapiAdminToken()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data }),
-      cache: 'no-store',
-    }
+function upstreamUnavailable(): NextResponse {
+  return NextResponse.json(
+    { error: "No se pudo conectar con el servidor de contenido." },
+    { status: 502 },
   );
-  const json = await res.json().catch(() => null);
-  // ISR milestone: the footer renders on every public page — purge
-  // sections-tagged fetches so edits render immediately.
-  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.sections, { expire: 0 });
-  return NextResponse.json(json, { status: res.status });
+}
+
+function invalidUpstreamBody(): NextResponse {
+  return NextResponse.json(
+    { error: "El servidor de contenido devolvió una respuesta inválida." },
+    { status: 502 },
+  );
+}
+
+async function readUpstreamJson(response: Response): Promise<unknown | undefined> {
+  return response.json().catch(() => undefined);
+}
+
+export async function GET() {
+  if (!(await requireAdmin())) return unauthorized();
+
+  let response: Response;
+  try {
+    response = await fetch(strapiUrl("draft"), {
+      headers: { Authorization: "Bearer " + getStrapiAdminToken() },
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (response.status === 401) return strapiAuthFailure();
+
+  const json = await readUpstreamJson(response);
+  if (json === undefined) return invalidUpstreamBody();
+
+  return NextResponse.json(json, { status: response.status });
+}
+
+export async function PUT(request: NextRequest) {
+  if (!(await requireAdmin())) return unauthorized();
+
+  let body: z.infer<typeof PutBody>;
+  try {
+    body = PutBody.parse(await request.json());
+  } catch (error) {
+    const issues =
+      error instanceof z.ZodError
+        ? error.issues.map((issue) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code,
+          }))
+        : [{ path: [], message: String(error), code: "unknown" }];
+
+    return NextResponse.json({ error: "Datos inválidos", details: { issues } }, { status: 400 });
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(strapiUrl("published"), {
+      method: "PUT",
+      headers: {
+        Authorization: "Bearer " + getStrapiAdminToken(),
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ data: body }),
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (response.status === 401) return strapiAuthFailure();
+
+  const json = await readUpstreamJson(response);
+  if (json === undefined) return invalidUpstreamBody();
+
+  if (response.ok) {
+    revalidateTag(STRAPI_CACHE_TAGS.sections, { expire: 0 });
+  }
+
+  return NextResponse.json(json, { status: response.status });
 }

@@ -1,104 +1,80 @@
 import type { MetadataRoute } from "next";
-import { getAllProducts, getCategories } from "@/lib/strapi";
+import { getLegalPage } from "@/lib/legal-pages";
+import { absoluteSiteUrl } from "@/lib/site-origin";
+import { getSitemapCategories, getSitemapProducts, SINGLE_SITEMAP_URL_LIMIT } from "@/lib/strapi";
 
-// Sitemap is rebuilt on every request that hits it (no prerender).
-// Strapi may be unreachable at build time; the route handler runs
-// on demand and serves a valid XML or fails loudly.
 export const dynamic = "force-dynamic";
 export const revalidate = 3600;
 
-/**
- * Dynamic sitemap.xml for the public site.
- *
- * - Static pages are declared here (priority tuned per role).
- * - Catalog and category pages are pulled from Strapi at request
- *   time and re-fetched every hour (revalidate: 3600) so the
- *   sitemap stays in sync with the catalog.
- *
- * The /admin/* and /api/* paths are NOT included here; robots.ts
- * disallows them from indexing.
- */
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
-  "https://ene-muebles.cl";
+export function validSitemapDate(value: unknown): Date | undefined {
+  if (typeof value !== "string" || value.trim() === "") return undefined;
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? undefined : date;
+}
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, categories] = await Promise.all([
-    // Every active product belongs in the sitemap, so page through the
-    // full collection instead of the first page.
-    getAllProducts(),
-    getCategories(),
+  const [products, categories, terms, privacy] = await Promise.all([
+    getSitemapProducts(),
+    getSitemapCategories(),
+    getLegalPage("terms"),
+    getLegalPage("privacy"),
   ]);
 
-  const now = new Date();
-
-  const staticEntries: MetadataRoute.Sitemap = [
+  const fixedEntries: MetadataRoute.Sitemap = [
+    { url: absoluteSiteUrl("/"), changeFrequency: "weekly", priority: 1.0 },
+    { url: absoluteSiteUrl("/catalogo"), changeFrequency: "weekly", priority: 0.9 },
+    { url: absoluteSiteUrl("/nosotros"), changeFrequency: "monthly", priority: 0.6 },
+    { url: absoluteSiteUrl("/contacto"), changeFrequency: "monthly", priority: 0.7 },
     {
-      url: `${BASE_URL}/`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 1.0,
-    },
-    {
-      url: `${BASE_URL}/catalogo`,
-      lastModified: now,
-      changeFrequency: "weekly",
-      priority: 0.9,
-    },
-    {
-      url: `${BASE_URL}/nosotros`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.6,
-    },
-    {
-      url: `${BASE_URL}/contacto`,
-      lastModified: now,
-      changeFrequency: "monthly",
-      priority: 0.7,
-    },
-    {
-      url: `${BASE_URL}/terminos`,
-      lastModified: now,
+      url: absoluteSiteUrl("/terminos"),
+      ...(terms.source === "cms" && validSitemapDate(terms.updatedAt)
+        ? { lastModified: validSitemapDate(terms.updatedAt) }
+        : {}),
       changeFrequency: "yearly",
       priority: 0.3,
     },
     {
-      url: `${BASE_URL}/privacidad`,
-      lastModified: now,
+      url: absoluteSiteUrl("/privacidad"),
+      ...(privacy.source === "cms" && validSitemapDate(privacy.updatedAt)
+        ? { lastModified: validSitemapDate(privacy.updatedAt) }
+        : {}),
       changeFrequency: "yearly",
       priority: 0.3,
     },
   ];
 
-  const categoryEntries: MetadataRoute.Sitemap = categories.map((c) => ({
-    url: `${BASE_URL}/categoria/${c.slug}`,
-    lastModified: now,
+  const categoryEntries: MetadataRoute.Sitemap = categories.map((category) => ({
+    url: absoluteSiteUrl(`/categoria/${category.slug}`),
     changeFrequency: "weekly",
     priority: 0.8,
   }));
 
-  const productEntries: MetadataRoute.Sitemap = products.map((p) => {
-    // Strapi v5 returns ISO strings; tolerate null.
-    const lastModified = p.updatedAt ? new Date(p.updatedAt) : now;
-    // Catalog-import (S4) — Next.js's typed `MetadataRoute.Sitemap.images`
-    // (string[]) does NOT expose `<image:title>`; Next.js's runtime
-    // emits only `<image:loc>` (verified in next@16.2.9
-    // resolve-route-data.js). The image-title extension would
-    // require dropping down to a raw XML route handler — out of
-    // scope here. The `buildSitemapImageTitle` helper in
-    // `product-attributes.ts` stays as the single source of truth
-    // for the catalog-import label so a future slice that switches
-    // to raw XML does not have to re-derive the format.
-    const cover = p.images?.[0]?.url;
+  const productEntries: MetadataRoute.Sitemap = products.map((product) => {
+    const lastModified =
+      validSitemapDate(product.updatedAt) ??
+      validSitemapDate(product.publishedAt) ??
+      validSitemapDate(product.createdAt);
+    const cover = product.images?.[0]?.url;
     return {
-      url: `${BASE_URL}/producto/${p.slug}`,
-      lastModified,
+      url: absoluteSiteUrl(`/producto/${product.slug}`),
+      ...(lastModified ? { lastModified } : {}),
       changeFrequency: "weekly",
       priority: 0.7,
-      images: cover ? [cover.startsWith("http") ? cover : `${BASE_URL}${cover}`] : [],
+      images: cover
+        ? [
+            cover.startsWith("http://") || cover.startsWith("https://")
+              ? cover
+              : absoluteSiteUrl(cover),
+          ]
+        : [],
     };
   });
 
-  return [...staticEntries, ...categoryEntries, ...productEntries];
+  const entries = [...fixedEntries, ...categoryEntries, ...productEntries];
+  if (entries.length > SINGLE_SITEMAP_URL_LIMIT) {
+    throw new Error(
+      `Sitemap contains ${entries.length} URLs; split it before exceeding the ${SINGLE_SITEMAP_URL_LIMIT}-URL protocol limit`,
+    );
+  }
+  return entries;
 }

@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { absoluteSiteUrl, resolveSiteOrigin } from "@/lib/site-origin";
 
 // robots.txt is generated per request. The list of disallowed paths
 // is static, but generating on demand keeps production deployments
@@ -17,11 +18,8 @@ export const dynamic = "force-dynamic";
  * (where it points at localhost:4780) and in production (where
  * it points at the real domain) without code changes.
  */
-const BASE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, "") ??
-  "https://ene-muebles.cl";
-
 export default function robots(): MetadataRoute.Robots {
+  const origin = resolveSiteOrigin();
   return {
     rules: [
       {
@@ -30,7 +28,7 @@ export default function robots(): MetadataRoute.Robots {
         disallow: ["/admin/", "/api/"],
       },
     ],
-    sitemap: `${BASE_URL}/sitemap.xml`,
-    host: BASE_URL,
+    sitemap: absoluteSiteUrl("/sitemap.xml", origin),
+    host: origin,
   };
 }

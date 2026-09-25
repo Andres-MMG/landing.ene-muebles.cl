@@ -1,4 +1,13 @@
 import { ImageResponse } from "next/og";
+import { FALLBACK_SITE_SETTINGS, getSiteSettings } from "@/lib/strapi";
+import {
+  FALLBACK_SHARE_IMAGE_ALT,
+  FALLBACK_SHARE_IMAGE_DESCRIPTION,
+  FALLBACK_SHARE_IMAGE_FOOTER,
+  FALLBACK_SHARE_IMAGE_KICKER,
+  FALLBACK_SHARE_IMAGE_TITLE,
+  resolveSeoText,
+} from "@/lib/seo-metadata";
 
 /**
  * Root Open Graph image (B2/U11) — generated via the `opengraph-image`
@@ -6,18 +15,15 @@ import { ImageResponse } from "next/og";
  * branded, truthful asset instead of nothing. Product pages override
  * it with their own cover image (see `producto/[slug]/page.tsx`).
  *
- * Brand tokens come from `packages/ui-tokens` (ink #2C2C2C, paper
- * #F9F8F6, taupe accent; taupe-text/ink-mute are the WCAG-safe text
- * shades). Static at build time (`dynamic = "force-static"`), so the
- * font fetch below runs once and a network hiccup degrades to the
- * ImageResponse default sans-serif instead of failing the build.
+ * Brand tokens and image geometry remain code-owned. Copy refreshes with
+ * Site Setting cache revalidation; a font-network failure degrades to the
+ * ImageResponse default sans-serif without failing image generation.
  */
 
-export const alt =
-  "ENE Muebles — Mobiliario institucional · Catálogo · Regiones desde Valparaíso hasta Los Lagos";
+export const alt = FALLBACK_SHARE_IMAGE_ALT;
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
-export const dynamic = "force-static";
+export const revalidate = 60;
 
 type BrandFont = {
   name: string;
@@ -31,7 +37,7 @@ async function loadBrandFont(): Promise<BrandFont[]> {
   try {
     const css = await fetch(
       "https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@600&display=swap",
-      { signal: AbortSignal.timeout(8000) }
+      { signal: AbortSignal.timeout(8000) },
     ).then((response) => response.text());
     const woff2Url = css.match(/src: url\((https:\/\/[^)]+\.woff2)\)/)?.[1];
     if (!woff2Url) return [];
@@ -45,7 +51,15 @@ async function loadBrandFont(): Promise<BrandFont[]> {
 }
 
 export default async function OpengraphImage() {
-  const fonts = await loadBrandFont();
+  const [fonts, settings] = await Promise.all([
+    loadBrandFont(),
+    getSiteSettings().catch(() => FALLBACK_SITE_SETTINGS),
+  ]);
+  const kicker = resolveSeoText(settings.seoShareImageKicker) ?? FALLBACK_SHARE_IMAGE_KICKER;
+  const title = resolveSeoText(settings.seoShareImageTitle) ?? FALLBACK_SHARE_IMAGE_TITLE;
+  const description =
+    resolveSeoText(settings.seoShareImageDescription) ?? FALLBACK_SHARE_IMAGE_DESCRIPTION;
+  const footer = resolveSeoText(settings.seoShareImageFooter) ?? FALLBACK_SHARE_IMAGE_FOOTER;
   return new ImageResponse(
     (
       <div
@@ -71,7 +85,7 @@ export default async function OpengraphImage() {
               color: "#7A6650",
             }}
           >
-            ENE-MUEBLES · Proveedor institucional
+            {kicker}
           </div>
         </div>
 
@@ -86,7 +100,7 @@ export default async function OpengraphImage() {
             maxWidth: 920,
           }}
         >
-          Mobiliario institucional
+          {title}
         </div>
 
         {/* Subline — verified service facts, no invented claims. */}
@@ -97,7 +111,7 @@ export default async function OpengraphImage() {
             color: "#656565",
           }}
         >
-          Catálogo 2026 · Regiones desde Valparaíso hasta Los Lagos · Cotización en 24 h
+          {description}
         </div>
 
         {/* Bottom rail — brand readout like the site footer. */}
@@ -115,7 +129,7 @@ export default async function OpengraphImage() {
             color: "#2C2C2C",
           }}
         >
-          <span>ENE-MUEBLES — Fabricación y distribución</span>
+          <span>{footer}</span>
           <span>Chile</span>
         </div>
       </div>
@@ -123,6 +137,6 @@ export default async function OpengraphImage() {
     {
       ...size,
       ...(fonts.length > 0 ? { fonts } : {}),
-    }
+    },
   );
 }

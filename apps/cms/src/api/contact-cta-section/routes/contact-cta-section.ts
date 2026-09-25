@@ -1,3 +1,9 @@
-import { factories } from '@strapi/strapi';
+import { factories } from "@strapi/strapi";
 
-export default factories.createCoreRouter('api::contact-cta-section.contact-cta-section');
+const draftReadPolicy = "global::require-api-token-for-draft";
+
+export default factories.createCoreRouter("api::contact-cta-section.contact-cta-section", {
+  config: {
+    find: { policies: [draftReadPolicy] },
+  },
+});

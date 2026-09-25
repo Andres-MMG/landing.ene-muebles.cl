@@ -1,3 +1,10 @@
-import { factories } from '@strapi/strapi';
+import { factories } from "@strapi/strapi";
 
-export default factories.createCoreRouter('api::category.category');
+const draftReadPolicy = "global::require-api-token-for-draft";
+
+export default factories.createCoreRouter("api::category.category", {
+  config: {
+    find: { policies: [draftReadPolicy] },
+    findOne: { policies: [draftReadPolicy] },
+  },
+});

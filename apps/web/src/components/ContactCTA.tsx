@@ -3,6 +3,11 @@ import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 import { formatAddress } from "@/lib/address";
 import { site } from "@ene/ui-tokens";
 
+type ContactCTAContent = ContactCTASection & {
+  eyebrow?: string;
+  emailLabel?: string;
+};
+
 type ContactCTAProps = {
   settings: SiteSetting;
   /**
@@ -15,7 +20,7 @@ type ContactCTAProps = {
    * `site-setting` because it is institution-level identity, not
    * section copy.
    */
-  section?: ContactCTASection;
+  section?: ContactCTAContent;
 };
 
 const DEFAULT_WHATSAPP_MESSAGE =
@@ -32,6 +37,8 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
   const title = section?.title ?? site.contactHeading;
   const body = section?.body ?? site.contactBody;
   const buttonLabel = section?.buttonLabel ?? site.whatsappCta;
+  const eyebrow = section?.eyebrow?.trim() || site.contactOverline;
+  const emailLabel = section?.emailLabel?.trim() || site.emailLabel;
   // `section.buttonHref` is set when the editor wants a non-WhatsApp
   // CTA (e.g. mailto:). When absent we build the WhatsApp href from
   // `settings.whatsappNumber` exactly like before.
@@ -48,17 +55,13 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
   const address = formatAddress(settings);
 
   return (
-    <section
-      id="contacto"
-      aria-labelledby="contacto-heading"
-      className="bg-ink text-paper"
-    >
+    <section id="contacto" aria-labelledby="contacto-heading" className="bg-ink text-paper">
       <div className="mx-auto w-full max-w-[1440px] px-6 pt-24 pb-20 sm:px-10 sm:pt-28 sm:pb-24 lg:px-16 lg:pt-36 lg:pb-28">
         <header className="grid grid-cols-1 gap-12 border-b border-paper-line-on-ink pb-16 lg:grid-cols-12 lg:gap-12 lg:pb-20">
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe">{site.contactOverline}</span>
+              <span className="t-label text-taupe">{eyebrow}</span>
             </div>
             <h2
               id="contacto-heading"
@@ -66,19 +69,13 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
             >
               {title}
             </h2>
-            <p className="t-body mt-8 max-w-[52ch] text-lg text-paper-mute-on-ink">
-              {body}
-            </p>
+            <p className="t-body mt-8 max-w-[52ch] text-lg text-paper-mute-on-ink">{body}</p>
             <div className="mt-12 flex flex-wrap items-center gap-x-8 gap-y-4">
               {buttonHref ? (
                 <a
                   href={buttonHref}
                   target={buttonHref.startsWith("http") ? "_blank" : undefined}
-                  rel={
-                    buttonHref.startsWith("http")
-                      ? "noopener noreferrer"
-                      : undefined
-                  }
+                  rel={buttonHref.startsWith("http") ? "noopener noreferrer" : undefined}
                   className="group inline-flex items-center gap-3 bg-taupe px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-ink transition-colors duration-500 hover:bg-paper"
                 >
                   {buttonLabel}
@@ -95,7 +92,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
                   href={`mailto:${settings.contactEmail}`}
                   className="t-label inline-flex items-center gap-2 text-paper underline-offset-[6px] transition-colors hover:text-taupe hover:underline tap-target"
                 >
-                  {site.emailLabel} · {settings.contactEmail}
+                  {emailLabel} · {settings.contactEmail}
                 </a>
               ) : null}
             </div>
@@ -105,9 +102,7 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
             <dl className="space-y-6">
               {settings.contactPhone ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-overline text-paper-mute-on-ink">
-                    {site.phoneLabel}
-                  </dt>
+                  <dt className="t-overline text-paper-mute-on-ink">{site.phoneLabel}</dt>
                   <dd className="t-mono mt-2 text-lg text-paper">
                     <a
                       href={`tel:${settings.contactPhone.replace(/\s/g, "")}`}
@@ -120,29 +115,19 @@ export function ContactCTA({ settings, section }: ContactCTAProps) {
               ) : null}
               {settings.whatsappNumber ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-overline text-paper-mute-on-ink">
-                    {site.whatsappLabel}
-                  </dt>
-                  <dd className="t-mono mt-2 text-lg text-paper">
-                    {settings.whatsappNumber}
-                  </dd>
+                  <dt className="t-overline text-paper-mute-on-ink">{site.whatsappLabel}</dt>
+                  <dd className="t-mono mt-2 text-lg text-paper">{settings.whatsappNumber}</dd>
                 </div>
               ) : null}
               {address ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-overline text-paper-mute-on-ink">
-                    {site.addressLabel}
-                  </dt>
-                  <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">
-                    {address}
-                  </dd>
+                  <dt className="t-overline text-paper-mute-on-ink">{site.addressLabel}</dt>
+                  <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">{address}</dd>
                 </div>
               ) : null}
               {settings.businessHours ? (
                 <div className="border-t border-paper-line-on-ink pt-4">
-                  <dt className="t-overline text-paper-mute-on-ink">
-                    {site.hoursLabel}
-                  </dt>
+                  <dt className="t-overline text-paper-mute-on-ink">{site.hoursLabel}</dt>
                   <dd className="t-mono mt-2 text-sm text-paper-mute-on-ink">
                     {settings.businessHours}
                   </dd>

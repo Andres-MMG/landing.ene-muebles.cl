@@ -1,96 +1,136 @@
-'use client';
+"use client";
 
-import { useState, useTransition } from 'react';
-import { adminPut } from '@/lib/admin/client';
+import { useState, useTransition } from "react";
+import { adminPut } from "@/lib/admin/client";
 
-type Values = {
+export type ContactCtaSectionFormValues = {
+  eyebrow: string;
   title: string;
   body: string;
   buttonLabel: string;
   buttonHref: string;
+  emailLabel: string;
 };
 
-type FieldKey = keyof Values;
+type FieldKey = keyof ContactCtaSectionFormValues;
 
 type FieldDef = {
   key: FieldKey;
   label: string;
-  type: 'text' | 'textarea';
+  type: "text" | "textarea";
+  maxLength: number;
   rows?: number;
   required?: boolean;
-  span?: 'half' | 'full';
+  span?: "half" | "full";
 };
 
 const FIELDS: FieldDef[] = [
-  { key: 'title', label: 'Título', type: 'text', required: true, span: 'half' },
-  { key: 'buttonLabel', label: 'Etiqueta del botón', type: 'text', required: true, span: 'half' },
-  { key: 'body', label: 'Cuerpo / bajada', type: 'textarea', rows: 4, span: 'full' },
-  { key: 'buttonHref', label: 'URL del botón (opcional — vacío usa WhatsApp)', type: 'text', span: 'full' },
+  {
+    key: "eyebrow",
+    label: "Etiqueta superior (opcional)",
+    type: "text",
+    maxLength: 80,
+    span: "half",
+  },
+  { key: "title", label: "Título", type: "text", maxLength: 200, required: true, span: "half" },
+  {
+    key: "body",
+    label: "Cuerpo / bajada",
+    type: "textarea",
+    maxLength: 1000,
+    rows: 4,
+    span: "full",
+  },
+  {
+    key: "buttonLabel",
+    label: "Etiqueta del botón",
+    type: "text",
+    maxLength: 60,
+    required: true,
+    span: "half",
+  },
+  {
+    key: "emailLabel",
+    label: "Etiqueta del correo (opcional)",
+    type: "text",
+    maxLength: 60,
+    span: "half",
+  },
+  {
+    key: "buttonHref",
+    label: "URL del botón (opcional — vacío usa WhatsApp)",
+    type: "text",
+    maxLength: 300,
+    span: "full",
+  },
 ];
 
 const inputClass =
-  'w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none';
+  "w-full border-0 border-b border-ink-line bg-transparent px-0 py-3 text-base text-ink placeholder:text-ink-soft focus:border-ink focus:outline-none";
 
-const labelClass =
-  't-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute';
+const labelClass = "t-mono block text-[10px] uppercase tracking-[0.22em] text-ink-mute";
 
 function normalizeSaveError(body: unknown): string {
-  if (!body || typeof body !== 'object') return '';
+  if (!body || typeof body !== "object") return "";
   const b = body as {
     error?: unknown;
     details?: { issues?: Array<{ path?: Array<string | number>; message?: string }> };
   };
   const err = b.error;
-  if (!err && !b.details?.issues?.length) return '';
+  if (!err && !b.details?.issues?.length) return "";
   const proxyIssueLines = (b.details?.issues ?? [])
     .map((i) => {
-      const path = Array.isArray(i.path) ? i.path.join('.') : '';
-      return path && i.message ? `${path}: ${i.message}` : i.message ?? '';
+      const path = Array.isArray(i.path) ? i.path.join(".") : "";
+      return path && i.message ? `${path}: ${i.message}` : (i.message ?? "");
     })
     .filter(Boolean)
-    .join('; ');
-  if (typeof err === 'string') {
+    .join("; ");
+  if (typeof err === "string") {
     return proxyIssueLines ? `${err} (${proxyIssueLines})` : err;
   }
-  if (typeof err !== 'object') return '';
+  if (typeof err !== "object") return "";
   const e = err as {
     name?: string;
     message?: string;
     details?: { errors?: Array<{ path?: string[]; message?: string }> };
   };
   const head: string[] = [];
-  if (e.name && e.name !== 'ApplicationError') head.push(e.name);
+  if (e.name && e.name !== "ApplicationError") head.push(e.name);
   if (e.message) head.push(e.message);
   const fieldErrors = Array.isArray(e.details?.errors) ? e.details.errors : [];
   const detail = fieldErrors
     .map((d) => {
-      const path = Array.isArray(d.path) ? d.path.join('.') : '';
-      return path && d.message ? `${path}: ${d.message}` : d.message ?? '';
+      const path = Array.isArray(d.path) ? d.path.join(".") : "";
+      return path && d.message ? `${path}: ${d.message}` : (d.message ?? "");
     })
     .filter(Boolean)
-    .join('; ');
-  if (detail) return `${head.join(': ')} (${detail})`;
-  if (head.length > 0) return proxyIssueLines ? `${head.join(': ')} (${proxyIssueLines})` : head.join(': ');
-  return 'No se pudieron guardar los ajustes.';
+    .join("; ");
+  if (detail) return `${head.join(": ")} (${detail})`;
+  if (head.length > 0) {
+    return proxyIssueLines ? `${head.join(": ")} (${proxyIssueLines})` : head.join(": ");
+  }
+  return "No se pudieron guardar los ajustes.";
 }
 
-export function buildSubmitPayload(values: Values): Record<string, unknown> {
+export function buildSubmitPayload(values: ContactCtaSectionFormValues): Record<string, unknown> {
   const payload: Record<string, unknown> = {
+    eyebrow: values.eyebrow.trim() || null,
     title: values.title.trim(),
     buttonLabel: values.buttonLabel.trim(),
+    emailLabel: values.emailLabel.trim() || null,
   };
   if (values.body.trim()) payload.body = values.body.trim();
   if (values.buttonHref.trim()) payload.buttonHref = values.buttonHref.trim();
   return payload;
 }
 
-export function ContactCtaSectionForm({ initial }: { initial: Values }) {
-  const [values, setValues] = useState<Values>(initial);
+export function ContactCtaSectionForm({ initial }: { initial: ContactCtaSectionFormValues }) {
+  const [values, setValues] = useState<ContactCtaSectionFormValues>(initial);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
   const [pending, startTransition] = useTransition();
 
-  function update<K extends FieldKey>(key: K, value: Values[K]) {
+  function update<K extends FieldKey>(key: K, value: ContactCtaSectionFormValues[K]) {
     setValues((prev) => ({ ...prev, [key]: value }));
     setSuccess(false);
   }
@@ -103,7 +143,7 @@ export function ContactCtaSectionForm({ initial }: { initial: Values }) {
 
     startTransition(async () => {
       try {
-        const body = await adminPut<unknown>('/api/admin/contact-cta-section', payload);
+        const body = await adminPut<unknown>("/api/admin/contact-cta-section", payload);
         const message = normalizeSaveError(body);
         if (message) {
           setError(message);
@@ -111,7 +151,7 @@ export function ContactCtaSectionForm({ initial }: { initial: Values }) {
         }
         setSuccess(true);
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'No se pudieron guardar los ajustes.');
+        setError(err instanceof Error ? err.message : "No se pudieron guardar los ajustes.");
       }
     });
   }
@@ -120,21 +160,24 @@ export function ContactCtaSectionForm({ initial }: { initial: Values }) {
     <form onSubmit={onSubmit} className="space-y-8" noValidate>
       <div className="grid grid-cols-1 gap-x-8 gap-y-6 sm:grid-cols-2">
         {FIELDS.map((field) => {
-          const colSpan = field.span === 'full' ? 'sm:col-span-2' : 'sm:col-span-1';
+          const colSpan = field.span === "full" ? "sm:col-span-2" : "sm:col-span-1";
           return (
             <label key={field.key} className={`block ${colSpan}`}>
               <span className={labelClass}>
                 {field.label}
                 {field.required ? (
-                  <span aria-hidden className="ml-2 text-taupe-deep">*</span>
+                  <span aria-hidden className="ml-2 text-taupe-deep">
+                    *
+                  </span>
                 ) : null}
               </span>
               <textarea
                 value={values[field.key]}
                 onChange={(e) => update(field.key, e.target.value)}
-                rows={field.type === 'textarea' ? field.rows ?? 4 : 2}
+                rows={field.type === "textarea" ? (field.rows ?? 4) : 2}
                 required={field.required}
-                className={inputClass + ' resize-y'}
+                maxLength={field.maxLength}
+                className={inputClass + " resize-y"}
               />
             </label>
           );
@@ -147,7 +190,10 @@ export function ContactCtaSectionForm({ initial }: { initial: Values }) {
         </p>
       ) : null}
       {success ? (
-        <p role="status" className="border-l-2 border-taupe-deep bg-cream-soft px-4 py-3 text-sm text-ink">
+        <p
+          role="status"
+          className="border-l-2 border-taupe-deep bg-cream-soft px-4 py-3 text-sm text-ink"
+        >
           Cambios guardados.
         </p>
       ) : null}
@@ -158,7 +204,7 @@ export function ContactCtaSectionForm({ initial }: { initial: Values }) {
           disabled={pending}
           className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep disabled:opacity-50"
         >
-          {pending ? 'Guardando…' : 'Guardar cambios'}
+          {pending ? "Guardando…" : "Guardar cambios"}
         </button>
         <p className="t-mono text-[11px] uppercase tracking-[0.22em] text-ink-mute">
           Marcados con <span className="text-taupe-deep">*</span> son obligatorios.

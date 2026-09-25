@@ -1,14 +1,14 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { site as siteTokens } from '@ene/ui-tokens';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { site as siteTokens } from "@ene/ui-tokens";
 
 const ORIGINAL_ENV = { ...process.env };
 
 beforeEach(() => {
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV };
-  process.env.STRAPI_INTERNAL_URL = 'http://localhost:1337';
-  process.env.STRAPI_API_TOKEN = 'test-token';
-  vi.stubGlobal('fetch', vi.fn());
+  process.env.STRAPI_INTERNAL_URL = "http://localhost:1337";
+  process.env.STRAPI_API_TOKEN = "test-token";
+  vi.stubGlobal("fetch", vi.fn());
 });
 
 afterEach(() => {
@@ -16,78 +16,99 @@ afterEach(() => {
   process.env = ORIGINAL_ENV;
 });
 
-const mockFetch = (status: number, body: unknown) => {
+function mockFetch(status: number, body: unknown) {
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json' },
-    })
+      headers: { "Content-Type": "application/json" },
+    }),
   );
-};
+}
 
-describe('Admin /admin/about data-loader — fallback contract', () => {
-  // The about section form has twelve scalar fields plus four value
-  // rows. When Strapi returns `data: null` the form must show the
-  // shared ui-tokens fallback (eyebrow / title / mission / vision /
-  // values) so the editor sees the live site copy and does not have
-  // to retype it. The contract here mirrors the hero section test.
-
-  it('returns the ui-tokens fallback when Strapi responds with data: null', async () => {
+describe("Admin /admin/about data loader", () => {
+  it("uses the complete public fallback only when Strapi returns data: null", async () => {
     mockFetch(200, { data: null });
-    const { getAboutSection } = await import('./page');
-    const section = await getAboutSection();
-    expect(section.eyebrow).toBe(siteTokens.aboutOverline);
-    expect(section.title).toBe(siteTokens.aboutHeading);
-    expect(section.intro).toBe(siteTokens.aboutIntro);
-    expect(section.missionLabel).toBe(siteTokens.missionLabel);
-    expect(section.missionHeading).toBe(siteTokens.missionHeading);
-    expect(section.visionLabel).toBe(siteTokens.visionLabel);
-    expect(section.visionHeading).toBe(siteTokens.visionHeading);
-    expect(section.valuesLabel).toBe(siteTokens.valuesLabel);
-    expect(section.valuesHeading).toBe(siteTokens.valuesHeading);
-    // Four `values` rows come from the same site-tokens copy the
-    // public site renders.
-    expect(Array.isArray(section.values)).toBe(true);
-    expect(section.values?.length).toBe(siteTokens.values.length);
-    expect(section.values?.[0]?.title).toBe(siteTokens.values[0]?.title);
-  });
 
-  it('returns the ui-tokens fallback when Strapi responds with an empty object', async () => {
-    mockFetch(200, { data: {} });
-    const { getAboutSection } = await import('./page');
-    const section = await getAboutSection();
-    // `Object.keys(data).length === 0` triggers the fallback even when
-    // Strapi returns 200 with `{}` — same rule as the hero section.
-    expect(section.title).toBe(siteTokens.aboutHeading);
-    expect(section.missionHeading).toBe(siteTokens.missionHeading);
-  });
+    const { getAboutSectionForAdmin } = await import("./page");
+    const section = await getAboutSectionForAdmin();
 
-  it('returns the ui-tokens fallback when the upstream fetch throws', async () => {
-    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(
-      new Error('ECONNREFUSED')
-    );
-    const { getAboutSection } = await import('./page');
-    const section = await getAboutSection();
-    expect(section.title).toBe(siteTokens.aboutHeading);
-  });
-
-  it('returns Strapi-supplied values verbatim when the singleton is seeded', async () => {
-    mockFetch(200, {
-      data: {
-        eyebrow: 'Sobre nosotros',
-        title: 'Una empresa con historia',
-        intro: 'Intro CMS',
-        missionHeading: 'Heading CMS',
-        values: [{ title: 'CMS value', body: 'CMS body' }],
-      },
+    expect(section).toMatchObject({
+      eyebrow: siteTokens.aboutOverline,
+      title: siteTokens.aboutHeading,
+      pageEyebrow: siteTokens.aboutOverlineSec,
+      pageTitle: siteTokens.aboutHeadingSec,
+      yearsInBusinessLabel: "Años en el rubro",
+      productCountLabel: "Productos en catálogo",
+      productLineCountLabel: "Líneas de producto",
+      coverageLabel: "Cobertura",
+      warrantyLabel: "Garantía",
+      projectCtaTitle: "¿Listo para cotizar tu proyecto institucional?",
+      projectCtaBody:
+        "Envíanos tu lista, región y plazos. Te respondemos con ficha técnica y propuesta en 24 h hábiles.",
+      projectCtaLabel: "Ir a contacto",
     });
-    const { getAboutSection } = await import('./page');
-    const section = await getAboutSection();
-    expect(section.eyebrow).toBe('Sobre nosotros');
-    expect(section.title).toBe('Una empresa con historia');
-    expect(section.intro).toBe('Intro CMS');
-    expect(section.missionHeading).toBe('Heading CMS');
-    expect(section.values?.[0]?.title).toBe('CMS value');
-    expect(section.values?.[0]?.body).toBe('CMS body');
+  });
+
+  it("uses the public fallback for an upstream 404", async () => {
+    mockFetch(404, { error: { message: "Not Found" } });
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    const section = await getAboutSectionForAdmin();
+
+    expect(section.pageTitle).toBe(siteTokens.aboutHeadingSec);
+  });
+
+  it("keeps a real partial document partial instead of replacing it with fallback copy", async () => {
+    mockFetch(200, { data: { pageTitle: "Título parcial del CMS" } });
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    const section = await getAboutSectionForAdmin();
+
+    expect(section).toEqual({ pageTitle: "Título parcial del CMS" });
+    expect(section.eyebrow).toBeUndefined();
+  });
+
+  it("keeps an empty real object instead of treating it as an absent singleton", async () => {
+    mockFetch(200, { data: {} });
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    await expect(getAboutSectionForAdmin()).resolves.toEqual({});
+  });
+
+  it("omits the Authorization header when the read token is blank", async () => {
+    process.env.STRAPI_API_TOKEN = "   ";
+    mockFetch(200, { data: null });
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    await getAboutSectionForAdmin();
+
+    const init = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as
+      | RequestInit
+      | undefined;
+    expect(init?.headers).toBeUndefined();
+  });
+
+  it("fails closed on network failures", async () => {
+    (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    await expect(getAboutSectionForAdmin()).rejects.toThrow("ECONNREFUSED");
+  });
+
+  it("fails closed on non-not-found upstream failures", async () => {
+    mockFetch(500, { error: { message: "cms down" } });
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    await expect(getAboutSectionForAdmin()).rejects.toThrow("(500)");
+  });
+
+  it.each<[string, unknown]>([
+    ["an envelope without data", { result: {} }],
+    ["a non-object document", { data: "invalid" }],
+  ])("fails closed when Strapi returns %s", async (_label: string, body: unknown) => {
+    mockFetch(200, body);
+
+    const { getAboutSectionForAdmin } = await import("./page");
+    await expect(getAboutSectionForAdmin()).rejects.toThrow(/inválid/iu);
   });
 });

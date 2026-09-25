@@ -1,4 +1,7 @@
+import type { Metadata } from "next";
 import {
+  FALLBACK_SITE_SETTINGS,
+  getContactPage,
   getContactProductBySlug,
   getContactProductOptions,
   getSiteSettings,
@@ -6,8 +9,9 @@ import {
 import { buildWhatsAppHandoff } from "@/lib/whatsapp";
 import { formatAddress } from "@/lib/address";
 import { normalizeProductSlug } from "@/lib/lead-policy";
-import { site } from "@ene/ui-tokens";
 import { ContactForm } from "@/components/ContactForm";
+import { getLegalPage } from "@/lib/legal-pages";
+import { buildSeoMetadata, FALLBACK_SHARE_IMAGE_ALT, resolveSeoText } from "@/lib/seo-metadata";
 
 // Must not be statically prerendered at build time: this page fetches
 // site settings from the CMS, which is unreachable during `next build`
@@ -15,11 +19,23 @@ import { ContactForm } from "@/components/ContactForm";
 // in lib/strapi.ts keep their own 60s SWR cache at runtime.
 export const dynamic = "force-dynamic";
 
-export const metadata = {
-  title: "Contacto",
-  description:
-    "Habla con Ene Muebles: WhatsApp, email, teléfono y dirección para cotizar mobiliario escolar y de oficina para tu institución.",
-};
+const CONTACT_METADATA_TITLE = "Contacto";
+const CONTACT_METADATA_DESCRIPTION =
+  "Habla con Ene Muebles: WhatsApp, email, teléfono y dirección para cotizar mobiliario escolar y de oficina para tu institución.";
+
+export async function generateMetadata(): Promise<Metadata> {
+  const [content, settings] = await Promise.all([
+    getContactPage(),
+    getSiteSettings().catch(() => FALLBACK_SITE_SETTINGS),
+  ]);
+  return buildSeoMetadata({
+    title: resolveSeoText(content.seoTitle) ?? CONTACT_METADATA_TITLE,
+    description: resolveSeoText(content.seoDescription) ?? CONTACT_METADATA_DESCRIPTION,
+    path: "/contacto",
+    siteName: settings.siteName,
+    imageAlt: resolveSeoText(settings.seoShareImageAlt) ?? FALLBACK_SHARE_IMAGE_ALT,
+  });
+}
 
 type ContactoPageProps = {
   searchParams?: Promise<{ product?: string | string[] }>;
@@ -30,10 +46,12 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
   const requestedSlug = normalizeProductSlug(
     Array.isArray(requestedProduct) ? requestedProduct[0] : requestedProduct,
   );
-  const [settings, productOptions, selectedProduct] = await Promise.all([
+  const [settings, contactPage, productOptions, selectedProduct, privacyPage] = await Promise.all([
     getSiteSettings(),
+    getContactPage(),
     getContactProductOptions(),
     getContactProductBySlug(requestedSlug),
+    getLegalPage("privacy"),
   ]);
   // B1 (U7): structured address — the street renders alone when no
   // city/region is configured (both are unconfirmed), and appends
@@ -49,18 +67,16 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
           <div className="lg:col-span-7">
             <div className="flex items-center gap-3">
               <span className="block h-px w-10 bg-taupe" aria-hidden />
-              <span className="t-label text-taupe-text">
-                {site.contactOverline}
-              </span>
+              <span className="t-label text-taupe-text">{contactPage.heroEyebrow}</span>
             </div>
             <h1
               id="contacto-heading"
               className="t-display mt-8 max-w-[20ch] text-[clamp(2.5rem,1.25rem+5vw,5rem)] text-ink"
             >
-              {site.contactHeadingPage}
+              {contactPage.heroTitle}
             </h1>
             <p className="t-body mt-8 max-w-[55ch] text-lg text-ink-mute sm:text-xl">
-              {site.contactBodyPage}
+              {contactPage.heroBody}
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-x-8 gap-y-4">
               {whatsappHref ? (
@@ -70,7 +86,7 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-3 bg-ink px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-paper transition-colors duration-500 hover:bg-taupe-deep"
                 >
-                  {site.whatsappCta}
+                  {contactPage.whatsappCtaLabel}
                   <span aria-hidden>→</span>
                 </a>
               ) : null}
@@ -79,21 +95,17 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
                   href={`mailto:${settings.contactEmail}`}
                   className="t-label text-ink underline-offset-[6px] hover:text-taupe-text hover:underline tap-target"
                 >
-                  {site.emailLabel} · {settings.contactEmail}
+                  {contactPage.emailCtaLabel} · {settings.contactEmail}
                 </a>
               ) : null}
             </div>
           </div>
           <aside className="lg:col-span-4 lg:col-start-9">
-            <p className="t-overline text-ink-mute">
-              Si prefieres
-            </p>
+            <p className="t-overline text-ink-mute">{contactPage.alternateContactEyebrow}</p>
             <dl className="mt-4 space-y-0 border-t border-ink-line">
               {settings.contactPhone ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-overline text-ink-mute">
-                    {site.phoneLabel}
-                  </dt>
+                  <dt className="t-overline text-ink-mute">{contactPage.phoneContactLabel}</dt>
                   <dd className="t-mono text-base text-ink">
                     <a
                       href={`tel:${settings.contactPhone.replace(/\s/g, "")}`}
@@ -106,32 +118,20 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
               ) : null}
               {settings.whatsappNumber ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-overline text-ink-mute">
-                    {site.whatsappLabel}
-                  </dt>
-                  <dd className="t-mono text-base text-ink">
-                    {settings.whatsappNumber}
-                  </dd>
+                  <dt className="t-overline text-ink-mute">{contactPage.whatsappContactLabel}</dt>
+                  <dd className="t-mono text-base text-ink">{settings.whatsappNumber}</dd>
                 </div>
               ) : null}
               {settings.businessHours ? (
                 <div className="flex items-baseline justify-between border-b border-ink-line py-4">
-                  <dt className="t-overline text-ink-mute">
-                    {site.hoursLabel}
-                  </dt>
-                  <dd className="t-mono text-base text-ink">
-                    {settings.businessHours}
-                  </dd>
+                  <dt className="t-overline text-ink-mute">{contactPage.businessHoursLabel}</dt>
+                  <dd className="t-mono text-base text-ink">{settings.businessHours}</dd>
                 </div>
               ) : null}
               {address ? (
                 <div className="flex items-baseline justify-between py-4">
-                  <dt className="t-overline text-ink-mute">
-                    {site.addressLabel}
-                  </dt>
-                  <dd className="t-mono text-sm text-ink-mute">
-                    {address}
-                  </dd>
+                  <dt className="t-overline text-ink-mute">{contactPage.addressLabel}</dt>
+                  <dd className="t-mono text-sm text-ink-mute">{address}</dd>
                 </div>
               ) : null}
             </dl>
@@ -145,18 +145,33 @@ export default async function ContactoPage({ searchParams }: ContactoPageProps) 
             <div className="lg:col-span-5">
               <div className="flex items-center gap-3">
                 <span className="block h-px w-10 bg-taupe" aria-hidden />
-                <span className="t-label text-taupe">Formulario</span>
+                <span className="t-label text-taupe">{contactPage.formEyebrow}</span>
               </div>
               <h2 className="t-h2 mt-6 text-[clamp(2rem,1.2rem+3vw,3rem)] text-paper">
-                Envíanos tu requerimiento.
+                {contactPage.formTitle}
               </h2>
-              <p className="t-body mt-6 text-base text-paper-mute-on-ink">
-                {site.contactoNote}
-              </p>
+              <p className="t-body mt-6 text-base text-paper-mute-on-ink">{contactPage.formBody}</p>
             </div>
             <ContactForm
+              copy={{
+                nameFieldLabel: contactPage.nameFieldLabel,
+                institutionFieldLabel: contactPage.institutionFieldLabel,
+                emailFieldLabel: contactPage.emailFieldLabel,
+                phoneFieldLabel: contactPage.phoneFieldLabel,
+                productFieldLabel: contactPage.productFieldLabel,
+                generalInquiryLabel: contactPage.generalInquiryLabel,
+                regionFieldLabel: contactPage.regionFieldLabel,
+                regionPlaceholder: contactPage.regionPlaceholder,
+                messageFieldLabel: contactPage.messageFieldLabel,
+                consentBeforeLink: contactPage.consentBeforeLink,
+                consentPrivacyLinkLabel: contactPage.consentPrivacyLinkLabel,
+                consentAfterLink: contactPage.consentAfterLink,
+                responseTimeText: contactPage.responseTimeText,
+                submitLabel: contactPage.submitLabel,
+              }}
               productOptions={productOptions}
               initialProductSlug={selectedProduct?.slug ?? null}
+              consentVersion={privacyPage.version}
             />
           </div>
         </div>

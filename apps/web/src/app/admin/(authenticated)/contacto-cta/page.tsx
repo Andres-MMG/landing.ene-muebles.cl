@@ -1,54 +1,73 @@
-import { ContactCtaSectionForm } from './ContactCtaSectionForm';
-import { resolveSection, sectionFallbacks } from '@/lib/strapi';
+import { site as siteTokens } from "@ene/ui-tokens";
+import { ContactCtaSectionForm } from "./ContactCtaSectionForm";
+import { sectionFallbacks } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 export const metadata = {
-  title: 'Contacto CTA · Ene Muebles',
+  title: "Contacto CTA · Ene Muebles",
   robots: { index: false, follow: false },
 };
 
-const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '');
-const TOKEN = process.env.STRAPI_API_TOKEN ?? '';
-
-type ContactCtaResponse = {
-  data: ContactCtaShape | null;
-};
+const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
+const TOKEN = process.env.STRAPI_API_TOKEN?.trim();
 
 type ContactCtaShape = {
+  eyebrow?: string;
   title?: string;
   body?: string;
   buttonLabel?: string;
   buttonHref?: string;
+  emailLabel?: string;
 };
 
-/**
- * Read the `contact-cta-section` singleton with the admin token and
- * apply the same fallback the public read helper applies when
- * Strapi responds with `data: null` or an empty object. Exported so
- * the matching test (see `page.test.ts`) can exercise the fallback
- * contract without rendering the page.
- */
-export async function getContactCtaSection(): Promise<ContactCtaShape> {
-  try {
-    const res = await fetch(`${STRAPI}/api/contact-cta-section`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
-      cache: 'no-store',
-    });
-    if (!res.ok) return sectionFallbacks.contactCta();
-    const json = (await res.json().catch(() => null)) as ContactCtaResponse | null;
-    return resolveSection(json?.data ?? null, sectionFallbacks.contactCta());
-  } catch {
-    return sectionFallbacks.contactCta();
-  }
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function contactCtaFallback(): ContactCtaShape {
+  const fallback = sectionFallbacks.contactCta() as ContactCtaShape;
+  return {
+    ...fallback,
+    eyebrow: fallback.eyebrow ?? siteTokens.contactOverline,
+    emailLabel: fallback.emailLabel ?? siteTokens.emailLabel,
+  };
 }
 
 /**
- * Admin editor for the dark contact call-to-action block that closes
- * the home page and the /contacto page. The CTA href is optional:
- * when left empty the public component builds a WhatsApp link from
- * `settings.whatsappNumber`. Setting an explicit href (e.g. a
- * mailto: or an external URL) overrides that behavior.
+ * Read the singleton without masking operational failures. Fallback
+ * copy represents only a missing singleton (404 or `data: null`);
+ * an existing partial document remains the editor's primary value.
+ */
+export async function getContactCtaSection(): Promise<ContactCtaShape> {
+  const response = await fetch(`${STRAPI}/api/contact-cta-section`, {
+    ...(TOKEN ? { headers: { Authorization: `Bearer ${TOKEN}` } } : {}),
+    cache: "no-store",
+  });
+
+  if (response.status === 404) return contactCtaFallback();
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el bloque Contacto CTA (${response.status})`);
+  }
+
+  const json: unknown = await response.json();
+  if (!isRecord(json) || !Object.prototype.hasOwnProperty.call(json, "data")) {
+    throw new Error("Strapi devolvió una respuesta inválida para el bloque Contacto CTA");
+  }
+
+  if (json.data === null) return contactCtaFallback();
+  if (!isRecord(json.data)) {
+    throw new Error("Strapi devolvió contenido inválido para el bloque Contacto CTA");
+  }
+
+  return json.data as ContactCtaShape;
+}
+
+/**
+ * Admin editor for the shared dark call-to-action rendered on the
+ * home, about, catalog, category, and product pages. `/contacto`
+ * owns a separate page-specific block. An empty button URL keeps the
+ * existing WhatsApp handoff built from the site settings.
  */
 export default async function AdminContactCtaPage() {
   const setting = await getContactCtaSection();
@@ -64,18 +83,20 @@ export default async function AdminContactCtaPage() {
         </p>
         <h1 className="t-display mt-3 text-4xl text-ink">Bloque «Contacto CTA»</h1>
         <p className="t-mono mt-3 text-sm text-ink-mute">
-          Bloque oscuro de cierre en / y /contacto. Si dejas la URL vacía,
-          el botón redirige a WhatsApp (usando el número del sitio).
+          Bloque oscuro compartido al cierre de inicio, nosotros, catálogo, categorías y productos.
+          Si dejas la URL vacía, el botón redirige a WhatsApp usando el número del sitio.
         </p>
       </div>
 
       <div className="mt-10 rounded-sm border border-ink-line bg-paper-pure p-6 sm:p-10">
         <ContactCtaSectionForm
           initial={{
-            title: setting.title ?? '',
-            body: setting.body ?? '',
-            buttonLabel: setting.buttonLabel ?? '',
-            buttonHref: setting.buttonHref ?? '',
+            eyebrow: setting.eyebrow ?? "",
+            title: setting.title ?? "",
+            body: setting.body ?? "",
+            buttonLabel: setting.buttonLabel ?? "",
+            buttonHref: setting.buttonHref ?? "",
+            emailLabel: setting.emailLabel ?? "",
           }}
         />
       </div>

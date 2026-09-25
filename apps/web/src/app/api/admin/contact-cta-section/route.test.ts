@@ -1,30 +1,35 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock('next/headers', () => ({
-  cookies: vi.fn().mockResolvedValue({
-    get: vi.fn().mockReturnValue({ value: 'mock-session-token' }),
-  }),
-}));
+const requireAdmin = vi.hoisted(() => vi.fn());
+const strapiAuthFailure = vi.hoisted(() =>
+  vi.fn(() =>
+    Response.json({ error: "El servidor de contenido rechazó la autenticación." }, { status: 502 }),
+  ),
+);
 
-vi.mock('@/lib/admin/session', () => ({
-  getServerSession: vi.fn().mockResolvedValue({ sub: 'admin-1', role: 'owner' }),
+vi.mock("@/lib/admin/require-admin", () => ({ requireAdmin, strapiAuthFailure }));
+vi.mock("@/lib/admin/strapi-admin", () => ({
+  getStrapiAdminToken: vi.fn().mockReturnValue("mock-strapi-token"),
 }));
-
-vi.mock('@/lib/admin/strapi-admin', () => ({
-  getStrapiAdminToken: vi.fn().mockReturnValue('mock-strapi-token'),
-}));
-
-vi.mock('next/cache', () => ({
-  revalidateTag: vi.fn(),
-}));
+vi.mock("next/cache", () => ({ revalidateTag: vi.fn() }));
 
 const ORIGINAL_ENV = { ...process.env };
 
+const payload = {
+  eyebrow: "  Proyectos  ",
+  title: "  Hablemos de tu proyecto.  ",
+  body: "  Cuéntanos qué necesitas.  ",
+  buttonLabel: "  Hablar por WhatsApp  ",
+  buttonHref: "  https://wa.me/56912345678  ",
+  emailLabel: "  Escríbenos  ",
+};
+
 beforeEach(() => {
   vi.resetModules();
-  process.env = { ...ORIGINAL_ENV };
-  process.env.STRAPI_INTERNAL_URL = 'http://localhost:1337';
-  vi.stubGlobal('fetch', vi.fn());
+  vi.clearAllMocks();
+  requireAdmin.mockResolvedValue({ documentId: "admin-1", active: true });
+  process.env = { ...ORIGINAL_ENV, STRAPI_INTERNAL_URL: "http://localhost:1337" };
+  vi.stubGlobal("fetch", vi.fn());
 });
 
 afterEach(() => {
@@ -32,132 +37,183 @@ afterEach(() => {
   process.env = ORIGINAL_ENV;
 });
 
-const mockFetch = (status: number, body: unknown) => {
+function mockJson(status: number, body: unknown) {
   (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
     new Response(JSON.stringify(body), {
       status,
-      headers: { 'Content-Type': 'application/json' },
-    })
+      headers: { "Content-Type": "application/json" },
+    }),
   );
-};
+}
 
-const callPut = async (payload: unknown) => {
-  const { PUT } = await import('./route');
-  const req = new Request('http://localhost/api/admin/contact-cta-section', {
-    method: 'PUT',
-    body: JSON.stringify(payload),
-    headers: { 'Content-Type': 'application/json' },
+function mockText(status: number, body = "not-json") {
+  (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
+    new Response(body, { status, headers: { "Content-Type": "text/plain" } }),
+  );
+}
+
+async function callPut(body: unknown) {
+  const { PUT } = await import("./route");
+  const request = new Request("http://localhost/api/admin/contact-cta-section", {
+    method: "PUT",
+    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
   });
-  return PUT(req as unknown as Parameters<typeof PUT>[0]);
-};
+  return PUT(request as unknown as Parameters<typeof PUT>[0]);
+}
 
-const callGet = async () => {
-  const { GET } = await import('./route');
+async function callGet() {
+  const { GET } = await import("./route");
   return GET();
-};
+}
 
-const readSentBody = async (): Promise<unknown> => {
-  const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-  const init0 = calls[0]?.[1] as RequestInit | undefined;
-  return init0?.body ? JSON.parse(init0.body as string) : null;
-};
+function sentRequestInit(): RequestInit {
+  return (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[1] as RequestInit;
+}
 
-const readSentUrl = async (): Promise<string> => {
-  const calls = (fetch as unknown as ReturnType<typeof vi.fn>).mock.calls;
-  return String(calls[0]?.[0] ?? '');
-};
+describe("GET /api/admin/contact-cta-section", () => {
+  it("allows an active admin to read the singleton with the admin token", async () => {
+    mockJson(200, { data: payload });
 
-describe('PUT /api/admin/contact-cta-section — validation', () => {
-  it('rejects empty title / buttonLabel with 400', async () => {
-    const res = await callPut({ title: '', buttonLabel: '' });
-    expect(res.status).toBe(400);
-    const body = (await res.json()) as { details?: { issues?: Array<{ path?: Array<string | number> }> } };
-    const paths = (body.details?.issues ?? []).flatMap((i) => i.path ?? []);
-    expect(paths).toContain('title');
-    expect(paths).toContain('buttonLabel');
+    const response = await callGet();
+
+    expect(response.status).toBe(200);
+    expect(requireAdmin).toHaveBeenCalledOnce();
+    expect(String((fetch as unknown as ReturnType<typeof vi.fn>).mock.calls[0]?.[0])).toContain(
+      "/api/contact-cta-section",
+    );
+    expect(new Headers(sentRequestInit().headers).get("authorization")).toBe(
+      "Bearer mock-strapi-token",
+    );
   });
 
-  it('rejects whitespace-only title with 400', async () => {
-    const res = await callPut({ title: '   ', buttonLabel: 'Hablar por WhatsApp' });
-    expect(res.status).toBe(400);
+  it("returns 401 without contacting Strapi when the admin is inactive", async () => {
+    requireAdmin.mockResolvedValueOnce(null);
+
+    const response = await callGet();
+
+    expect(response.status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
-  it('forwards trimmed required fields and optional buttonHref', async () => {
-    mockFetch(200, { data: { ok: true } });
-    const res = await callPut({
-      title: '  Cotiza tu proyecto  ',
-      body: '\tCuéntanos qué necesitas\n',
-      buttonLabel: ' Hablar por WhatsApp ',
-      buttonHref: '  https://wa.me/56912345678  ',
-    });
-    expect(res.status).toBe(200);
-    const body = (await readSentBody()) as { data?: Record<string, unknown> };
-    expect(body.data?.title).toBe('Cotiza tu proyecto');
-    expect(body.data?.body).toBe('Cuéntanos qué necesitas');
-    expect(body.data?.buttonLabel).toBe('Hablar por WhatsApp');
-    expect(body.data?.buttonHref).toBe('https://wa.me/56912345678');
+  it("maps an upstream 401 to the Strapi authentication gateway response", async () => {
+    mockJson(401, { error: { message: "Unauthorized" } });
+
+    const response = await callGet();
+
+    expect(response.status).toBe(502);
+    expect(strapiAuthFailure).toHaveBeenCalledOnce();
   });
 
-  it('omits optional body/buttonHref when blank', async () => {
-    mockFetch(200, { data: { ok: true } });
-    await callPut({
-      title: 'Cotiza',
-      buttonLabel: 'Hablar',
-      body: '   ',
-      buttonHref: '',
-    });
-    const body = (await readSentBody()) as { data?: Record<string, unknown> };
-    expect('body' in (body.data ?? {})).toBe(false);
-    expect('buttonHref' in (body.data ?? {})).toBe(false);
-  });
+  it.each([200, 503])(
+    "returns explicit JSON when upstream status %s is not JSON",
+    async (status: number) => {
+      mockText(status);
 
-  it('forwards upstream 400 with its status', async () => {
-    mockFetch(400, { error: { message: 'invalid' } });
-    const res = await callPut({ title: 'X', buttonLabel: 'Y' });
-    expect(res.status).toBe(400);
-  });
+      const response = await callGet();
 
-  it('returns 401 when the admin session is missing', async () => {
-    const session = await import('@/lib/admin/session');
-    (session.getServerSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
-    const res = await callPut({ title: 'X', buttonLabel: 'Y' });
-    expect(res.status).toBe(401);
-  });
+      expect(response.status).toBe(status === 200 ? 502 : status);
+      await expect(response.json()).resolves.toMatchObject({ error: expect.any(String) });
+    },
+  );
 });
 
-describe('GET /api/admin/contact-cta-section — read-through proxy', () => {
-  it('forwards the upstream payload to the admin page with status 200', async () => {
-    const upstream = {
+describe("PUT /api/admin/contact-cta-section", () => {
+  it("forwards trimmed legacy fields and the new optional labels", async () => {
+    mockJson(200, { data: { ok: true } });
+
+    const response = await callPut(payload);
+
+    expect(response.status).toBe(200);
+    expect(JSON.parse(String(sentRequestInit().body))).toEqual({
       data: {
-        id: 1,
-        title: 'Cotiza tu proyecto institucional.',
-        body: 'Cuéntanos qué necesitas.',
-        buttonLabel: 'Hablar por WhatsApp',
-        buttonHref: null,
+        eyebrow: "Proyectos",
+        title: "Hablemos de tu proyecto.",
+        body: "Cuéntanos qué necesitas.",
+        buttonLabel: "Hablar por WhatsApp",
+        buttonHref: "https://wa.me/56912345678",
+        emailLabel: "Escríbenos",
       },
-    };
-    mockFetch(200, upstream);
-    const res = await callGet();
-    expect(res.status).toBe(200);
-    const body = (await res.json()) as { data?: Record<string, unknown> };
-    expect(body.data?.title).toBe('Cotiza tu proyecto institucional.');
-    expect(body.data?.buttonLabel).toBe('Hablar por WhatsApp');
-    expect(body.data?.buttonHref).toBeNull();
+    });
   });
 
-  it('targets /api/contact-cta-section on the upstream call', async () => {
-    mockFetch(200, { data: null });
-    await callGet();
-    const url = await readSentUrl();
-    expect(url).toContain('/api/contact-cta-section');
+  it("forwards explicit null for blank new optional labels", async () => {
+    mockJson(200, { data: { ok: true } });
+
+    await callPut({ ...payload, eyebrow: null, emailLabel: null });
+
+    expect(JSON.parse(String(sentRequestInit().body))).toMatchObject({
+      data: { eyebrow: null, emailLabel: null },
+    });
   });
 
-  it('returns 401 when the admin session is missing', async () => {
-    const session = await import('@/lib/admin/session');
-    (session.getServerSession as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(null);
-    const res = await callGet();
-    expect(res.status).toBe(401);
-    const body = (await res.json()) as { error?: string };
-    expect(body.error).toBe('Unauthorized');
+  it.each([
+    ["eyebrow", "x".repeat(81)],
+    ["emailLabel", "x".repeat(61)],
+    ["title", "x".repeat(201)],
+    ["body", "x".repeat(1001)],
+    ["buttonLabel", "x".repeat(61)],
+    ["buttonHref", "x".repeat(301)],
+  ])(
+    "rejects %s values over the configured bound",
+    async (field: keyof typeof payload, value: string) => {
+      const response = await callPut({ ...payload, [field]: value });
+
+      expect(response.status).toBe(400);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("rejects blank required fields before contacting Strapi", async () => {
+    const response = await callPut({ ...payload, title: " ", buttonLabel: "" });
+
+    expect(response.status).toBe(400);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("returns 401 without validating or contacting Strapi when the admin is inactive", async () => {
+    requireAdmin.mockResolvedValueOnce(null);
+
+    const response = await callPut(payload);
+
+    expect(response.status).toBe(401);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
+  it("maps an upstream 401 to the Strapi authentication gateway response", async () => {
+    mockJson(401, { error: { message: "Unauthorized" } });
+
+    const response = await callPut(payload);
+
+    expect(response.status).toBe(502);
+    expect(strapiAuthFailure).toHaveBeenCalledOnce();
+    const cache = await import("next/cache");
+    expect(cache.revalidateTag).not.toHaveBeenCalled();
+  });
+
+  it("returns explicit JSON for a non-JSON upstream failure", async () => {
+    mockText(500);
+
+    const response = await callPut(payload);
+
+    expect(response.status).toBe(500);
+    await expect(response.json()).resolves.toMatchObject({ error: expect.any(String) });
+  });
+
+  it("invalidates the sections tag only after a successful write", async () => {
+    mockJson(200, { data: { ok: true } });
+    await callPut(payload);
+
+    const cache = await import("next/cache");
+    const { STRAPI_CACHE_TAGS } = await import("@/lib/strapi");
+    expect(cache.revalidateTag).toHaveBeenCalledWith(STRAPI_CACHE_TAGS.sections, { expire: 0 });
+  });
+
+  it("does not invalidate the sections tag after a failed write", async () => {
+    mockJson(400, { error: { message: "invalid" } });
+    await callPut(payload);
+
+    const cache = await import("next/cache");
+    expect(cache.revalidateTag).not.toHaveBeenCalled();
   });
 });

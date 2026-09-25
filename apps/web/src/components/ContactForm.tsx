@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { site } from "@ene/ui-tokens";
 import { SUPPORTED_REGIONS } from "@/lib/lead-policy";
 import type { ContactProductOption } from "@/lib/strapi";
 
@@ -21,13 +20,11 @@ import type { ContactProductOption } from "@/lib/strapi";
  * `{ ok, errors?: Record<string, string> }` — 201 on success.
  */
 
-const CONSENT_VERSION = "2026-01";
-
 /** Error text color on the ink section — light salmon keeps contrast on dark. */
 const ERROR_TEXT = "text-[#ffb4ab]";
 
 type FieldErrors = Partial<
-  Record<"name" | "email" | "phone" | "consent" | "message" | "form", string>
+  Record<"name" | "email" | "phone" | "region" | "message" | "consent" | "form", string>
 >;
 
 type Status =
@@ -40,19 +37,41 @@ const FIELD_IDS: Record<keyof FieldErrors, string> = {
   name: "lead-name",
   email: "lead-email",
   phone: "lead-phone",
-  consent: "lead-consent",
+  region: "lead-region",
   message: "lead-message",
+  consent: "lead-consent",
   form: "lead-form-status",
 };
 
+export type ContactFormCopy = Readonly<{
+  nameFieldLabel: string;
+  institutionFieldLabel: string;
+  emailFieldLabel: string;
+  phoneFieldLabel: string;
+  productFieldLabel: string;
+  generalInquiryLabel: string;
+  regionFieldLabel: string;
+  regionPlaceholder: string;
+  messageFieldLabel: string;
+  consentBeforeLink: string;
+  consentPrivacyLinkLabel: string;
+  consentAfterLink: string;
+  responseTimeText: string;
+  submitLabel: string;
+}>;
+
 type ContactFormProps = {
+  copy: ContactFormCopy;
   productOptions?: ContactProductOption[];
   initialProductSlug?: string | null;
+  consentVersion: string;
 };
 
 export function ContactForm({
+  copy,
   productOptions = [],
   initialProductSlug = null,
+  consentVersion,
 }: ContactFormProps) {
   const [status, setStatus] = useState<Status>({ state: "idle" });
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -74,7 +93,7 @@ export function ContactForm({
   }, []);
 
   const focusFirstError = (fieldErrors: FieldErrors) => {
-    const firstField = (["name", "email", "phone", "consent", "message"] as const).find(
+    const firstField = (["name", "email", "phone", "region", "message", "consent"] as const).find(
       (field) => fieldErrors[field],
     );
     if (firstField) {
@@ -99,7 +118,7 @@ export function ContactForm({
       productSlug: data.get("productSlug"),
       message: data.get("message"),
       consent: data.get("consent") === "on",
-      consentVersion: CONSENT_VERSION,
+      consentVersion,
       website: data.get("website") ?? "",
       idempotencyKey: idempotencyKeyRef.current,
     };
@@ -110,9 +129,10 @@ export function ContactForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-      const json = (await res.json().catch(() => null)) as
-        | { ok?: boolean; errors?: Record<string, string> }
-        | null;
+      const json = (await res.json().catch(() => null)) as {
+        ok?: boolean;
+        errors?: Record<string, string>;
+      } | null;
 
       if (res.ok && json?.ok) {
         // A fresh key per successful submission: keeping the old one
@@ -131,8 +151,7 @@ export function ContactForm({
           fieldErrors[key as keyof FieldErrors] = message;
         }
       }
-      const formError =
-        json?.errors?.form ?? "No se pudo enviar la solicitud. Intenta nuevamente.";
+      const formError = json?.errors?.form ?? "No se pudo enviar la solicitud. Intenta nuevamente.";
       setErrors(fieldErrors);
       setStatus({ state: "error", message: formError });
       focusFirstError(fieldErrors);
@@ -147,8 +166,7 @@ export function ContactForm({
 
   const inputClasses =
     "mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper placeholder:text-paper-soft focus:border-taupe focus:outline-none aria-invalid:border-[#ffb4ab]";
-  const labelClasses =
-    "t-overline text-paper-mute-on-ink";
+  const labelClasses = "t-overline text-paper-mute-on-ink";
   const submitting = status.state === "submitting";
 
   return (
@@ -165,18 +183,12 @@ export function ContactForm({
         className="pointer-events-none absolute -left-[9999px] top-0 h-0 w-0 overflow-hidden"
       >
         <label htmlFor="lead-website">Website</label>
-        <input
-          id="lead-website"
-          type="text"
-          name="website"
-          tabIndex={-1}
-          autoComplete="off"
-        />
+        <input id="lead-website" type="text" name="website" tabIndex={-1} autoComplete="off" />
       </div>
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <label className="block">
-          <span className={labelClasses}>{site.contactoFieldName}</span>
+          <span className={labelClasses}>{copy.nameFieldLabel}</span>
           <input
             id={FIELD_IDS.name}
             type="text"
@@ -194,7 +206,7 @@ export function ContactForm({
           ) : null}
         </label>
         <label className="block">
-          <span className={labelClasses}>{site.contactoFieldCompany}</span>
+          <span className={labelClasses}>{copy.institutionFieldLabel}</span>
           <input
             id="lead-institution"
             type="text"
@@ -207,7 +219,7 @@ export function ContactForm({
 
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2">
         <label className="block">
-          <span className={labelClasses}>{site.contactoFieldEmail}</span>
+          <span className={labelClasses}>{copy.emailFieldLabel}</span>
           <input
             id={FIELD_IDS.email}
             type="email"
@@ -225,7 +237,7 @@ export function ContactForm({
           ) : null}
         </label>
         <label className="block">
-          <span className={labelClasses}>{site.contactoFieldPhone}</span>
+          <span className={labelClasses}>{copy.phoneFieldLabel}</span>
           <input
             id={FIELD_IDS.phone}
             type="tel"
@@ -244,7 +256,7 @@ export function ContactForm({
       </div>
 
       <label className="block">
-        <span className={labelClasses}>¿Sobre qué producto nos escribes?</span>
+        <span className={labelClasses}>{copy.productFieldLabel}</span>
         <select
           id="lead-product"
           name="productSlug"
@@ -252,7 +264,7 @@ export function ContactForm({
           className="mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper focus:border-taupe focus:outline-none"
         >
           <option value="" className="bg-ink text-paper">
-            Pregunta general
+            {copy.generalInquiryLabel}
           </option>
           {productOptions.map((product) => (
             <option key={product.slug} value={product.slug} className="bg-ink text-paper">
@@ -263,15 +275,17 @@ export function ContactForm({
       </label>
 
       <label className="block">
-        <span className={labelClasses}>{site.contactoFieldRegion}</span>
+        <span className={labelClasses}>{copy.regionFieldLabel}</span>
         <select
-          id="lead-region"
+          id={FIELD_IDS.region}
           name="region"
           defaultValue=""
-          className="mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper focus:border-taupe focus:outline-none"
+          aria-invalid={errors.region ? true : undefined}
+          aria-describedby={errors.region ? `${FIELD_IDS.region}-error` : undefined}
+          className="mt-2 w-full border-b border-paper-line-on-ink bg-transparent py-3 text-paper focus:border-taupe focus:outline-none aria-invalid:border-[#ffb4ab]"
         >
           <option value="" disabled className="bg-ink text-paper">
-            Selecciona una región
+            {copy.regionPlaceholder}
           </option>
           {SUPPORTED_REGIONS.map((region) => (
             <option key={region} value={region} className="bg-ink text-paper">
@@ -279,10 +293,15 @@ export function ContactForm({
             </option>
           ))}
         </select>
+        {errors.region ? (
+          <p id={`${FIELD_IDS.region}-error`} className={`t-mono mt-2 text-xs ${ERROR_TEXT}`}>
+            {errors.region}
+          </p>
+        ) : null}
       </label>
 
       <label className="block">
-        <span className={labelClasses}>{site.contactoFieldMessage}</span>
+        <span className={labelClasses}>{copy.messageFieldLabel}</span>
         <textarea
           id={FIELD_IDS.message}
           name="message"
@@ -311,14 +330,11 @@ export function ContactForm({
             className="mt-0.5 h-5 w-5 shrink-0 accent-taupe"
           />
           <span className="t-body text-sm text-paper-mute-on-ink">
-            Acepto la{" "}
-            <Link
-              href="/privacidad"
-              className="text-taupe underline-offset-[6px] hover:underline"
-            >
-              política de privacidad
+            {copy.consentBeforeLink}{" "}
+            <Link href="/privacidad" className="text-taupe underline-offset-[6px] hover:underline">
+              {copy.consentPrivacyLinkLabel}
             </Link>{" "}
-            y autorizo el uso de mis datos para recibir la cotización solicitada.
+            {copy.consentAfterLink}
           </span>
         </label>
         {errors.consent ? (
@@ -329,27 +345,20 @@ export function ContactForm({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-4 pt-6">
-        <p className="t-overline text-paper-mute-on-ink">
-          Respondemos en 24 h hábiles
-        </p>
+        <p className="t-overline text-paper-mute-on-ink">{copy.responseTimeText}</p>
         <button
           type="submit"
           disabled={submitting}
           className="inline-flex items-center gap-3 bg-taupe px-7 py-4 text-sm font-medium uppercase tracking-[0.18em] text-ink transition-colors duration-500 hover:bg-paper disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? "Enviando…" : site.contactoSubmit}
+          {submitting ? "Enviando…" : copy.submitLabel}
           <span aria-hidden>→</span>
         </button>
       </div>
 
       {/* Status region — announcements are polite so they do not
           interrupt the reading flow (lead-capture spec). */}
-      <div
-        id={FIELD_IDS.form}
-        aria-live="polite"
-        role="status"
-        className="min-h-[1.5rem] pt-2"
-      >
+      <div id={FIELD_IDS.form} aria-live="polite" role="status" className="min-h-[1.5rem] pt-2">
         {status.state === "success" ? (
           <p className="t-mono text-sm text-taupe">
             Recibimos tu solicitud. Te contactaremos dentro de 24 h hábiles.

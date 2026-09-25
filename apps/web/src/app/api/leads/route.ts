@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getContactProductBySlug, STRAPI_URL } from "@/lib/strapi";
 import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
 import { isSupportedRegion, normalizeProductSlug } from "@/lib/lead-policy";
+import { getPublishedPrivacyVersion, isLegalVersion } from "@/lib/legal-pages";
 import { createRateLimiter } from "./_lib/rateLimit";
 
 export const dynamic = "force-dynamic";
@@ -57,18 +58,14 @@ const rateLimiter = createRateLimiter({
 const optionalTrimmed = (max: number) => z.string().trim().max(max).optional();
 
 const LeadSchema = z.object({
-  name: z
-    .string()
-    .trim()
-    .min(1, "Ingresa tu nombre.")
-    .max(200, "El nombre es demasiado largo."),
+  name: z.string().trim().min(1, "Ingresa tu nombre.").max(200, "El nombre es demasiado largo."),
   institution: optionalTrimmed(280),
   email: z
     .string()
     .trim()
     .email("Ingresa un correo válido.")
     .max(200, "El correo es demasiado largo."),
-  phone: optionalTrimmed(40),
+  phone: z.string().trim().max(40, "El teléfono es demasiado largo.").optional(),
   region: z
     .string()
     .trim()
@@ -80,12 +77,12 @@ const LeadSchema = z.object({
     .trim()
     .min(1, "Cuéntanos qué necesitas.")
     .max(2000, "El mensaje es demasiado largo."),
-  consent: z
-    .boolean()
-    .refine((value) => value === true, {
-      message: "Debes aceptar la política de privacidad para continuar.",
-    }),
-  consentVersion: z.string().trim().min(1).max(40),
+  consent: z.boolean().refine((value) => value === true, {
+    message: "Debes aceptar la política de privacidad para continuar.",
+  }),
+  consentVersion: z.string().refine(isLegalVersion, {
+    message: "La versión de la política de privacidad tiene un formato inválido.",
+  }),
   /** Honeypot — accepted by the schema but rejected earlier in the handler. */
   website: z.string().optional(),
   product: optionalTrimmed(200),
@@ -165,7 +162,10 @@ export async function POST(req: NextRequest) {
   const rate = rateLimiter(ip);
   if (!rate.allowed) {
     return NextResponse.json(
-      { ok: false, errors: { form: "Has enviado demasiadas solicitudes. Intenta nuevamente en unos minutos." } },
+      {
+        ok: false,
+        errors: { form: "Has enviado demasiadas solicitudes. Intenta nuevamente en unos minutos." },
+      },
       { status: 429, headers: { "Retry-After": String(rate.retryAfterSeconds) } },
     );
   }
@@ -240,12 +240,33 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ ok: false, errors }, { status: 400 });
   }
 
+  let consentVersion: string;
+  try {
+    consentVersion = await getPublishedPrivacyVersion();
+    if (!isLegalVersion(consentVersion)) {
+      throw new Error("Published privacy version has an invalid format");
+    }
+  } catch (error) {
+    console.error("[leads] Privacy policy lookup failed:", (error as Error).message);
+    return formError(
+      "No pudimos verificar la política de privacidad vigente. Inténtalo nuevamente en unos minutos.",
+    );
+  }
+  if (input.consentVersion !== consentVersion) {
+    return NextResponse.json(
+      {
+        ok: false,
+        errors: {
+          form: "La política de privacidad cambió. Recarga la página antes de enviar.",
+        },
+      },
+      { status: 409 },
+    );
+  }
   const token = getStrapiAdminToken();
   if (!token) {
     // Operator configuration error — log it, never crash the request.
-    console.error(
-      "[leads] Persistence skipped: STRAPI_ADMIN_TOKEN / STRAPI_API_TOKEN is not set.",
-    );
+    console.error("[leads] Persistence skipped: STRAPI_ADMIN_TOKEN / STRAPI_API_TOKEN is not set.");
     return formError(
       "No pudimos guardar tu solicitud en este momento. Inténtalo nuevamente en unos minutos.",
     );
@@ -269,7 +290,7 @@ export async function POST(req: NextRequest) {
       region: input.region,
       message: input.message,
       consent: input.consent,
-      consentVersion: input.consentVersion,
+      consentVersion,
       source: SOURCE_CONTACT_FORM,
       product: product?.name ?? null,
       status: "new",
@@ -296,7 +317,9 @@ export async function POST(req: NextRequest) {
   }
 
   if (!res.ok) {
-    console.error(`[leads] Strapi create failed: ${res.status} ${await res.text().catch(() => "")}`);
+    console.error(
+      `[leads] Strapi create failed: ${res.status} ${await res.text().catch(() => "")}`,
+    );
     return formError(
       "No pudimos guardar tu solicitud en este momento. Inténtalo nuevamente en unos minutos.",
     );

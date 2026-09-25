@@ -1,34 +1,27 @@
-import { NextResponse, type NextRequest } from 'next/server';
-import { z } from 'zod';
-import { revalidateTag } from 'next/cache';
-import { getServerSession } from '@/lib/admin/session';
-import { getStrapiAdminToken } from '@/lib/admin/strapi-admin';
-import { STRAPI_CACHE_TAGS } from '@/lib/strapi';
+import { revalidateTag } from "next/cache";
+import { NextResponse, type NextRequest } from "next/server";
+import { z } from "zod";
+import { requireAdmin, strapiAuthFailure } from "@/lib/admin/require-admin";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
+import { STRAPI_CACHE_TAGS } from "@/lib/strapi";
 
-export const dynamic = 'force-dynamic';
-export const runtime = 'nodejs';
-
-/**
- * GET /api/admin/about-section
- *   Read the `about-section` singleton (populate=*).
- *
- * PUT /api/admin/about-section
- *   Update the singleton. Strapi v5 singleType has no document id —
- *   the endpoint is `/api/about-section`. The required-by-domain
- *   fields (eyebrow, title) reject empty and whitespace-only input.
- *   Optional fields accept a trimmed string OR `null` (clear).
- *   `values` (the four-commitment cards) is forwarded as a JSON array
- *   of `{ title, body }` so the editor can add or remove items.
- */
+export const dynamic = "force-dynamic";
+export const runtime = "nodejs";
 
 const trimmedString = (max: number) =>
-  z.string().max(max).transform((s) => s.trim());
+  z
+    .string()
+    .max(max)
+    .transform((value) => value.trim());
 
 const requiredTrimmed = (max: number, label: string) =>
-  trimmedString(max).refine((s) => s.length > 0, { message: `${label} no debe estar vacío` });
+  trimmedString(max).refine((value) => value.length > 0, {
+    message: label + " no debe estar vacío",
+  });
 
-const optionalClearedString = (max: number) =>
-  z.union([trimmedString(max), z.null()]).optional();
+const optionalClearedString = (max: number) => z.union([trimmedString(max), z.null()]).optional();
+const optionalClearedMetadata = (max: number) =>
+  optionalClearedString(max).transform((value) => (value === "" ? null : value));
 
 const ValueItem = z
   .object({
@@ -37,18 +30,24 @@ const ValueItem = z
   })
   .strict();
 
-const PatchBody = z
+const PutBody = z
   .object({
-    // B2 batch 2 fix: eyebrow and title are REQUIRED by the Strapi
-    // schema (minLength: 1, required: true). Reject the PATCH with
-    // 400 when either is missing entirely, mirroring the upstream
-    // contract — the form always sends them.
-    eyebrow: requiredTrimmed(80, 'Etiqueta superior'),
-    title: requiredTrimmed(200, 'Título'),
+    seoTitle: optionalClearedMetadata(60),
+    seoDescription: optionalClearedMetadata(160),
+    eyebrow: requiredTrimmed(80, "Etiqueta superior"),
+    title: requiredTrimmed(200, "Título"),
     intro: optionalClearedString(600),
     body: optionalClearedString(4000),
-    // B2 batch 2 fix: label (kicker) and heading (h2) are separate
-    // schema fields. Keep both in the patch contract.
+    pageEyebrow: optionalClearedString(80),
+    pageTitle: optionalClearedString(200),
+    yearsInBusinessLabel: optionalClearedString(80),
+    productCountLabel: optionalClearedString(80),
+    productLineCountLabel: optionalClearedString(80),
+    coverageLabel: optionalClearedString(80),
+    warrantyLabel: optionalClearedString(80),
+    projectCtaTitle: optionalClearedString(200),
+    projectCtaBody: optionalClearedString(600),
+    projectCtaLabel: optionalClearedString(80),
     missionLabel: optionalClearedString(40),
     missionHeading: optionalClearedString(200),
     missionBody: optionalClearedString(1000),
@@ -57,75 +56,105 @@ const PatchBody = z
     visionBody: optionalClearedString(1000),
     valuesLabel: optionalClearedString(40),
     valuesHeading: optionalClearedString(200),
-    values: z.array(ValueItem).optional(),
+    values: z.array(ValueItem).max(4, "Sólo se permiten 4 valores").optional(),
   })
   .strict();
 
-export async function GET() {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  const res = await fetch(
-    `${(process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '')}/api/about-section?populate=*`,
-    {
-      headers: { Authorization: `Bearer ${getStrapiAdminToken()}` },
-      cache: 'no-store',
-    }
-  );
-  const data = await res.json().catch(() => null);
-  return NextResponse.json(data ?? { data: null }, { status: res.status });
+function strapiUrl(path: string): string {
+  const base = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
+  return base + path;
 }
 
-export async function PUT(req: NextRequest) {
-  const session = await getServerSession();
-  if (!session) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
+function unauthorized() {
+  return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+}
 
-  let body: z.infer<typeof PatchBody>;
+function upstreamUnavailable(): NextResponse {
+  return NextResponse.json(
+    { error: "No se pudo conectar con el servidor de contenido." },
+    { status: 502 },
+  );
+}
+function invalidUpstreamResponse(status: number) {
+  return NextResponse.json(
+    { error: "El servidor de contenido devolvió una respuesta inválida." },
+    { status: status >= 400 ? status : 502 },
+  );
+}
+
+async function readUpstreamJson(response: Response): Promise<unknown | null> {
+  return response.json().catch(() => null);
+}
+
+export async function GET() {
+  if (!(await requireAdmin())) return unauthorized();
+
+  let response: Response;
   try {
-    body = PatchBody.parse(await req.json());
-  } catch (err) {
+    response = await fetch(strapiUrl("/api/about-section?populate=*&status=draft"), {
+      headers: { Authorization: "Bearer " + getStrapiAdminToken() },
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (response.status === 401) return strapiAuthFailure();
+
+  const json = await readUpstreamJson(response);
+  if (json === null) return invalidUpstreamResponse(response.status);
+  return NextResponse.json(json, { status: response.status });
+}
+
+export async function PUT(request: NextRequest) {
+  if (!(await requireAdmin())) return unauthorized();
+
+  let body: z.infer<typeof PutBody>;
+  try {
+    body = PutBody.parse(await request.json());
+  } catch (error) {
     const issues =
-      err instanceof z.ZodError
-        ? err.issues.map((i) => ({ path: i.path, message: i.message, code: i.code }))
-        : [{ path: [], message: String(err), code: 'unknown' }];
-    return NextResponse.json(
-      { error: 'Datos inválidos', details: { issues } },
-      { status: 400 }
-    );
+      error instanceof z.ZodError
+        ? error.issues.map((issue) => ({
+            path: issue.path,
+            message: issue.message,
+            code: issue.code,
+          }))
+        : [{ path: [], message: String(error), code: "unknown" }];
+
+    return NextResponse.json({ error: "Datos inválidos", details: { issues } }, { status: 400 });
   }
 
-  // Same diff/clear semantics as the site-setting route: drop fields
-  // the form omitted, forward `null` to clear, trim strings.
   const data: Record<string, unknown> = {};
-  for (const [k, v] of Object.entries(body)) {
-    if (v === undefined) continue;
-    if (typeof v === 'string' && v.trim() === '') continue;
-    if (v === null) {
-      data[k] = null;
-      continue;
-    }
-    data[k] = v;
+  for (const [key, value] of Object.entries(body)) {
+    if (value === undefined) continue;
+    if (typeof value === "string" && value.length === 0) continue;
+    data[key] = value;
   }
 
-  const res = await fetch(
-    `${(process.env.STRAPI_INTERNAL_URL ?? 'http://cms:1337').replace(/\/+$/, '')}/api/about-section`,
-    {
-      method: 'PUT',
+  let response: Response;
+  try {
+    response = await fetch(strapiUrl("/api/about-section?status=published"), {
+      method: "PUT",
       headers: {
-        Authorization: `Bearer ${getStrapiAdminToken()}`,
-        'Content-Type': 'application/json',
+        Authorization: "Bearer " + getStrapiAdminToken(),
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({ data }),
-      cache: 'no-store',
-    }
-  );
-  const json = await res.json().catch(() => null);
-  // ISR milestone: about copy renders on home/nosotros — purge
-  // sections-tagged fetches so edits render immediately.
-  if (res.ok) revalidateTag(STRAPI_CACHE_TAGS.sections, { expire: 0 });
-  return NextResponse.json(json, { status: res.status });
+      cache: "no-store",
+    });
+  } catch {
+    return upstreamUnavailable();
+  }
+
+  if (response.status === 401) return strapiAuthFailure();
+
+  const json = await readUpstreamJson(response);
+  if (json === null) return invalidUpstreamResponse(response.status);
+
+  if (response.ok) {
+    revalidateTag(STRAPI_CACHE_TAGS.sections, { expire: 0 });
+  }
+
+  return NextResponse.json(json, { status: response.status });
 }

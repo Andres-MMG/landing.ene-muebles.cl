@@ -2,6 +2,14 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 const ORIGINAL_ENV = { ...process.env };
 
+const getPublishedPrivacyVersion = vi.hoisted(() => vi.fn(async () => "2026-01"));
+const isLegalVersion = vi.hoisted(
+  () =>
+    (value: unknown): value is string =>
+      typeof value === "string" && /^[A-Za-z0-9][A-Za-z0-9._-]{0,39}$/.test(value),
+);
+vi.mock("@/lib/legal-pages", () => ({ getPublishedPrivacyVersion, isLegalVersion }));
+
 const STRAPI = "http://localhost:1337";
 
 const VALID_BODY = {
@@ -16,7 +24,11 @@ const VALID_BODY = {
   idempotencyKey: "idem-test-0001",
 };
 
-const callPost = async (body: unknown, ip = "203.0.113.7", headers: Record<string, string> = {}) => {
+const callPost = async (
+  body: unknown,
+  ip = "203.0.113.7",
+  headers: Record<string, string> = {},
+) => {
   const { POST } = await import("./route");
   const raw = JSON.stringify(body);
   const req = new Request("http://localhost/api/leads", {
@@ -53,6 +65,7 @@ const stubStrapiFetch = () => {
 
 beforeEach(() => {
   vi.resetModules();
+  getPublishedPrivacyVersion.mockResolvedValue("2026-01");
   vi.clearAllMocks();
   process.env = {
     ...ORIGINAL_ENV,
@@ -94,6 +107,28 @@ describe("POST /api/leads — validation", () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  it("rejects a phone longer than 40 characters with a Spanish field error", async () => {
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost({ ...VALID_BODY, phone: "1".repeat(41) });
+
+    expect(res.status).toBe(400);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: false,
+      errors: { phone: "El teléfono es demasiado largo." },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("keeps an empty phone optional", async () => {
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost({ ...VALID_BODY, phone: "   " });
+
+    expect(res.status).toBe(201);
+    expect(fetchMock).toHaveBeenCalled();
+  });
+
   it("rejects a missing message with a field-level error", async () => {
     const fetchMock = stubStrapiFetch();
 
@@ -133,17 +168,30 @@ describe("POST /api/leads — validation", () => {
     ["La Araucanía", "203.0.113.26"],
     ["Los Ríos", "203.0.113.27"],
     ["Los Lagos", "203.0.113.28"],
-  ] as [string, string][]) ("accepts the supported region %s", async (region: string, ip: string) => {
-    const fetchMock = stubStrapiFetch();
+  ] as [string, string][])(
+    "accepts the supported region %s",
+    async (region: string, ip: string) => {
+      const fetchMock = stubStrapiFetch();
 
-    const res = await callPost(
-      { ...VALID_BODY, region, idempotencyKey: `region-key-${ip}` },
-      ip,
-    );
+      const res = await callPost({ ...VALID_BODY, region, idempotencyKey: `region-key-${ip}` }, ip);
 
-    expect(res.status).toBe(201);
-    expect(fetchMock).toHaveBeenCalled();
-  });
+      expect(res.status).toBe(201);
+      expect(fetchMock).toHaveBeenCalled();
+    },
+  );
+
+  it.each(["{{siteName}}", "2026{01", "2026 01"])(
+    "rejects malformed client consent version %s before authority lookup",
+    async (consentVersion: string) => {
+      const fetchMock = stubStrapiFetch();
+
+      const res = await callPost({ ...VALID_BODY, consentVersion });
+
+      expect(res.status).toBe(400);
+      expect(getPublishedPrivacyVersion).not.toHaveBeenCalled();
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
 
   it("rejects malformed JSON without persisting", async () => {
     const fetchMock = stubStrapiFetch();
@@ -230,6 +278,7 @@ describe("POST /api/leads — rate limiting", () => {
   it("enforces the configured daily cap", async () => {
     process.env.LEAD_DAILY_LIMIT = "2";
     vi.resetModules();
+    getPublishedPrivacyVersion.mockResolvedValue("2026-01");
     stubStrapiFetch();
 
     const res1 = await callPost({ ...VALID_BODY, idempotencyKey: "daily-key-1" });
@@ -248,29 +297,23 @@ describe("POST /api/leads — rate limiting", () => {
     const fetchMock = stubStrapiFetch();
 
     for (let i = 0; i < 5; i += 1) {
-      const res = await callPost(
-        { ...VALID_BODY, idempotencyKey: `spoofed-key-${i}` },
-        undefined,
-        { "x-forwarded-for": "6.6.6.6, 203.0.113.99" },
-      );
+      const res = await callPost({ ...VALID_BODY, idempotencyKey: `spoofed-key-${i}` }, undefined, {
+        "x-forwarded-for": "6.6.6.6, 203.0.113.99",
+      });
       expect(res.status).toBe(201);
     }
 
     // The 6th request from the same trailing IP is blocked even though
     // the spoofed prefix differs.
-    const blocked = await callPost(
-      { ...VALID_BODY, idempotencyKey: "spoofed-key-6" },
-      undefined,
-      { "x-forwarded-for": "6.6.6.6, 203.0.113.99" },
-    );
+    const blocked = await callPost({ ...VALID_BODY, idempotencyKey: "spoofed-key-6" }, undefined, {
+      "x-forwarded-for": "6.6.6.6, 203.0.113.99",
+    });
     expect(blocked.status).toBe(429);
 
     // A different trailing IP is NOT affected by the spoofed prefix.
-    const other = await callPost(
-      { ...VALID_BODY, idempotencyKey: "other-ip" },
-      undefined,
-      { "x-forwarded-for": "6.6.6.6, 203.0.113.100" },
-    );
+    const other = await callPost({ ...VALID_BODY, idempotencyKey: "other-ip" }, undefined, {
+      "x-forwarded-for": "6.6.6.6, 203.0.113.100",
+    });
     expect(other.status).toBe(201);
     expect(fetchMock).toHaveBeenCalled();
   });
@@ -311,10 +354,15 @@ describe("POST /api/leads — persistence", () => {
     const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
       const url = String(input);
       if (init?.method === "POST") {
-        return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), { status: 200 });
+        return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), {
+          status: 200,
+        });
       }
       if (url.includes("/api/products?")) {
-        return new Response(JSON.stringify({ data: [{ name: "Silla Norte", slug: "silla-norte" }] }), { status: 200 });
+        return new Response(
+          JSON.stringify({ data: [{ name: "Silla Norte", slug: "silla-norte" }] }),
+          { status: 200 },
+        );
       }
       return new Response(JSON.stringify({ data: [] }), { status: 200 });
     });
@@ -366,7 +414,10 @@ describe("POST /api/leads — persistence", () => {
 
   it("persists null for stale or tampered product context", async () => {
     const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
-      if (init?.method === "POST") return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), { status: 200 });
+      if (init?.method === "POST")
+        return new Response(JSON.stringify({ data: { documentId: "lead-abc123" } }), {
+          status: 200,
+        });
       return new Response(JSON.stringify({ data: [] }), { status: 200 });
     });
     vi.stubGlobal("fetch", fetchMock);
@@ -408,6 +459,7 @@ describe("POST /api/leads — persistence", () => {
     delete process.env.STRAPI_API_TOKEN;
     delete process.env.STRAPI_ADMIN_TOKEN;
     vi.resetModules();
+    getPublishedPrivacyVersion.mockResolvedValue("2026-01");
     const fetchMock = stubStrapiFetch();
 
     const res = await callPost(VALID_BODY);
@@ -439,5 +491,50 @@ describe("POST /api/leads — persistence", () => {
       ok: false,
       errors: { form: expect.any(String) },
     });
+  });
+
+  it("rejects a stale or forged consent version before reading or creating a Lead", async () => {
+    getPublishedPrivacyVersion.mockResolvedValueOnce("2026-02");
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost(VALID_BODY);
+
+    expect(res.status).toBe(409);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: false,
+      errors: { form: expect.any(String) },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it.each(["{{siteName}}", "2026{01", "2026 01"])(
+    "fails closed instead of returning a stale-version conflict for invalid authority version %s",
+    async (version: string) => {
+      getPublishedPrivacyVersion.mockResolvedValueOnce(version);
+      const fetchMock = stubStrapiFetch();
+
+      const res = await callPost(VALID_BODY);
+
+      expect(res.status).toBe(503);
+      await expect(res.json()).resolves.toMatchObject({
+        ok: false,
+        errors: { form: expect.any(String) },
+      });
+      expect(fetchMock).not.toHaveBeenCalled();
+    },
+  );
+
+  it("fails closed when the published privacy version cannot be resolved", async () => {
+    getPublishedPrivacyVersion.mockRejectedValueOnce(new Error("privacy upstream unavailable"));
+    const fetchMock = stubStrapiFetch();
+
+    const res = await callPost(VALID_BODY);
+
+    expect(res.status).toBe(503);
+    await expect(res.json()).resolves.toMatchObject({
+      ok: false,
+      errors: { form: expect.any(String) },
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });

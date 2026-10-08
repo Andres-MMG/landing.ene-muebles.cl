@@ -1,4 +1,5 @@
 import { HeroSectionForm } from "./HeroSectionForm";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
 import { resolveSection, sectionFallbacks } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
@@ -9,11 +10,6 @@ export const metadata = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
-const TOKEN = process.env.STRAPI_API_TOKEN ?? "";
-
-type HeroResponse = {
-  data: HeroShape | null;
-};
 
 type HeroShape = {
   eyebrow?: string;
@@ -28,25 +24,34 @@ type HeroShape = {
   railSecondaryText?: string;
 };
 
-/**
- * Read the `hero-section` singleton with the admin token and apply
- * the same fallback the public read helper applies when Strapi
- * responds with `data: null` or an empty object. Exported so the
- * matching test (see `page.test.ts`) can exercise the fallback
- * contract without rendering the page.
- */
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+/** Preserve absent/legacy-empty fallback without masking operational failures. */
 export async function getHeroSection(): Promise<HeroShape> {
-  try {
-    const res = await fetch(`${STRAPI}/api/hero-section?populate=*`, {
-      headers: { Authorization: `Bearer ${TOKEN}` },
-      cache: "no-store",
-    });
-    if (!res.ok) return sectionFallbacks.hero();
-    const json = (await res.json().catch(() => null)) as HeroResponse | null;
-    return resolveSection(json?.data ?? null, sectionFallbacks.hero());
-  } catch {
-    return sectionFallbacks.hero();
+  const token = getStrapiAdminToken().trim();
+  const response = await fetch(`${STRAPI}/api/hero-section?populate=*`, {
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
+    cache: "no-store",
+  });
+
+  if (response.status === 404) return sectionFallbacks.hero();
+  if (!response.ok) {
+    throw new Error(`No se pudo cargar el hero (${response.status})`);
   }
+
+  const json: unknown = await response.json();
+  if (!isRecord(json) || !Object.prototype.hasOwnProperty.call(json, "data")) {
+    throw new Error("Strapi devolvió una respuesta inválida para el hero");
+  }
+
+  if (json.data === null) return sectionFallbacks.hero();
+  if (!isRecord(json.data)) {
+    throw new Error("Strapi devolvió contenido inválido para el hero");
+  }
+
+  return resolveSection(json.data as HeroShape, sectionFallbacks.hero());
 }
 
 /**

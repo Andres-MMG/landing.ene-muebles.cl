@@ -7,6 +7,7 @@ beforeEach(() => {
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV };
   process.env.STRAPI_INTERNAL_URL = "http://localhost:1337";
+  delete process.env.STRAPI_ADMIN_TOKEN;
   process.env.STRAPI_API_TOKEN = "test-token";
   vi.stubGlobal("fetch", vi.fn());
 });

@@ -1,4 +1,5 @@
 import { AboutSectionForm } from "./AboutSectionForm";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
 import { sectionFallbacks, type AboutSection } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
@@ -9,7 +10,6 @@ export const metadata = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
-const TOKEN = process.env.STRAPI_API_TOKEN?.trim();
 
 type AboutPageCopy = {
   pageEyebrow?: string;
@@ -31,8 +31,9 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 export async function getAboutSectionForAdmin(): Promise<AboutShape> {
+  const token = getStrapiAdminToken().trim();
   const response = await fetch(STRAPI + "/api/about-section?populate=*&status=draft", {
-    ...(TOKEN ? { headers: { Authorization: "Bearer " + TOKEN } } : {}),
+    ...(token ? { headers: { Authorization: "Bearer " + token } } : {}),
     cache: "no-store",
   });
 

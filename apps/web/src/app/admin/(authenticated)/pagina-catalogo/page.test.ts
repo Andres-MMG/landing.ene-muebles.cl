@@ -5,6 +5,7 @@ const ORIGINAL_ENV = { ...process.env };
 beforeEach(() => {
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV, STRAPI_INTERNAL_URL: "http://localhost:1337" };
+  delete process.env.STRAPI_ADMIN_TOKEN;
   delete process.env.STRAPI_API_TOKEN;
   vi.stubGlobal("fetch", vi.fn());
 });
@@ -83,7 +84,7 @@ describe("Admin /admin/pagina-catalogo data loader", () => {
     await expect(getCatalogPageForAdmin()).rejects.toThrow();
   });
 
-  it("omits the Authorization header when STRAPI_API_TOKEN is absent", async () => {
+  it("omits the Authorization header when both Strapi tokens are absent", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockResolvedValueOnce(
       new Response(JSON.stringify({ data: null }), { status: 200 }),
     );

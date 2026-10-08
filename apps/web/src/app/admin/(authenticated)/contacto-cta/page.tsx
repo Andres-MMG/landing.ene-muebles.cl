@@ -1,5 +1,6 @@
 import { site as siteTokens } from "@ene/ui-tokens";
 import { ContactCtaSectionForm } from "./ContactCtaSectionForm";
+import { getStrapiAdminToken } from "@/lib/admin/strapi-admin";
 import { sectionFallbacks } from "@/lib/strapi";
 
 export const dynamic = "force-dynamic";
@@ -10,7 +11,6 @@ export const metadata = {
 };
 
 const STRAPI = (process.env.STRAPI_INTERNAL_URL ?? "http://cms:1337").replace(/\/+$/, "");
-const TOKEN = process.env.STRAPI_API_TOKEN?.trim();
 
 type ContactCtaShape = {
   eyebrow?: string;
@@ -40,8 +40,9 @@ function contactCtaFallback(): ContactCtaShape {
  * an existing partial document remains the editor's primary value.
  */
 export async function getContactCtaSection(): Promise<ContactCtaShape> {
+  const token = getStrapiAdminToken().trim();
   const response = await fetch(`${STRAPI}/api/contact-cta-section`, {
-    ...(TOKEN ? { headers: { Authorization: `Bearer ${TOKEN}` } } : {}),
+    ...(token ? { headers: { Authorization: `Bearer ${token}` } } : {}),
     cache: "no-store",
   });
 

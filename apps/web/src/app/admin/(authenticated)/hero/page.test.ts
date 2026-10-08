@@ -7,6 +7,7 @@ beforeEach(() => {
   vi.resetModules();
   process.env = { ...ORIGINAL_ENV };
   process.env.STRAPI_INTERNAL_URL = "http://localhost:1337";
+  delete process.env.STRAPI_ADMIN_TOKEN;
   process.env.STRAPI_API_TOKEN = "test-token";
   vi.stubGlobal("fetch", vi.fn());
 });
@@ -26,14 +27,6 @@ const mockFetch = (status: number, body: unknown) => {
 };
 
 describe("Admin /admin/hero data-loader — fallback contract", () => {
-  // Batch 2 fix: when Strapi v5 has not saved a `hero-section`
-  // singleton yet, it responds with `data: null`. Before this fix the
-  // admin page rendered blank inputs because the page fell back to
-  // `setting?.X ?? ''`. The shared `sectionFallbacks.hero()` +
-  // `resolveSection` helpers must return the same fallback content
-  // the public site renders, so the editor sees the live site copy
-  // instead of empty fields.
-
   it("returns the ui-tokens fallback when Strapi responds with data: null", async () => {
     mockFetch(200, { data: null });
     const { getHeroSection } = await import("./page");
@@ -49,29 +42,57 @@ describe("Admin /admin/hero data-loader — fallback contract", () => {
     expect(section.railSecondaryText).toBe("Fabricación y distribución");
   });
 
-  it("returns the ui-tokens fallback when Strapi responds with an empty object", async () => {
+  it("preserves the legacy fallback for an empty singleton object", async () => {
     mockFetch(200, { data: {} });
     const { getHeroSection } = await import("./page");
     const section = await getHeroSection();
-    // The admin page must show the same copy the public site renders,
-    // not blank inputs. `Object.keys(data).length === 0` triggers the
-    // fallback even when Strapi returns 200 with `{}`.
+
     expect(section.title).toBe(siteTokens.promise);
     expect(section.primaryCtaLabel).toBe(siteTokens.catalogAll);
   });
 
-  it("returns the ui-tokens fallback when Strapi responds with non-200 status", async () => {
-    mockFetch(500, { error: "oops" });
+  it("returns the ui-tokens fallback for an explicit not-found response", async () => {
+    mockFetch(404, { error: "Not Found" });
     const { getHeroSection } = await import("./page");
     const section = await getHeroSection();
+
     expect(section.title).toBe(siteTokens.promise);
+    expect(section.primaryCtaLabel).toBe(siteTokens.catalogAll);
   });
 
-  it("returns the ui-tokens fallback when the upstream fetch throws", async () => {
+  it.each([401, 403, 500])(
+    "fails closed when Strapi responds with HTTP %s",
+    async (status: number) => {
+      mockFetch(status, { error: "upstream failure" });
+      const { getHeroSection } = await import("./page");
+
+      await expect(getHeroSection()).rejects.toThrow(String(status));
+    },
+  );
+
+  it("fails closed when the upstream fetch throws", async () => {
     (fetch as unknown as ReturnType<typeof vi.fn>).mockRejectedValueOnce(new Error("ECONNREFUSED"));
     const { getHeroSection } = await import("./page");
-    const section = await getHeroSection();
-    expect(section.title).toBe(siteTokens.promise);
+
+    await expect(getHeroSection()).rejects.toThrow("ECONNREFUSED");
+  });
+
+  it("fails closed when Strapi returns malformed JSON", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response("not-json", { status: 200 }));
+    const { getHeroSection } = await import("./page");
+
+    await expect(getHeroSection()).rejects.toThrow();
+  });
+
+  it.each([
+    ["an envelope without data", {}],
+    ["array data", { data: [] }],
+    ["string data", { data: "invalid" }],
+  ])("fails closed for %s", async (_label: string, body: unknown) => {
+    mockFetch(200, body);
+    const { getHeroSection } = await import("./page");
+
+    await expect(getHeroSection()).rejects.toThrow("inválid");
   });
 
   it("returns the Strapi-supplied values verbatim when the singleton is seeded", async () => {

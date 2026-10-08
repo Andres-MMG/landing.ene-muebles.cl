@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@/lib/admin/session", () => ({ getServerSession: vi.fn() }));
-vi.mock("@/lib/admin/strapi-admin", () => ({
+vi.mock("@/lib/admin/strapi-admin", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/admin/strapi-admin")>()),
   getStrapiAdminToken: vi.fn(() => "token"),
   findAdminUserByDocumentId: vi.fn(),
 }));
@@ -56,6 +57,7 @@ function request(url: string) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.mocked(strapiAdmin.getStrapiAdminToken).mockReturnValue("token");
   vi.stubGlobal("fetch", vi.fn());
   (session.getServerSession as ReturnType<typeof vi.fn>).mockResolvedValue({ sub: "admin" });
   (strapiAdmin.findAdminUserByDocumentId as ReturnType<typeof vi.fn>).mockResolvedValue(
@@ -156,5 +158,23 @@ describe("GET /api/admin/leads", () => {
     expect(response.status).toBe(502);
     const body = (await response.json()) as { error?: string };
     expect(body.error).toContain("autenticación");
+  });
+
+  it("returns 502 without fetching when the server token is missing", async () => {
+    vi.mocked(strapiAdmin.getStrapiAdminToken).mockReturnValue("");
+    const { GET } = await import("./route");
+    const response = await GET(request("http://localhost/api/admin/leads"));
+    expect(response.status).toBe(502);
+    expect(fetchMock()).not.toHaveBeenCalled();
+  });
+
+  it("does not misclassify an auth-lookup transport failure as session expiry", async () => {
+    vi.mocked(strapiAdmin.findAdminUserByDocumentId).mockRejectedValueOnce(
+      new Error("CMS unavailable"),
+    );
+    const { GET } = await import("./route");
+    const response = await GET(request("http://localhost/api/admin/leads"));
+    expect(response.status).toBe(502);
+    expect(fetchMock()).not.toHaveBeenCalled();
   });
 });

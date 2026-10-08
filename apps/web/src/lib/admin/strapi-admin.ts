@@ -182,6 +182,53 @@ async function adminFetch<T>(
   return { status: res.status, data: data as T | null };
 }
 
+/** Internal, uncached leads read shared by the guarded API and SSR entrypoints. */
+export async function readAdminLeads(
+  params: URLSearchParams,
+  token = getStrapiAdminToken(),
+): Promise<{ status: number; data: unknown }> {
+  const rawPage = Number.parseInt(params.get("page") ?? "1", 10);
+  const page = Number.isFinite(rawPage) && rawPage >= 1 ? rawPage : 1;
+  const rawPageSize = Number.parseInt(params.get("pageSize") ?? "50", 10);
+  const pageSize = Number.isFinite(rawPageSize) ? Math.min(Math.max(rawPageSize, 1), 100) : 50;
+  const qs = new URLSearchParams({
+    "pagination[page]": String(page),
+    "pagination[pageSize]": String(pageSize),
+  });
+  const status = params.get("status");
+  if (status) {
+    if (!["new", "notified", "failed"].includes(status)) {
+      return { status: 400, data: { error: `Status inválido: ${status}` } };
+    }
+    qs.set("filters[status][$eq]", status);
+  }
+  const q = params.get("q");
+  if (q) {
+    qs.set("filters[$or][0][name][$containsi]", q);
+    qs.set("filters[$or][1][email][$containsi]", q);
+    qs.set("filters[$or][2][institution][$containsi]", q);
+  }
+  qs.set("sort", "createdAt:desc");
+  const authFailure = {
+    status: 502,
+    data: {
+      error:
+        "El servidor de contenido rechazó la autenticación (token de administración inválido o expirado).",
+    },
+  };
+  if (!token.trim()) return authFailure;
+  const result = await adminFetch<unknown>(`/api/leads?${qs}`, { token });
+  // An upstream credential failure must never become the admin's own 401.
+  if (result.status === 401) return authFailure;
+  return {
+    status: result.status,
+    data: result.data ?? {
+      data: [],
+      meta: { pagination: { page, pageSize, pageCount: 0, total: 0 } },
+    },
+  };
+}
+
 /**
  * Look up an admin user by email via Strapi. The Strapi v5 response
  * shape wraps records in `{ data: [{...}] }` — the caller is
